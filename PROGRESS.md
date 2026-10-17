@@ -53,6 +53,35 @@
 
 ## 未完成 / 下一步
 
+### A4 realm（`packages/realm`）——已完成并已装入 `~/.dsh/profiles/web`
+- `RemoteWorkspaceRegistry extends WorkspaceRuntimeRegistry`，只覆盖 `mountRealmProviders`：
+  官方 `fs/subprocess/sandbox/shell` 家族 + `DaemonSshConnection` 挂进 realm 隔离链；
+  路由、realm 缓存、`workspaceRemoteVerifier` 全部沿用上游实现。
+- **实测约束（重要）**：realm 是从插件 fiber 里 `ctx.plugin(carrier) + isolate(5 个名字)` 建的，
+  而 cordis 的服务解析走“提供者 fiber 的 store 链”。宿主平面的 `sandboxPolicy` 因此**无法**被
+  realm 内的 fiber 直接读到（`SandboxBashExecutor` 构造时读 `ctx.sandboxPolicy` 会抛
+  `cannot get property ... without inject`）。`isolate+provide` / `provide` / `accessor` 都不行
+  （前者撞 root store 的 symbol 键，后者报 already declared as service）。
+  **可行解**：`realmCtx.extend({ sandboxPolicy, sessionProjections })` —— `extend` 的 meta 是
+  自有属性，代理 `get` 先命中 `Reflect.has`，于是 realm 内解析与宿主一致；注册与释放仍发生在
+  realm 的 fiber 上。见 `bridgeHostServices`。
+- `packages/realm/dist/daemon.tar.gz`（bundle + 裁剪后的 node-pty，451 KiB）由
+  `pnpm run archive` 生成；realm 在宿主首次使用时按 (host, daemonDir, 归档摘要) 幂等安装。
+- 冒烟：`tests/daemon/probe-realm.mjs` 10/10（含 remote verifier 的 canonicalPath / status）。
+- `daemonDir` 支持 `~/...`：由远端 shell 展开（`daemonDirExpr`，只放行 `[A-Za-z0-9._/-]`）。
+
+### 已装入本机 web profile（可回滚）
+- `dsh plugin --profile web add link:.../packages/realm`；`cordis.patch.yml` 里
+  `disabled: true` 官方 `execution-worlds` 行 + `insert` 本插件同名行。
+- `dsh --profile web --dump-config` 确认：`execution-worlds` 只剩本插件那一行。
+- web 服务已用新 profile 重启（PID 2394 已终止，改为 `setsid nohup dsh web --no-open --port 3080`），
+  启动日志无告警/错误。原始 patch/package.json 备份在 profile 目录（`*.bak*`）。
+
+### 为何浏览器里还看不到“添加远程工作区”
+`ui-workspace` 的该菜单项受 `verifyRemote !== undefined` 门控，`verifyRemote` 来自
+`@deepseek-ai/dsh-api-remotes/client` 的 host 侧 remote。**该 host/client remote 还没实现**
+（= 待办 B1/B2/B3），所以当前 UI 只提供本地目录选择；这是预期状态，不是故障。
+
 ### A3 providers（`packages/providers`）——已完成
 - `DaemonSshConnection extends Service`（注册为 `ctx.ssh`），surface = `{ready, request, connectStream, dispose}`；
   官方 `SshFileSystem` / `SshSubprocessRuntime` / `SshSandboxProvider` / `SandboxBashExecutor` 原样挂载。
