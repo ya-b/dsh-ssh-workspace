@@ -1,0 +1,113 @@
+# PROGRESS — dsh-ssh-workspace 实施进度
+
+> 更新于 `A0` 探针 + `A1` daemon + `A2` transport 完成并实测通过之后。
+> 实测环境：`ssh localhost`（真实 sshd；daemon 部署在 `~/.dsh-workspace`）。
+
+## 已完成并验证
+
+| 模块 | 状态 | 证据 |
+|---|---|---|
+| A0 探针 | **通过（核心项）** | `tests/daemon/probe-transport.mjs` 11/11 checks |
+| A1 daemon | **通过** | 同上：进程/fs/terminal/opId 去重/replay 全绿 |
+| A2 transport | **通过** | 同上：ssh 通道杀死后重连续取终态，零重复执行 |
+| A3 provider 薄壳 | 未开始 | 设计已定（见下） |
+| A4 realm 注入 | 未开始 | 设计已定（见下） |
+| B1/B2/B3 | 未开始 | — |
+| C1/C2 | 部分（case 1 已覆盖） | probe 的"master kill + 单次执行 + 终态重取" |
+
+### A0 落锤结论
+
+1. **流转发机制（D9）定案：per-stream `ssh -L`**。
+   理由：与官方 `SshConnection.establishStream` 完全同形（`ssh -O forward -L <local>:<remote>`），
+   复用 master 控制通道，实测在 8+ 并发流与断线重连下无串流、无 fd 泄漏；
+   `ssh -D` SOCKS5 需自实现握手且对 unix socket 目标无额外收益，**放弃**。
+   安全面与官方一致：`BatchMode=yes`、`StrictHostKeyChecking=yes`、`ForwardAgent=no`、
+   `ClearAllForwardings=yes`、socket `0600`、目录 `0700`、每次握手新 PSK。
+2. **daemon 生存性**：`setsid nohup node workspaced.js --dir $D </dev/null` 启动；
+   `ssh -O exit` 杀死 master 后 daemon 与子进程继续运行（probe 断言 exit=0、marker 只写一次）。
+3. **单文件 bundle**：esbuild `--format=esm` + banner `createRequire`；
+   构建期把 `createRequire(import.meta.url)("../package.json")`
+   （`@deepseek-ai/dsh-llm` 读自身版本）改写为字面量，使 bundle 可脱离源码树部署。
+4. **原生依赖**：`node-pty` 是唯一无法内联的依赖（PTY 终端）。
+   已实现归档安装：`tar -czf` 打包 `workspaced.js` + `package.json` + 裁剪后的
+   `node_modules/node-pty`（只含目标 `prebuilds/<platform>-<arch>`），
+   `ssh ... 'tar -xzf - -C $D'` 安装。无 node-pty 时 daemon 其余功能不受影响。
+5. **TLS-PSK 就绪**：`PSK-AES256-GCM-SHA384` / TLSv1.2，服务端按 socket 目录白名单 +
+   每流 64hex capability；客户端在 preamble 中声明上次已确认字节偏移。
+
+### 协议要点（实现契约，A3/A4 必须遵守）
+
+- daemon 控制面 = `hello / session.reattach / heartbeat / close / fs.* / process.* / terminal.* / executable / sandbox`。
+  名称与 `@deepseek-ai/dsh-ssh` 家族 call site 逐一对齐。
+- `process.prepare` 响应为 `{id, streams, phase}`，`phase` ∈ `prepared | completed`；
+  `completed` 时 `streams` 为空且缓存终态由 `process.done` 返回。
+  官方 `preparedSchema` 只取 `{id, streams}`，**不会**因多余字段报错（`.strict()` 只作用于解析对象自身字段，`prepared` 未在 provider 侧解析 —— 仅 `terminal` 流走 `streamEndpointSchema.parse`，故流端点形状保持 `{path,capability}`）。
+- daemon→client 流信道（`stdout`/`stderr`/`terminal`）在 TLS 握手后先收一帧
+  `{sync: <已确认偏移>}`，再回放 ring buffer（1 MiB/流）并转入 live。
+  客户端按 socket 文件名（basename）判断是否需要该 preamble。
+- opId 幂等门：`fs.write` / `fs.edit` / `process.prepare` / `process.start` / `terminal.write`。
+  **transport 会在缺省时自动注入 opId**，因此官方 provider 不改一行即获得幂等重放。
+- 显式 reap（D7）：① daemon 关闭；② 显式 `process.terminate`（`abandon=true` 连带丢弃缓存）；
+  ③ `process.prepare` 前的上限回收（先淘汰终态缓存，再按最老运行态 SIGTERM）。
+  断线**不**触发任何回收；已终态记录在 `completed` 缓存中可无限次查询。
+
+## 未完成 / 下一步
+
+### A3 providers（`packages/providers`）
+- 挂载官方 `SshFileSystem` / `SshSubprocessRuntime` / `SshSandboxProvider` + `SandboxBashExecutor`，
+  以 `RemoteWorkspaceTransport` 作为 `ctx.ssh`。
+- schema snapshot 对照 `@deepseek-ai/dsh-ssh/schemas`（逐字段），确认 daemon 响应全部通过官方 zod。
+- 已知待补：`fs.stream` 重连策略（迭代器不可跨连接续传，当前在断线时结构化失败）、
+  `SshSubprocessRuntime` 的 `process.done(wait=true)` 在断线期间的等待行为已由 transport 覆盖。
+
+### A4 realm（`packages/realm`）
+- `RemoteWorkspaceRegistry extends WorkspaceRuntimeRegistry`：
+  - override `mountRealmProviders`（protected，可行）
+  - override `connectionConfig`（private，编译期可见但需 `as any` 或子类方法名遮蔽）返回形状合法 SshConfig；
+    实测该路径只需非空字符串+正则通过，永不真正拉起 helper。
+  - realm 继承 host 平面 `sandboxPolicy`（`REALM_NAMES` 不含它）—— 待实测确认。
+- `RemoteWorkspaceVerifier`：daemon 可达 + workspace 在 daemon 白名单 + Node 版本检查。
+- profile 叠层：`profile/cordis.patch.yml` override `- id: execution-worlds` row 指向插件子类，
+  并在 profile `package.json` 声明
+  `@deepseek-ai/dsh-host-execution-worlds`、`dsh-fs-ssh`、`dsh-subprocess-ssh`、`dsh-sandbox-ssh`、
+  `dsh-bash-sandbox` 依赖（用户层 resolve）。
+
+### B1 机器枚举（`packages/api`）
+- `listHosts()`：递归 `Include`、具名 `Host`、过滤 `*`/`!`、不做 `Match` 展开。
+- `precheck(alias)`：`ssh -G` 为唯一权威 + `BatchMode` 短超时探测 → `usable/needs-credentials/unreachable`。
+- 本机永远第一位。
+
+### B2 远端目录浏览
+- 复用官方 `directory-picker` row（bundle/web-app 已存在，支持 overlay pin）；
+  不可行时自写 daemon `fs.list` 通路（daemon 已具备 `fs.list`）。
+
+### B3 添加工作区两步流 UI
+- `packages/ui`（client face）：选机器 → 远端目录树 → `ctx.workspaceRegistry.create({transport:'ssh',host,path})`。
+- daemon 未装时给手动安装指引 + 重新检测；保留官方手输 alias 通路。
+
+### C1 场景补齐
+- 已有：case 1（kill master → 重连取终态 → 单次执行）。
+- 待补：case 2（terminal 断 30s 续播，daemon 侧已具备 replay，需端到端断言）、
+  case 3（大文件写中断）、case 4（daemon 换代 → `WORKSPACE_PROGRESS_LOST`）、case 5（reap 顺序）。
+
+### C2 收尾
+- `profile/README.md`（接入步骤）、升级指南、兼容矩阵（Node ≥ 20 / OpenSSH ≥ 8.2）、
+  SIGKILL 重建指南、压力测试（5000 opId、断线 3m、同 opId 重复提交）。
+
+## 运行方式
+
+```bash
+# daemon 单测/端到端探针（真实 ssh localhost）
+cd packages/daemon && pnpm run build
+node ../../tests/daemon/probe-transport.mjs
+
+# 手工 daemon 探针（无 ssh）
+node ../../tests/daemon/probe-manual.mjs /tmp/dsh-ws-test/dsh-workspace
+```
+
+## 已知限制
+
+- `packages/api` / `packages/ui` / `packages/providers` / `packages/realm` 目前是空占位包。
+- daemon 的多 workspace sandbox 语义已按会话解析 `workspaceRoot`（`canonicalPolicy` 使用调用方传入的 policy），
+  但白名单目前是 daemon 级 `config.json` 的 `roots`；B1/B3 接入后需按工作区动态下发/校验。
+- node-pty 归档约 6 MiB（含裁剪后 linux-x64 预编译二进制）；其它平台需在本地准备对应 node-pty。

@@ -19,7 +19,7 @@
 | D6 | Node 环境检查缺失即给手动安装指引 | 用户选了 node-script 档，非 SEA 打包 |
 | D7 | **reap 只由显式事件驱动，禁止心跳/lease 式隐式清扫** | 官方 helper 断连即 lease 清扫 = 与「断线不中断」直接冲突；daemon 的遗留进程回收策略必须显式定义，否则长会话下进程记录无限累积 |
 | D8 | **daemon = 官方 helper 服务端的完整重实现** | fs 版本原子语义（`FS_STALE_VERSION`）、helper-owned atomic write、流 id/窗口、management-class 配额全套对齐（对标 ssh 包 `helper-processes.ts` 456 行 + fs 语义）；A1 为全项目最大模块 |
-| D9 | **流转发机制 A0 落锤**：per-stream `ssh -L` 或单条 `ssh -D` SOCKS5 二选一 | `process.prepare` 返回远端独立 unix socket + 64hex capability，客户端 `connectStream` 需 TLS-PSK（`PSK-AES256-GCM-SHA384`）；这是 A2 最大的未定实现项，须实测后定案 |
+| D9 | **流转发机制 A0 落锤：per-stream `ssh -L`**（2025-10-17 定案，`ssh -D` SOCKS5 放弃） | `process.prepare` 返回远端独立 unix socket + 64hex capability，客户端 `connectStream` 需 TLS-PSK（`PSK-AES256-GCM-SHA384`）。per-stream `-L` 与官方 `SshConnection.establishStream` 同形，复用 master 控制通道；实测 8+ 并发流与断线重连无串流/无 fd 泄漏。`ssh -D` 需自实现 SOCKS5 握手且对 unix socket 目标无额外收益 |
 
 ## 2. 全局红线（任何模块都适用）
 
@@ -46,6 +46,10 @@
 **执行顺序：A0 探针 → A1 daemon → A2 传输 → A3 provider 适配 → A4 realm 注入 → B1 机器枚举 → B2 远端目录 → B3 ui 两步流 → C1 乱序持久 reconnect 致死案例 → C2 收口**。每模块未过「完成自检」不得开始下一个模块。
 
 （名称缩写排查：`name`/`wait`/`release`/`argv` 全与官方 provider 家族 `SshFileSystem/SshSubprocessRuntime/SshSandboxProvider` 已 freezing 的接入面保持一致，插件侧不另起新词，是交换的平面 vocab.）
+
+> **实施状态（2025-10-17）**：A0 核心项 + A1 + A2 已完成并通过真实 `ssh localhost` 端到端验证
+> （`tests/daemon/probe-transport.mjs`，11/11）。A3/A4/B1/B2/B3/C1/C2 未开始，
+> 详情、实测结论与下一步见 [`PROGRESS.md`](./PROGRESS.md)。
 
 ### 模块 A0 · probe 探针（最先做，全项目最大架构风险在这里落锤）
 
