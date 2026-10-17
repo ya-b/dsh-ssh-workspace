@@ -58115,8 +58115,11 @@ var spawnSchema = external_exports2.object({
   graceMs: external_exports2.number().int().positive().max(2147483647),
   stdio: external_exports2.object({
     stdin: external_exports2.union([external_exports2.literal("ignore"), external_exports2.literal("pipe"), external_exports2.object({ data: external_exports2.string() }).strict()]),
-    stdout: external_exports2.union([external_exports2.literal("pipe"), external_exports2.literal("inherit"), collection]),
-    stderr: external_exports2.union([external_exports2.literal("pipe"), external_exports2.literal("inherit"), collection]),
+    // Every ordinary process publishes stdout and stderr, and release happens
+    // once the client has attached both: `inherit` cannot be honoured without
+    // silently changing that contract, so it is not part of the vocabulary.
+    stdout: external_exports2.union([external_exports2.literal("pipe"), collection]),
+    stderr: external_exports2.union([external_exports2.literal("pipe"), collection]),
     control: external_exports2.literal("pipe").optional()
   }).strict().optional(),
   terminal: external_exports2.object({

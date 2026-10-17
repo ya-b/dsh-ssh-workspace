@@ -1,6 +1,6 @@
 # PROGRESS — dsh-ssh-workspace 实施进度
 
-> 更新于 `A0` 探针 + `A1` daemon + `A2` transport 完成并实测通过之后。
+> 更新于 A0–A4、B1–B3、C1–C2 全部完成并实测通过之后。
 > 实测环境：`ssh localhost`（真实 sshd；daemon 部署在 `~/.dsh-workspace`）。
 
 ## 已完成并验证
@@ -12,8 +12,29 @@
 | A2 transport | **通过** | 同上：ssh 通道杀死后重连续取终态，零重复执行 |
 | A3 provider 薄壳 | **通过** | `tests/daemon/probe-providers.mjs` 13/13 checks |
 | A4 realm 注入 | **通过** | `tests/daemon/probe-realm.mjs` 10/10；已装入 web profile |
-| B1/B2/B3 | 未开始 | — |
-| C1/C2 | 部分（case 1 已覆盖） | probe 的"master kill + 单次执行 + 终态重取" |
+| B1 机器枚举 | **通过** | `GET /ssh-workspace/machines` 返回本机 + 6 台 ssh config 主机；无 cookie → 401 |
+| B2 远端目录浏览 | **通过** | `GET /ssh-workspace/browse`（远端走 realm/daemon，实测 200 / 1.5s） |
+| B3 两步流 UI | **通过** | 浏览器：🌐 面板 → 选机器 → 选目录 → 添加 → 落库 `{transport:{kind:'ssh',host}}` |
+| C1 死亡场景 | **通过** | `tests/daemon/probe-resilience.mjs` 11/11 |
+| C2 文档/压测 | **通过** | `README.md` / `INSTALL.md` 兼容矩阵与恢复表；200 次连续观测、1 MiB 写入 opId 重放 |
+
+### C1 死亡场景（`tests/daemon/probe-resilience.mjs` 11/11）
+1. **终端跨断线续播**：PTY 产出 `BEFORE-33` → 用控制 socket `ssh -O exit` + SIGKILL 结束 master
+   → 断线期间由另一条通道写入 `DURING-44` → transport 自动重连并按已确认偏移续播，
+   两段输出都在，**无字节丢失**（在线期间 status 保持 ready，重连在 ~1s 内完成）。
+2. **daemon 换代**：同一 uuid 会话说出过期 `instanceId` → `WORKSPACE_PROGRESS_LOST`（明确拒绝假装续上）。
+3. **回收顺序**：`maxProcessHandles=1` 下第二次 reservation 被接受（已完成的先让位），
+   而被回收的已完成结果**仍可查询且绝不会重跑**（重放同一 opId 返回同一 id 与终态）。
+4. **大文件 opId 重放**：1 MiB 写入两次提交同一 opId → **版本号完全一致**、sha256 一致；
+   （opId 门是**会话级**：跨会话同 opId 会真正重放，这是设计边界）
+5. **压测**：200 次连续观测完成（`fs.resolve` 抽样 ≈ 4 ms/op）。
+6. **崩溃自愈**：socket 在而 pid 已死时，bootstrap 清理残留并重启（`bootstrapCommand`）。
+
+### C2 文档与兼容
+- `README.md`：架构、浏览器用法、兼容矩阵（Node ≥ 20 / OpenSSH ≥ 8.2 / POSIX sh / linux 预编译）、
+  恢复与运维表、四个探针的运行方式。
+- `INSTALL.md`：构建三类产物（daemon bundle / 远端归档 / 浏览器 bundle）→ 装入 profile →
+  覆写 `execution-worlds` 行 → 校验 → 设置项 → 回滚；并说明白名单落盘语义。
 
 ### A0 落锤结论
 

@@ -335,11 +335,26 @@ async function worldFor(ctx: Context, host: string | null, path: string) {
   } as never)
 }
 
-/** Resolve one remote machine's home directory through its realm. */
-async function remoteHome(ctx: Context, host: string): Promise<string> {
-  const world = await worldFor(ctx, host, '/')
-  const resolved = await world.fs.resolve('~').catch(() => world.fs.resolve('/'))
-  return world.fs.processPath(resolved)
+/** Homes already discovered, so repeated browsing does not re-ask. */
+const homes = new Map<string, Promise<string>>()
+
+/**
+ * The home directory of one remote machine. The realm's filesystem resolves
+ * paths literally (a `~` is not expanded by a provider), so the shell is asked
+ * once per machine and the answer cached.
+ * @param _ctx - host plugin context (kept for symmetry with the other lookups).
+ * @param host - OpenSSH host alias.
+ */
+async function remoteHome(_ctx: Context, host: string): Promise<string> {
+  let pending = homes.get(host)
+  if (pending === undefined) {
+    pending = run('ssh', [
+      '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ForwardAgent=no',
+      '-o', 'ClearAllForwardings=yes', '-o', 'ConnectTimeout=4', host, 'printf %s "$HOME"',
+    ], 8000).then(result => result.stdout.trim() || '/')
+    homes.set(host, pending)
+  }
+  return await pending
 }
 
 /** Run one command, resolving with its output or rejecting with the failure. */

@@ -39,8 +39,11 @@ export const spawnSchema = z.object({
   env: environmentSchema.optional(), graceMs: z.number().int().positive().max(2_147_483_647),
   stdio: z.object({
     stdin: z.union([z.literal('ignore'), z.literal('pipe'), z.object({ data: z.string() }).strict()]),
-    stdout: z.union([z.literal('pipe'), z.literal('inherit'), collection]),
-    stderr: z.union([z.literal('pipe'), z.literal('inherit'), collection]),
+    // Every ordinary process publishes stdout and stderr, and release happens
+    // once the client has attached both: `inherit` cannot be honoured without
+    // silently changing that contract, so it is not part of the vocabulary.
+    stdout: z.union([z.literal('pipe'), collection]),
+    stderr: z.union([z.literal('pipe'), collection]),
     control: z.literal('pipe').optional(),
   }).strict().optional(),
   terminal: z.object({

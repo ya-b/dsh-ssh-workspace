@@ -291,6 +291,26 @@ export class RemoteWorkspaceTransport {
 
   get state(): TransportStatus { return this.status }
   get hello(): DaemonHello | undefined { return this.master?.hello }
+
+  /**
+   * The daemon session identity this transport joins. Published so an operator
+   * tool (or a test) can attach a second, independent channel to the *same*
+   * session, which is how a probe inspects a live session without disturbing it.
+   * @returns the session uuid, or undefined before the first connection attempt.
+   */
+  /**
+   * Absolute local path of this session's SSH control socket. Published for the
+   * same reason as {@link clientId}: an operator or test can inspect or end the
+   * channel with `ssh -S <path> -O check|exit <host>`.
+   * @returns the control socket path, or undefined before the first attempt.
+   */
+  get controlSocket(): string | undefined {
+    return this.master?.controlPath ?? (this.directory === undefined ? undefined : join(this.directory, 'master'))
+  }
+
+  get clientId(): string | undefined {
+    return this.directory === undefined ? undefined : this.clientUuid(this.directory)
+  }
   /** Local control socket of the live SSH master (diagnostics and forced outage tests). */
   get controlPath(): string | undefined { return this.master?.controlPath }
 
@@ -310,7 +330,11 @@ export class RemoteWorkspaceTransport {
     const master = this.master
     this.master = undefined
     if (master !== undefined) await master.close()
-    if (this.directory !== undefined) await rm(this.directory, { recursive: true, force: true })
+    // The control directory is scratch space: a leftover file (an SSH master
+    // still settling) must never turn disposal into a failure the caller sees.
+    if (this.directory !== undefined) {
+      await rm(this.directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }).catch(() => {})
+    }
   }
 
   /**
