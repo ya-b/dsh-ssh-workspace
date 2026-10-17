@@ -16,26 +16,6 @@ import type { ReactElement } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-// Temporary diagnostics: capture the first render failure of this plugin's
-// surfaces on window.__dshWsErrors so it can be read from the page.
-if (typeof window !== 'undefined') {
-  const scope = window as unknown as { __dshWsErrors?: string[], __dshWsHooked?: boolean }
-  if (scope.__dshWsHooked !== true) {
-    scope.__dshWsHooked = true
-    scope.__dshWsErrors = []
-    const original = console.error
-    console.error = (...args: unknown[]) => {
-      try {
-        scope.__dshWsErrors?.push(args.map(part => {
-          if (part instanceof Error) return `${part.message} :: ${(part.stack ?? '').slice(0, 300)}`
-          return String(part).slice(0, 300)
-        }).join(' | ').slice(0, 800))
-      } catch { /* diagnostics never throw */ }
-      original(...(args as never[]))
-    }
-  }
-}
-
 /** Route prefix of this plugin's host half. */
 const API = '/ssh-workspace'
 

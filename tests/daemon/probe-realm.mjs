@@ -36,6 +36,12 @@ const world = await registry.worldForWorkspace(workspace)
 check('remote world resolved as ssh transport', world.transport === 'ssh', `host=${world.host}`)
 check('remote world carries every provider', world.fs !== undefined && world.subprocess !== undefined && world.sandbox !== undefined && world.shell !== undefined)
 
+// The session path must resolve to the very world the workspace path does:
+// a session is only remote if its own lookup lands on the realm.
+const sessionWorld = await registry.worldForSessionId('probe-session')
+check('worldForSessionId resolves through the same realm', sessionWorld === world)
+check('the realm does not hand back the host filesystem', world.fs.constructor.name === 'SshFileSystem', world.fs.constructor.name)
+
 const target = await world.fs.resolve(join(REMOTE_ROOT, 'realm-note.txt'))
 await import('node:fs/promises').then(fsModule => fsModule.rm(target.targetKey, { force: true }))
 const written = await world.fs.writeText(target, 'realm\n', { kind: 'createIfAbsent' })

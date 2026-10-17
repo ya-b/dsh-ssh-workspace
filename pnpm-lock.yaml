@@ -87,6 +87,9 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: link:../deepseek-harness/vendor/schemastery
         version: link:../deepseek-harness/vendor/schemastery
+      '@dsh-ssh-workspace/api':
+        specifier: workspace:*
+        version: link:packages/api
       '@dsh-ssh-workspace/install':
         specifier: workspace:*
         version: link:packages/install
@@ -102,6 +105,9 @@ importers:
       '@dsh-ssh-workspace/transport':
         specifier: workspace:*
         version: link:packages/transport
+      '@dsh-ssh-workspace/ui':
+        specifier: workspace:*
+        version: link:packages/ui
       '@types/node':
         specifier: ^26.0.0
         version: 26.6.5

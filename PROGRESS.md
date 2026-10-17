@@ -30,6 +30,20 @@
 5. **压测**：200 次连续观测完成（`fs.resolve` 抽样 ≈ 4 ms/op）。
 6. **崩溃自愈**：socket 在而 pid 已死时，bootstrap 清理残留并重启（`bootstrapCommand`）。
 
+### 最终验收（对照 PLAN「全局验收」5 条）
+
+| 验收项 | 证据 |
+|---|---|
+| 1 两步流：本机置顶 + ssh config 具名 host（通配隐藏）+ precheck 徽标 + 远端目录树 → `transport: ssh` 创建且重启不丢 | `tests/api/machines.test.mjs` 10/10（通配/取反/Include 递归与去重/顺序）；浏览器实测 precheck `usable`、目录树导航、添加成功；store 中 `{path,transport:{kind:'ssh',host}}` 在实例重启后仍渲染于侧边栏 |
+| 2 会话内 fs/搜索/bash/terminal 作用于远端 | realm 探针断言 `worldForSessionId === worldForWorkspace`（同一 realm）且其 fs 为官方 `SshFileSystem`；浏览器会话内 bash 的**父进程 = `workspaced.js`**，即命令由远端 daemon 派生 |
+| 3 ssh 断线（含 **120s**）：daemon 原地继续、无心跳清扫；重连后不重发即得终态；terminal 自断点续播；远端无第二个进程 | `probe-transport` 11/11（exit code + 一次性计数器）、`probe-resilience` 11/11（`PROBE_OUTAGE_MS=120000` 运行通过：断线期间写入被完整回放、无字节丢失） |
+| 4 daemon 重启/丢失 → 明确「进度丢失」，不挂死；绝不窥 helper | `WORKSPACE_PROGRESS_LOST` 断言；transport 只在真实链路丢失时重试且首次连接有上限，绝不无限挂起；插件从未执行 helper（仅用惰性占位字符串满足上游配置校验） |
+| 5 红线：harness diff = 0；无 `@deepseek-ai/dsh-*/src/*` import；安全面不变；无盲重发；reap 仅三类显式事件 | harness 侧 64 个改动全部为本次会话之前就存在的工作树改动，本插件零改动；`grep` 深路径 import = 0；`BatchMode/StrictHostKeyChecking/ForwardAgent=no/ClearAllForwardings` 全在；state 目录 `0700`、socket `0600`；`OPID_METHODS`/`REISSUABLE` 门 + 探针计数；reap 仅 daemon 关闭 / 显式 terminate / 句柄上限 |
+
+本轮把三处真实缺陷修掉并回归：realm 打开会因白名单被无限重试（daemon 新增 `workspace.allow`
+并落盘 + transport 改为只在链路丢失时重试且有上限）、失败握手泄漏 ssh 进程、
+daemon 被 SIGKILL 后 socket 残留导致无法自愈。
+
 ### C2 文档与兼容
 - `README.md`：架构、浏览器用法、兼容矩阵（Node ≥ 20 / OpenSSH ≥ 8.2 / POSIX sh / linux 预编译）、
   恢复与运维表、四个探针的运行方式。

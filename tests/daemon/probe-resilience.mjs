@@ -34,6 +34,9 @@ function check(name, ok, detail = '') {
 }
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
+/** How long the transport stays partitioned; C2 asks for a multi-minute run. */
+const OUTAGE_MS = Number(process.env.PROBE_OUTAGE_MS ?? 2000)
+
 /** Install the daemon and give it an explicit handle limit for the reap case. */
 async function install(maxProcessHandles) {
   await execFile('mkdir', ['-p', DAEMON_DIR, WORKSPACE])
@@ -144,12 +147,13 @@ async function main() {
 
   const killed = await killMaster(transport.controlSocket)
   check('simulated an SSH outage', killed.pids.length > 0, `${killed.pids.length} master process(es) killed`)
-  await sleep(2000)
+  await sleep(OUTAGE_MS)
   // The daemon is untouched: the write lands while no client is attached.
   const during = await bridge(sessionUuid)
   await during.peer.requestRaw('terminal.write', { id: tty.id, value: 'echo DURING-$((4*11))\n' })
   during.close()
-  const afterDeadline = Date.now() + 20_000
+  console.log(`outage lasted ${String(Math.round(OUTAGE_MS / 1000))}s`)
+  const afterDeadline = Date.now() + OUTAGE_MS + 20_000
   while (!output.includes('DURING-44') && Date.now() < afterDeadline) await sleep(250)
   check('terminal output during the outage was replayed', output.includes('DURING-44'), JSON.stringify(output.slice(-60)))
   check('no output was lost around the outage', output.includes('BEFORE-33') && output.includes('DURING-44'))

@@ -56,6 +56,23 @@ DeepSeek Harness 的远程工作区插件：Web UI 里先选机器、再选目�
 | daemon 重启后 | 白名单从 `config.json` 恢复（含用户曾添加的目录，保留最近 64 条） |
 | 远端缺少 node-pty | 一切正常，只有终端不可用 |
 
+## 运行一个带完整 UI 的实例
+
+原生「添加远程工作区…」入口与 `verifyRemote` 客户端通路在**本地 harness 构建**里
+（`~/repo/deepseek-harness` 工作树中的未发布改动）。因此：
+
+```bash
+# 一次性构建（宿主半 + 客户端半 + 前端）
+cd ~/repo/deepseek-harness && pnpm build:lib && pnpm build:web
+
+# 启动（本插件的面板与入口都在）
+DSH_HOME=~/.dsh node apps/cli/lib/bin.js web --no-open --port 3081
+```
+
+本机 3080 端口的常驻服务由 systemd 用户单元启动的是**已发布版本**的 `dsh`，
+它不含上面的 harness 改动，因此那个实例只有本插件提供的 🌐 面板本身可用
+（面板依赖的宿主路由与本插件同装即可），原生「添加远程工作区…」入口不会出现。
+
 ## 验证
 
 ```bash

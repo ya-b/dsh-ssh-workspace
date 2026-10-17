@@ -37,6 +37,8 @@
     "@deepseek-ai/dsh-shell": "link:../deepseek-harness/packages/shell/shell",
     "@dsh-ssh-workspace/providers": "workspace:*",
     "@deepseek-ai/cordis": "link:../deepseek-harness/vendor/cordis",
-    "@deepseek-ai/schemastery": "link:../deepseek-harness/vendor/schemastery"
+    "@deepseek-ai/schemastery": "link:../deepseek-harness/vendor/schemastery",
+    "@dsh-ssh-workspace/api": "workspace:*",
+    "@dsh-ssh-workspace/ui": "workspace:*"
   }
 }
