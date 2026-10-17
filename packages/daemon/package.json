@@ -1,0 +1,72 @@
+{
+  "name": "@dsh-ssh-workspace/daemon",
+  "description": "Remote workspace daemon: durable fs/process/terminal execution over a private unix-socket RPC; survives SSH outages with opId idempotency and explicit-only reap",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/workspaced.js",
+  "types": "lib/types/entry.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/entry.d.ts",
+      "default": "./lib/workspaced.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/workspaced.js"
+  ],
+  "dsh": {
+    "workspaceDaemon": true
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --root ../.. --dir tests/daemon"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@dsh-ssh-workspace/rpc": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-fs-sandbox": ">=0.0.1",
+    "@deepseek-ai/dsh-session-projection": ">=0.0.1",
+    "@deepseek-ai/dsh-sandbox-local": ">=0.0.1",
+    "@deepseek-ai/dsh-sandbox-policy": ">=0.0.1",
+    "@deepseek-ai/dsh-subprocess-local": ">=0.0.1",
+    "@deepseek-ai/dsh-fs": "link:../../deepseek-harness/packages/fs/fs",
+    "@deepseek-ai/dsh-subprocess": "link:../../deepseek-harness/packages/subprocess/subprocess",
+    "@deepseek-ai/dsh-sandbox": "link:../../deepseek-harness/packages/sandbox/sandbox",
+    "@deepseek-ai/dsh-shell": "link:../../deepseek-harness/packages/shell/shell",
+    "@deepseek-ai/dsh-session": "link:../../deepseek-harness/packages/core/session",
+    "@deepseek-ai/dsh-cordis": "link:../../deepseek-harness/vendor/cordis",
+    "@deepseek-ai/cordis": "link:../../deepseek-harness/vendor/cordis",
+    "@deepseek-ai/schemastery": "link:../../deepseek-harness/vendor/schemastery"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-fs-sandbox": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session-projection": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-sandbox-local": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-sandbox-policy": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-subprocess-local": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-fs": "link:../../deepseek-harness/packages/fs/fs",
+    "@deepseek-ai/dsh-subprocess": "link:../../deepseek-harness/packages/subprocess/subprocess",
+    "@deepseek-ai/dsh-sandbox": "link:../../deepseek-harness/packages/sandbox/sandbox",
+    "@deepseek-ai/dsh-shell": "link:../../deepseek-harness/packages/shell/shell",
+    "@deepseek-ai/dsh-session": "link:../../deepseek-harness/packages/core/session",
+    "@deepseek-ai/cordis": "link:../../deepseek-harness/vendor/cordis",
+    "@deepseek-ai/schemastery": "link:../../deepseek-harness/vendor/schemastery"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "dsh-ssh-workspace-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "pnpm -r --no-bail run test",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.0",
+    "typescript": "~5.9.0",
+    "@types/node": "^26.0.0",
+    "zod": "^4.4.3",
+    "vitest": "^3.2.0",
+    "@dsh-ssh-workspace/rpc": "workspace:*",
+    "@dsh-ssh-workspace/transport": "workspace:*",
+    "@dsh-ssh-workspace/realm": "workspace:*",
+    "@deepseek-ai/dsh-ssh": "link:../deepseek-harness/packages/ssh/ssh",
+    "@deepseek-ai/dsh-fs-ssh": "link:../deepseek-harness/packages/ssh/fs-ssh",
+    "@deepseek-ai/dsh-subprocess-ssh": "link:../deepseek-harness/packages/ssh/subprocess-ssh",
+    "@deepseek-ai/dsh-sandbox-ssh": "link:../deepseek-harness/packages/ssh/sandbox-ssh",
+    "@deepseek-ai/dsh-host-execution-worlds": "link:../deepseek-harness/packages/host/execution-worlds",
+    "@deepseek-ai/dsh-workspace": "link:../deepseek-harness/packages/workspace/workspace",
+    "@deepseek-ai/dsh-bash-sandbox": "link:../deepseek-harness/packages/shell/bash-sandbox",
+    "@deepseek-ai/dsh-bash-local": "link:../deepseek-harness/packages/shell/bash-local",
+    "@deepseek-ai/dsh-host-directory-picker": "link:../deepseek-harness/packages/host/directory-picker",
+    "@deepseek-ai/dsh-fs-local": "link:../deepseek-harness/packages/fs/fs-local",
+    "@deepseek-ai/dsh-session": "link:../deepseek-harness/packages/core/session"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@dsh-ssh-workspace/rpc",
+  "description": "Shared length-prefixed JSON RPC peer for the workspace daemon and its client transport",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}

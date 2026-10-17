@@ -1,0 +1,32 @@
+packages:
+  - packages/*
+  - profile
+
+nodeLinker: hoisted
+autoInstallPeers: false
+
+allowBuilds:
+  esbuild: true
+
+# Build-time overrides: compile/bundle against the sibling harness checkout so
+# the daemon bundle and realm plugin match the installed dsh runtime exactly.
+# Runtime instances resolve the same names through the harness profile's
+# own node_modules; build links are a developer convenience only.
+overrides:
+  '@deepseek-ai/dsh-fs-sandbox': link:../deepseek-harness/packages/fs/fs-sandbox
+  '@deepseek-ai/dsh-subprocess-local': link:../deepseek-harness/packages/subprocess/subprocess-local
+  '@deepseek-ai/dsh-sandbox-local': link:../deepseek-harness/packages/sandbox/sandbox-local
+  '@deepseek-ai/dsh-sandbox-policy': link:../deepseek-harness/packages/sandbox/sandbox-policy
+  '@deepseek-ai/dsh-session-projection': link:../deepseek-harness/packages/session/session-projection
+  '@deepseek-ai/dsh-fs': link:../deepseek-harness/packages/fs/fs
+  '@deepseek-ai/dsh-subprocess': link:../deepseek-harness/packages/subprocess/subprocess
+  '@deepseek-ai/dsh-sandbox': link:../deepseek-harness/packages/sandbox/sandbox
+  '@deepseek-ai/dsh-shell': link:../deepseek-harness/packages/shell/shell
+  '@deepseek-ai/dsh-session': link:../deepseek-harness/packages/core/session
+  '@deepseek-ai/dsh-brand': link:../deepseek-harness/packages/util/brand
+  '@deepseek-ai/dsh-util-values': link:../deepseek-harness/packages/util/values
+  '@deepseek-ai/dsh-timeout': link:../deepseek-harness/packages/util/timeout
+  '@deepseek-ai/dsh-cheap-reporter': link:../deepseek-harness/packages/util/cheap-reporter
+  '@deepseek-ai/cordis': link:../deepseek-harness/vendor/cordis
+  '@deepseek-ai/schemastery': link:../deepseek-harness/vendor/schemastery
+  '@deepseek-ai/cosmokit': link:../deepseek-harness/vendor/cosmokit
