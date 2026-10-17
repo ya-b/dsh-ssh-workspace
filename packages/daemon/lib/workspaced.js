@@ -57647,6 +57647,12 @@ var frameSchema = external_exports2.discriminatedUnion("type", [
 function operationError(error112) {
   return error112 instanceof Error ? error112 : new Error(String(error112));
 }
+var RpcTransportError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "RpcTransportError";
+  }
+};
 var RemoteOperationError = class extends Error {
   code;
   constructor(message, code) {
@@ -57718,7 +57724,7 @@ var RpcPeer = class extends EventEmitter2 {
     return await this.request(method, params, external_exports2.unknown(), signal);
   }
   /** Fail pending operations and abort active handlers. */
-  close(error112 = new Error("RPC connection lost; remote operation outcome is unknown")) {
+  close(error112 = new RpcTransportError("RPC connection lost; remote operation outcome is unknown")) {
     if (this.failure !== void 0) return;
     this.failure = error112;
     for (const pending of this.pending.values()) pending.reject(error112);
@@ -57801,7 +57807,7 @@ var RpcPeer = class extends EventEmitter2 {
         }
       }
     }
-    throw new Error(headerBytes > 0 || payload !== void 0 ? "RPC peer disconnected during a frame; outcome is unknown" : "RPC peer disconnected; outcome is unknown");
+    throw new RpcTransportError(headerBytes > 0 || payload !== void 0 ? "RPC peer disconnected during a frame; outcome is unknown" : "RPC peer disconnected; outcome is unknown");
   }
   receive(frame) {
     if (frame.type === "result" || frame.type === "error") {
@@ -58222,16 +58228,8 @@ var RemoteProcessOwner = class {
     if (opId !== void 0) {
       const existing = this.byOpId.get(opId);
       if (existing !== void 0) {
-        const completed = this.completed.get(existing);
-        if (completed !== void 0) {
-          return {
-            id: existing,
-            streams: {},
-            phase: "completed",
-            startResult: completed.startResult
-          };
-        }
-        return { ...this.describe(existing), phase: "prepared" };
+        if (this.completed.has(existing)) return { id: existing, streams: {} };
+        return this.describe(existing);
       }
     }
     const request = spawnSchema.parse(raw);
@@ -58259,7 +58257,7 @@ var RemoteProcessOwner = class {
         record3.endpoints[name] = await createEndpoint(directory, name, replay === void 0 ? {} : { replay });
         record3.controller.signal.throwIfAborted();
       }
-      return { ...this.describe(id), phase: "prepared" };
+      return this.describe(id);
     } catch (error112) {
       void this.release(id).catch(() => {
       });
@@ -58707,7 +58705,7 @@ async function dispatch(method, raw, signal, session, registry4) {
       return ctx.sandbox.confine(input2.argv, resolved, signal);
     }
     case "process.prepare": {
-      await registry4.reapDetached();
+      void registry4.reapDetached(session.uuid);
       const { spawn: spawn3, opId } = parsePrepare(raw);
       return await owner.prepare(spawn3, opId);
     }
@@ -58951,14 +58949,26 @@ var ClientRegistry = class {
   drop(uuid8) {
     this.sessions.delete(uuid8);
   }
-  /** Reclaim sessions that have detached and own no processes (reap event ③). */
-  async reapDetached() {
+  /**
+   * Reclaim sessions that have detached and own no processes (reap event ③).
+   * Bounded and never blocking a caller: disposal of a session whose child
+   * ignores SIGTERM must not wedge an unrelated request.
+   * @param keep - uuid of the asking session, never reclaimed here.
+   * @param budgetMs - per-session disposal budget before the attempt is abandoned.
+   */
+  async reapDetached(keep, budgetMs = 5e3) {
     const entries = await Promise.allSettled([...this.sessions.values()]);
     for (const entry of entries) {
       if (entry.status !== "fulfilled") continue;
       const session = entry.value;
-      if (!session.detached || session.owner.size > 0) continue;
-      await session.dispose();
+      if (session.uuid === keep || !session.detached || session.owner.size > 0) continue;
+      await Promise.race([
+        session.dispose().catch(() => {
+        }),
+        new Promise((resolve8) => {
+          setTimeout(resolve8, budgetMs).unref();
+        })
+      ]);
     }
   }
   get size() {

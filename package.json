@@ -27,6 +27,15 @@
     "@deepseek-ai/dsh-host-directory-picker": "link:../deepseek-harness/packages/host/directory-picker",
     "@deepseek-ai/dsh-fs-local": "link:../deepseek-harness/packages/fs/fs-local",
     "@deepseek-ai/dsh-session": "link:../deepseek-harness/packages/core/session",
-    "@dsh-ssh-workspace/install": "workspace:*"
+    "@dsh-ssh-workspace/install": "workspace:*",
+    "@deepseek-ai/dsh-sandbox-policy": "link:../deepseek-harness/packages/sandbox/sandbox-policy",
+    "@deepseek-ai/dsh-session-projection": "link:../deepseek-harness/packages/session/session-projection",
+    "@deepseek-ai/dsh-subprocess-local": "link:../deepseek-harness/packages/subprocess/subprocess-local",
+    "@deepseek-ai/dsh-subprocess": "link:../deepseek-harness/packages/subprocess/subprocess",
+    "@deepseek-ai/dsh-fs": "link:../deepseek-harness/packages/fs/fs",
+    "@deepseek-ai/dsh-sandbox": "link:../deepseek-harness/packages/sandbox/sandbox",
+    "@deepseek-ai/dsh-shell": "link:../deepseek-harness/packages/shell/shell",
+    "@dsh-ssh-workspace/providers": "workspace:*",
+    "@deepseek-ai/cordis": "link:../deepseek-harness/vendor/cordis"
   }
 }

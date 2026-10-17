@@ -10,7 +10,7 @@
 | A0 探针 | **通过（核心项）** | `tests/daemon/probe-transport.mjs` 11/11 checks |
 | A1 daemon | **通过** | 同上：进程/fs/terminal/opId 去重/replay 全绿 |
 | A2 transport | **通过** | 同上：ssh 通道杀死后重连续取终态，零重复执行 |
-| A3 provider 薄壳 | 未开始 | 设计已定（见下） |
+| A3 provider 薄壳 | **通过** | `tests/daemon/probe-providers.mjs` 13/13 checks |
 | A4 realm 注入 | 未开始 | 设计已定（见下） |
 | B1/B2/B3 | 未开始 | — |
 | C1/C2 | 部分（case 1 已覆盖） | probe 的"master kill + 单次执行 + 终态重取" |
@@ -53,12 +53,17 @@
 
 ## 未完成 / 下一步
 
-### A3 providers（`packages/providers`）
-- 挂载官方 `SshFileSystem` / `SshSubprocessRuntime` / `SshSandboxProvider` + `SandboxBashExecutor`，
-  以 `RemoteWorkspaceTransport` 作为 `ctx.ssh`。
-- schema snapshot 对照 `@deepseek-ai/dsh-ssh/schemas`（逐字段），确认 daemon 响应全部通过官方 zod。
-- 已知待补：`fs.stream` 重连策略（迭代器不可跨连接续传，当前在断线时结构化失败）、
-  `SshSubprocessRuntime` 的 `process.done(wait=true)` 在断线期间的等待行为已由 transport 覆盖。
+### A3 providers（`packages/providers`）——已完成
+- `DaemonSshConnection extends Service`（注册为 `ctx.ssh`），surface = `{ready, request, connectStream, dispose}`；
+  官方 `SshFileSystem` / `SshSubprocessRuntime` / `SshSandboxProvider` / `SandboxBashExecutor` 原样挂载。
+- **实测约束（重要）**：provider 会用官方 `preparedSchema`（`.strict()`）解析 `process.prepare` 响应，
+  因此响应**必须**恰好为 `{id, streams}`；任何附加字段都会解析失败。
+  已终态 reservation 以 `{id, streams:{}}` 应答，`process.start` / `process.done` 从缓存返回——
+  provider 的空流循环自然退化为"无流可连"。
+- **实测约束（重要）**：transport 的 `request` 重试必须只在真实断线（`RpcTransportError`）时发生；
+  早期把 zod 解析错误也当作断线重试，造成 20s 静默 SSH 重连循环、真实错误被吞。
+  现已改为按类型判定（`isTransportLoss`）。
+- 已知待补：`fs.stream` 的迭代器不可跨连接续传（断线时结构化失败，非静默重试）。
 
 ### A4 realm（`packages/realm`）
 - `RemoteWorkspaceRegistry extends WorkspaceRuntimeRegistry`：

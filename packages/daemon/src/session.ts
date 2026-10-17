@@ -154,7 +154,9 @@ async function dispatch(method: string, raw: unknown, signal: AbortSignal, sessi
     case 'process.prepare': {
       // Reap event ③ also covers detached, process-less sessions: a client
       // that reconnected and re-prepared must not accumulate dead sessions.
-      await registry.reapDetached()
+      // It runs off the request path, because a stale session's own disposal
+      // may legitimately stall on a child that ignores SIGTERM.
+      void registry.reapDetached(session.uuid)
       const { spawn, opId } = parsePrepare(raw)
       return await owner.prepare(spawn, opId)
     }
@@ -381,14 +383,23 @@ export class ClientRegistry {
 
   drop(uuid: string): void { this.sessions.delete(uuid) }
 
-  /** Reclaim sessions that have detached and own no processes (reap event ③). */
-  async reapDetached(): Promise<void> {
+  /**
+   * Reclaim sessions that have detached and own no processes (reap event ③).
+   * Bounded and never blocking a caller: disposal of a session whose child
+   * ignores SIGTERM must not wedge an unrelated request.
+   * @param keep - uuid of the asking session, never reclaimed here.
+   * @param budgetMs - per-session disposal budget before the attempt is abandoned.
+   */
+  async reapDetached(keep?: string, budgetMs = 5000): Promise<void> {
     const entries = await Promise.allSettled([...this.sessions.values()])
     for (const entry of entries) {
       if (entry.status !== 'fulfilled') continue
       const session = entry.value
-      if (!session.detached || session.owner.size > 0) continue
-      await session.dispose()
+      if (session.uuid === keep || !session.detached || session.owner.size > 0) continue
+      await Promise.race([
+        session.dispose().catch(() => {}),
+        new Promise<void>((resolve) => { setTimeout(resolve, budgetMs).unref() }),
+      ])
     }
   }
 

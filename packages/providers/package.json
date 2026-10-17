@@ -1,8 +1,19 @@
 {
   "name": "@dsh-ssh-workspace/providers",
+  "description": "Daemon-backed ctx.ssh service that mounts the official SSH provider family unchanged",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "license": "MIT",
+  "dependencies": {
+    "@dsh-ssh-workspace/transport": "workspace:*"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "link:../../deepseek-harness/vendor/cordis"
+  }
 }

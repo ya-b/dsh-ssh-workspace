@@ -27,12 +27,18 @@ importers:
 
   .:
     devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: link:../deepseek-harness/vendor/cordis
+        version: link:../deepseek-harness/vendor/cordis
       '@deepseek-ai/dsh-bash-local':
         specifier: link:../deepseek-harness/packages/shell/bash-local
         version: link:../deepseek-harness/packages/shell/bash-local
       '@deepseek-ai/dsh-bash-sandbox':
         specifier: link:../deepseek-harness/packages/shell/bash-sandbox
         version: link:../deepseek-harness/packages/shell/bash-sandbox
+      '@deepseek-ai/dsh-fs':
+        specifier: link:../deepseek-harness/packages/fs/fs
+        version: link:../deepseek-harness/packages/fs/fs
       '@deepseek-ai/dsh-fs-local':
         specifier: link:../deepseek-harness/packages/fs/fs-local
         version: link:../deepseek-harness/packages/fs/fs-local
@@ -45,15 +51,33 @@ importers:
       '@deepseek-ai/dsh-host-execution-worlds':
         specifier: link:../deepseek-harness/packages/host/execution-worlds
         version: link:../deepseek-harness/packages/host/execution-worlds
+      '@deepseek-ai/dsh-sandbox':
+        specifier: link:../deepseek-harness/packages/sandbox/sandbox
+        version: link:../deepseek-harness/packages/sandbox/sandbox
+      '@deepseek-ai/dsh-sandbox-policy':
+        specifier: link:../deepseek-harness/packages/sandbox/sandbox-policy
+        version: link:../deepseek-harness/packages/sandbox/sandbox-policy
       '@deepseek-ai/dsh-sandbox-ssh':
         specifier: link:../deepseek-harness/packages/ssh/sandbox-ssh
         version: link:../deepseek-harness/packages/ssh/sandbox-ssh
       '@deepseek-ai/dsh-session':
         specifier: link:../deepseek-harness/packages/core/session
         version: link:../deepseek-harness/packages/core/session
+      '@deepseek-ai/dsh-session-projection':
+        specifier: link:../deepseek-harness/packages/session/session-projection
+        version: link:../deepseek-harness/packages/session/session-projection
+      '@deepseek-ai/dsh-shell':
+        specifier: link:../deepseek-harness/packages/shell/shell
+        version: link:../deepseek-harness/packages/shell/shell
       '@deepseek-ai/dsh-ssh':
         specifier: link:../deepseek-harness/packages/ssh/ssh
         version: link:../deepseek-harness/packages/ssh/ssh
+      '@deepseek-ai/dsh-subprocess':
+        specifier: link:../deepseek-harness/packages/subprocess/subprocess
+        version: link:../deepseek-harness/packages/subprocess/subprocess
+      '@deepseek-ai/dsh-subprocess-local':
+        specifier: link:../deepseek-harness/packages/subprocess/subprocess-local
+        version: link:../deepseek-harness/packages/subprocess/subprocess-local
       '@deepseek-ai/dsh-subprocess-ssh':
         specifier: link:../deepseek-harness/packages/ssh/subprocess-ssh
         version: link:../deepseek-harness/packages/ssh/subprocess-ssh
@@ -63,6 +87,9 @@ importers:
       '@dsh-ssh-workspace/install':
         specifier: workspace:*
         version: link:packages/install
+      '@dsh-ssh-workspace/providers':
+        specifier: workspace:*
+        version: link:packages/providers
       '@dsh-ssh-workspace/realm':
         specifier: workspace:*
         version: link:packages/realm
@@ -145,7 +172,14 @@ importers:
         specifier: workspace:*
         version: link:../transport
 
-  packages/providers: {}
+  packages/providers:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: link:../../../deepseek-harness/vendor/cordis
+        version: link:../../../deepseek-harness/vendor/cordis
+      '@dsh-ssh-workspace/transport':
+        specifier: workspace:*
+        version: link:../transport
 
   packages/realm: {}
 

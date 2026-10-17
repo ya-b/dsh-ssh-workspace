@@ -119,14 +119,11 @@ export class RemoteProcessOwner {
     if (opId !== undefined) {
       const existing = this.byOpId.get(opId)
       if (existing !== undefined) {
-        const completed = this.completed.get(existing)
-        if (completed !== undefined) {
-          return {
-            id: existing, streams: {}, phase: 'completed',
-            startResult: completed.startResult,
-          }
-        }
-        return { ...this.describe(existing), phase: 'prepared' }
+        // A completed reservation answers with its id and no streams: the
+        // official prepared schema is strict, and start/done remain queryable
+        // from the completion cache.
+        if (this.completed.has(existing)) return { id: existing, streams: {} }
+        return this.describe(existing)
       }
     }
     const request = spawnSchema.parse(raw)
@@ -155,7 +152,7 @@ export class RemoteProcessOwner {
         record.endpoints[name] = await createEndpoint(directory, name, replay === undefined ? {} : { replay })
         record.controller.signal.throwIfAborted()
       }
-      return { ...this.describe(id), phase: 'prepared' }
+      return this.describe(id)
     } catch (error) {
       void this.release(id).catch(() => {})
       throw error

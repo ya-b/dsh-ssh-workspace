@@ -26,6 +26,14 @@ function operationError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
 }
 
+/** The peer's transport is gone; the operation's remote outcome is unknown and a retry is the caller's decision. */
+export class RpcTransportError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'RpcTransportError'
+  }
+}
+
 /** Remote error retaining its typed filesystem or sandbox code. */
 export class RemoteOperationError extends Error {
   readonly code: string | undefined
@@ -110,7 +118,7 @@ export class RpcPeer extends EventEmitter {
   }
 
   /** Fail pending operations and abort active handlers. */
-  close(error: Error = new Error('RPC connection lost; remote operation outcome is unknown')): void {
+  close(error: Error = new RpcTransportError('RPC connection lost; remote operation outcome is unknown')): void {
     if (this.failure !== undefined) return
     this.failure = error
     for (const pending of this.pending.values()) pending.reject(error)
@@ -181,7 +189,7 @@ export class RpcPeer extends EventEmitter {
         }
       }
     }
-    throw new Error(headerBytes > 0 || payload !== undefined ? 'RPC peer disconnected during a frame; outcome is unknown' : 'RPC peer disconnected; outcome is unknown')
+    throw new RpcTransportError(headerBytes > 0 || payload !== undefined ? 'RPC peer disconnected during a frame; outcome is unknown' : 'RPC peer disconnected; outcome is unknown')
   }
 
   private receive(frame: Frame): void {

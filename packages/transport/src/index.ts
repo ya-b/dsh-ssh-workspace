@@ -18,7 +18,7 @@ import { connect, type TLSSocket } from 'node:tls'
 import { createConnection, type Socket } from 'node:net'
 import { Duplex } from 'node:stream'
 import { basename, join } from 'node:path'
-import { RpcPeer, RemoteOperationError } from '@dsh-ssh-workspace/rpc'
+import { RpcPeer, RemoteOperationError, RpcTransportError } from '@dsh-ssh-workspace/rpc'
 import { z } from 'zod'
 
 /** Stream endpoint coordinates published by the daemon. */
@@ -271,10 +271,7 @@ export class RemoteWorkspaceTransport {
   get controlPath(): string | undefined { return this.master?.controlPath }
 
   /** Establish the first session; resolves once the daemon handshake completes. */
-  async open(): Promise<void> {
-    this.directory ??= this.config.controlDir ?? await mkdtemp('/tmp/dsh-ws-')
-    await this.ensureSession()
-  }
+  async open(): Promise<void> { await this.ensureSession() }
 
   /** Wait until a live session exists (used by stream re-attachment). */
   async awaitReady(): Promise<void> { await this.ensureSession() }
@@ -314,7 +311,11 @@ export class RemoteWorkspaceTransport {
       } catch (error) {
         bounded?.throwIfAborted()
         if (this.stopped) throw error
-        if (error instanceof RemoteOperationError) throw error
+        // Only a genuine transport loss is retryable. A remote operation
+        // error, a response-schema error, or a caller abort must surface
+        // unchanged: silently re-issuing those would hide real failures
+        // (and, worse, churn SSH connections in a loop).
+        if (!this.isTransportLoss(error)) throw error
         if (!(REISSUABLE.has(method) || opId !== undefined)) throw error
         // Transport loss: reconnect and re-issue. The daemon's opId gate (for
         // mutations) or read-only nature (for observations) makes this safe.
@@ -392,6 +393,16 @@ export class RemoteWorkspaceTransport {
     return tls
   }
 
+  private isTransportLoss(error: unknown): boolean {
+    if (error instanceof RemoteOperationError) return false
+    if (error instanceof RpcTransportError) return true
+    if (this.master === undefined) return true
+    // Node socket/ssh exec failures carry no typed marker; treat only their
+    // well-known shapes as loss.
+    const code = (error as { code?: unknown } | null)?.code
+    return typeof code === 'string' && ['ECONNRESET', 'EPIPE', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ERR_STREAM_PREMATURE_CLOSE', 'ERR_STREAM_DESTROYED'].includes(code)
+  }
+
   private control(session: MasterSession, args: string[]): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const child = execFile('ssh', ['-S', session.controlPath, ...args, this.config.host], {
@@ -446,7 +457,8 @@ export class RemoteWorkspaceTransport {
   }
 
   private async openOnce(): Promise<MasterSession> {
-    const directory = this.directory as string
+    this.directory ??= this.config.controlDir ?? await mkdtemp('/tmp/dsh-ws-')
+    const directory = this.directory
     const controlPath = join(directory, 'master')
     const child = spawn('ssh', [
       '-T', '-M', '-S', controlPath, '-o', 'ControlPersist=no', '-o', 'BatchMode=yes',
