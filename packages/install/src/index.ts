@@ -11,8 +11,7 @@ import { access, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:
 import { constants } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import type { RemoteWorkspaceConfig } from '@dsh-ssh-workspace/transport'
-import { shellQuote } from '@dsh-ssh-workspace/transport'
+import { daemonDirExpr, type RemoteWorkspaceConfig } from '@dsh-ssh-workspace/transport'
 
 /** Files the daemon bundle needs beside it: its own version manifest and node-pty. */
 export interface DaemonArchiveInput {
@@ -28,7 +27,7 @@ export interface DaemonArchiveInput {
 
 /** Remote command: extract the daemon archive into its state directory. */
 export function installCommand(config: RemoteWorkspaceConfig): string {
-  const dir = shellQuote(config.daemonDir)
+  const dir = daemonDirExpr(config.daemonDir)
   return [
     `D=${dir}`,
     'mkdir -p "$D" && chmod 700 "$D"',

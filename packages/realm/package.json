@@ -1,8 +1,41 @@
 {
   "name": "@dsh-ssh-workspace/realm",
+  "description": "execution-worlds realm backed by the remote workspace daemon: a drop-in row for the dsh profile bundle",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "license": "MIT",
+  "files": ["src", "dist"],
+  "scripts": {
+    "archive": "node scripts/archive.mjs"
+  },
+  "dependencies": {
+    "@dsh-ssh-workspace/install": "workspace:*",
+    "@dsh-ssh-workspace/providers": "workspace:*",
+    "@dsh-ssh-workspace/transport": "workspace:*"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-bash-sandbox": "*",
+    "@deepseek-ai/dsh-fs-ssh": "*",
+    "@deepseek-ai/dsh-host-execution-worlds": "*",
+    "@deepseek-ai/dsh-sandbox-ssh": "*",
+    "@deepseek-ai/dsh-ssh": "*",
+    "@deepseek-ai/dsh-subprocess-ssh": "*",
+    "@deepseek-ai/schemastery": "*"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "link:../../../deepseek-harness/vendor/cordis",
+    "@deepseek-ai/dsh-bash-sandbox": "link:../../../deepseek-harness/packages/sandbox/bash-sandbox",
+    "@deepseek-ai/dsh-fs-ssh": "link:../../../deepseek-harness/packages/ssh/fs-ssh",
+    "@deepseek-ai/dsh-host-execution-worlds": "link:../../../deepseek-harness/packages/host/execution-worlds",
+    "@deepseek-ai/dsh-sandbox-policy": "link:../../../deepseek-harness/packages/sandbox/sandbox-policy",
+    "@deepseek-ai/dsh-sandbox-ssh": "link:../../../deepseek-harness/packages/ssh/sandbox-ssh",
+    "@deepseek-ai/dsh-session-projection": "link:../../../deepseek-harness/packages/session/session-projection",
+    "@deepseek-ai/dsh-ssh": "link:../../../deepseek-harness/packages/ssh/ssh",
+    "@deepseek-ai/dsh-subprocess-ssh": "link:../../../deepseek-harness/packages/ssh/subprocess-ssh",
+    "@deepseek-ai/dsh-workspace": "link:../../../deepseek-harness/packages/workspace/workspace",
+    "@deepseek-ai/schemastery": "link:../../../deepseek-harness/vendor/schemastery"
+  }
 }

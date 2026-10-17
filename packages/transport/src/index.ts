@@ -95,9 +95,24 @@ const BRIDGE = [
   "s.on('close',end);process.stdin.on('end',end);process.stdin.on('error',end);",
 ].join('')
 
+/**
+ * Remote shell expression for a daemon state directory. A leading `~/` must
+ * expand on the remote side, so it becomes `"$HOME/..."`; any other spelling is
+ * single-quoted literally, which keeps command substitution out of reach.
+ * @param directory - configured daemon state directory.
+ * @returns a shell-safe expression evaluating to the directory.
+ */
+export function daemonDirExpr(directory: string): string {
+  if (directory === '~') return '"$HOME"'
+  if (directory.startsWith('~/') && /^[A-Za-z0-9._/-]+$/.test(directory.slice(2))) {
+    return `"$HOME/${directory.slice(2)}"`
+  }
+  return shellQuote(directory)
+}
+
 /** Remote command: ensure the daemon runs on its state directory and bridge stdio to it. */
 export function bootstrapCommand(config: RemoteWorkspaceConfig): string {
-  const dir = shellQuote(config.daemonDir)
+  const dir = daemonDirExpr(config.daemonDir)
   const node = shellQuote(config.node)
   return [
     `D=${dir}`,
@@ -112,7 +127,7 @@ export function bootstrapCommand(config: RemoteWorkspaceConfig): string {
 /** Remote command: atomically install the daemon bundle from this channel's stdin. */
 export function installCommand(config: RemoteWorkspaceConfig): string {
   return [
-    `D=${shellQuote(config.daemonDir)}`,
+    `D=${daemonDirExpr(config.daemonDir)}`,
     'mkdir -p "$D" && chmod 700 "$D"',
     'cat > "$D/workspaced.js.tmp" && chmod 700 "$D/workspaced.js.tmp" && mv "$D/workspaced.js.tmp" "$D/workspaced.js"',
   ].join('; ')

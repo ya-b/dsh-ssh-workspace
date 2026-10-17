@@ -84,6 +84,9 @@ importers:
       '@deepseek-ai/dsh-workspace':
         specifier: link:../deepseek-harness/packages/workspace/workspace
         version: link:../deepseek-harness/packages/workspace/workspace
+      '@deepseek-ai/schemastery':
+        specifier: link:../deepseek-harness/vendor/schemastery
+        version: link:../deepseek-harness/vendor/schemastery
       '@dsh-ssh-workspace/install':
         specifier: workspace:*
         version: link:packages/install
@@ -181,7 +184,51 @@ importers:
         specifier: workspace:*
         version: link:../transport
 
-  packages/realm: {}
+  packages/realm:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: link:../../../deepseek-harness/vendor/cordis
+        version: link:../../../deepseek-harness/vendor/cordis
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../deepseek-harness/vendor/schemastery
+        version: link:../../../deepseek-harness/vendor/schemastery
+      '@dsh-ssh-workspace/install':
+        specifier: workspace:*
+        version: link:../install
+      '@dsh-ssh-workspace/providers':
+        specifier: workspace:*
+        version: link:../providers
+      '@dsh-ssh-workspace/transport':
+        specifier: workspace:*
+        version: link:../transport
+    devDependencies:
+      '@deepseek-ai/dsh-bash-sandbox':
+        specifier: link:../../../deepseek-harness/packages/sandbox/bash-sandbox
+        version: link:../../../deepseek-harness/packages/sandbox/bash-sandbox
+      '@deepseek-ai/dsh-fs-ssh':
+        specifier: link:../../../deepseek-harness/packages/ssh/fs-ssh
+        version: link:../../../deepseek-harness/packages/ssh/fs-ssh
+      '@deepseek-ai/dsh-host-execution-worlds':
+        specifier: link:../../../deepseek-harness/packages/host/execution-worlds
+        version: link:../../../deepseek-harness/packages/host/execution-worlds
+      '@deepseek-ai/dsh-sandbox-policy':
+        specifier: link:../../../deepseek-harness/packages/sandbox/sandbox-policy
+        version: link:../../../deepseek-harness/packages/sandbox/sandbox-policy
+      '@deepseek-ai/dsh-sandbox-ssh':
+        specifier: link:../../../deepseek-harness/packages/ssh/sandbox-ssh
+        version: link:../../../deepseek-harness/packages/ssh/sandbox-ssh
+      '@deepseek-ai/dsh-session-projection':
+        specifier: link:../../../deepseek-harness/packages/session/session-projection
+        version: link:../../../deepseek-harness/packages/session/session-projection
+      '@deepseek-ai/dsh-ssh':
+        specifier: link:../../../deepseek-harness/packages/ssh/ssh
+        version: link:../../../deepseek-harness/packages/ssh/ssh
+      '@deepseek-ai/dsh-subprocess-ssh':
+        specifier: link:../../../deepseek-harness/packages/ssh/subprocess-ssh
+        version: link:../../../deepseek-harness/packages/ssh/subprocess-ssh
+      '@deepseek-ai/dsh-workspace':
+        specifier: link:../../../deepseek-harness/packages/workspace/workspace
+        version: link:../../../deepseek-harness/packages/workspace/workspace
 
   packages/rpc:
     dependencies:

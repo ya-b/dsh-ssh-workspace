@@ -14,11 +14,9 @@ import type { Duplex } from 'node:stream'
 import type { z } from 'zod'
 import { RemoteWorkspaceTransport, type RemoteWorkspaceConfig, type StreamEndpoint } from '@dsh-ssh-workspace/transport'
 
-declare module '@deepseek-ai/cordis' {
-  interface Context {
-    ssh: DaemonSshConnection
-  }
-}
+// The service is registered under the harness's own `ssh` name. Its declared
+// type stays the upstream `SshConnection`; this class is a runtime-compatible
+// substitute, so no context augmentation is added here.
 
 /** Holds the transport instance a realm's providers share. */
 export interface DaemonSshConfig {
