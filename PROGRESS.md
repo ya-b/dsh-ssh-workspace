@@ -11,7 +11,7 @@
 | A1 daemon | **通过** | 同上：进程/fs/terminal/opId 去重/replay 全绿 |
 | A2 transport | **通过** | 同上：ssh 通道杀死后重连续取终态，零重复执行 |
 | A3 provider 薄壳 | **通过** | `tests/daemon/probe-providers.mjs` 13/13 checks |
-| A4 realm 注入 | 未开始 | 设计已定（见下） |
+| A4 realm 注入 | **通过** | `tests/daemon/probe-realm.mjs` 10/10；已装入 web profile |
 | B1/B2/B3 | 未开始 | — |
 | C1/C2 | 部分（case 1 已覆盖） | probe 的"master kill + 单次执行 + 终态重取" |
 
