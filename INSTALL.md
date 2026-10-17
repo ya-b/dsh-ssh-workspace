@@ -66,6 +66,24 @@ dsh --profile web --dump-config | grep -A6 execution-worlds
 删掉上面三个 patch 条目（`execution-worlds` 回到官方 helper 实现），再
 `dsh plugin --profile web remove @dsh-ssh-workspace/{realm,api,ui}`。
 
+## 升级
+
+插件的三类产物各自独立演进，升级时按需重建：
+
+```bash
+cd packages/daemon && pnpm run build && cd ../realm && pnpm run archive   # 远端代码变了
+cd ../ui && node build.mjs                                                # 浏览器半变了
+node ../transport/../../tests/daemon/probe-transport.mjs                   # 回归
+```
+
+远端 daemon 的替换时机：新归档的**摘要**变化后，下一次首次使用该 (host, daemonDir) 时会
+重新投递；但**正在运行的 daemon 进程不会自动换代码**——需要重启它（
+`kill "$(cat ~/.dsh-workspace/pid)"` 后删掉 `sock`/`pid`/`lock`，或直接让它在下一次
+bootstrap 时自愈），随后客户端按 `clientUuid` 重入会话。
+
+远端 Node 版本不足或路径错误时，bootstrap 会在建连阶段直接报
+`remote workspace daemon preflight failed: <node> is not a usable Node >= 20`。
+
 ## 备注：白名单
 
 daemon 的 `config.json` 里 `roots` 是允许作为工作区打开的目录。客户端在打开某个目录前会先

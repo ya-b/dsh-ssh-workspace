@@ -126,12 +126,24 @@ export function bootstrapCommand(config: RemoteWorkspaceConfig): string {
     // killed outright: clear it, or the boot below would wait on a listener
     // that no longer exists.
     'if [ -S "$D/sock" ] && { [ ! -f "$D/pid" ] || ! kill -0 "$(cat "$D/pid" 2>/dev/null)" 2>/dev/null; }; then rm -f "$D/sock" "$D/pid" "$D/lock"; fi',
+    // Preflight the interpreter so a missing or ancient remote Node names the
+    // requirement instead of surfacing as "the socket never appeared".
+    `${node} -e ${shellQuote(NODE_PREFLIGHT)} || { echo "remote workspace daemon preflight failed: ${node} is not a usable Node >= 20" >&2; exit 1; }`,
     `if [ ! -S "$D/sock" ]; then setsid nohup ${node} "$D/workspaced.js" --dir "$D" >>"$D/daemon.log" 2>&1 </dev/null & sleep 0.2; fi`,
     'i=0; while [ ! -S "$D/sock" ] && [ $i -lt 100 ]; do i=$((i+1)); sleep 0.1; done',
     '[ -S "$D/sock" ] || { echo "workspace daemon socket did not appear" >&2; exit 1; }',
     `exec ${node} -e ${shellQuote(BRIDGE)} "$D/sock"`,
   ].join('; ')
 }
+
+/** Remote preflight: the daemon needs a Node that can run its single-file bundle. */
+const NODE_PREFLIGHT = [
+  'const major = Number(process.versions.node.split(".")[0])',
+  'if (!Number.isFinite(major) || major < 20) {',
+  '  console.error("dsh workspace daemon requires Node >= 20 on the remote host (found " + process.version + " at " + process.execPath + "); install Node 20+ or point the daemon node setting at it")',
+  '  process.exit(1)',
+  '}',
+].join('; ')
 
 /** Remote command: atomically install the daemon bundle from this channel's stdin. */
 export function installCommand(config: RemoteWorkspaceConfig): string {
