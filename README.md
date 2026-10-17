@@ -80,7 +80,10 @@ DSH_HOME=~/.dsh node apps/cli/lib/bin.js web --no-open --port 3081
 node tests/daemon/probe-transport.mjs    # 11/11 执行、断线续取终态、零重复、fs
 node tests/daemon/probe-providers.mjs    # 13/13 官方 provider 家族原样工作
 node tests/daemon/probe-realm.mjs        # 10/10 execution-worlds 路由与 verifier
+node tests/api/machines.test.mjs          # 10/10 ssh config 枚举（通配隐藏、Include 递归、顺序）
 node tests/daemon/probe-resilience.mjs   # 11/11 死亡场景（终端断线续播、换代、回收顺序、大文件 opId 重放、200 次观测）
+PROBE_OUTAGE_MS=120000 node tests/daemon/probe-resilience.mjs   # 同上，断线 2 分钟
+node tests/daemon/check-node-preflight.mjs                      # 远端 Node 缺失/过旧的报错文案
 node tests/daemon/bench-resolve.mjs      # 往返延迟抽样（fs.resolve ≈ 4ms/op）
 ```
 
