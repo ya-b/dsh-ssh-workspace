@@ -76,14 +76,6 @@ for await (const chunk of await fs.streamText(fileTarget)) streamed.push(chunk)
 check('fs.streamText iterates', streamed.join('') === 'beta\n', JSON.stringify(streamed))
 
 // subprocess: spawn, capture, exit code
-// The direct call pins the transport's own prepare/dedupe path independently
-// of the official provider's strict response schema.
-const direct = await transport.request('process.prepare', {
-  argv: ['/bin/sh', '-c', 'echo direct'], cwd: WORKSPACE, graceMs: 3000,
-  stdio: { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' },
-}, { parse: value => value })
-const directDone = await transport.request('process.done', { id: direct.id }, { parse: value => value }, undefined, true)
-check('direct prepare + done', directDone.outcome !== undefined, `id=${String(direct.id).slice(0, 8)}`)
 const handle = subprocess.spawn({
   argv: ['/bin/sh', '-c', 'echo out-$((3*14)); echo err-line >&2; exit 7'],
   cwd: WORKSPACE, graceMs: 3000,

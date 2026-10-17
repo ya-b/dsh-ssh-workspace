@@ -77,6 +77,11 @@ type ResolvedConfig = {
   maxPending?: number
 } & SshDeploymentConfig
 
+/** Temporary trace of one realm's mount phases, enabled with DSH_WS_DEBUG=1. */
+function trace(message: string): void {
+  if (process.env.DSH_WS_DEBUG === '1') console.error(`[ws-debug ${new Date().toISOString()}] ${message}`)
+}
+
 /** Installs in flight or finished, keyed by host, directory, and archive digest. */
 const installs = new Map<string, Promise<void>>()
 
@@ -151,7 +156,9 @@ export class RemoteWorkspaceRegistry extends WorkspaceRuntimeRegistry {
    * @param config - the realm's target coordinates.
    */
   protected async mountRealmProviders(realmCtx: Context, config: SshConfig): Promise<void> {
+    trace(`realm mount start host=${config.host} workspace=${config.workspace}`)
     await this.prepareDaemon(config.host)
+    trace(`daemon ready host=${config.host}`)
     const scope = this.bridgeHostServices(realmCtx)
     const transport = createTransport(this.transportConfig(config.host, config.workspace))
     await scope.plugin(DaemonSshConnection, { transport })
@@ -159,6 +166,7 @@ export class RemoteWorkspaceRegistry extends WorkspaceRuntimeRegistry {
     await scope.plugin(SshSubprocessRuntime)
     await scope.plugin(SshSandboxProvider)
     await scope.plugin(SandboxBashExecutor, {})
+    trace(`realm providers mounted host=${config.host}`)
   }
 
   /**

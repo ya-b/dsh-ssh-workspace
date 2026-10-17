@@ -7807,8 +7807,8 @@ var require_dist = __commonJS({
 import { randomUUID as randomUUID6 } from "node:crypto";
 import { open as open4, rm as rm4 } from "node:fs/promises";
 import { createServer as createServer2 } from "node:net";
-import { chmod as chmod3, mkdir as mkdir3, readFile as readFile3, writeFile } from "node:fs/promises";
-import { join as join14, resolve as resolve7 } from "node:path";
+import { chmod as chmod3, mkdir as mkdir3, readFile as readFile3, writeFile as writeFile2 } from "node:fs/promises";
+import { join as join14, resolve as resolve8 } from "node:path";
 import { homedir } from "node:os";
 
 // ../../../deepseek-harness/packages/subprocess/subprocess-local/lib/output.js
@@ -8003,7 +8003,8 @@ var OutputCollector = class {
 };
 
 // src/session.ts
-import { join as join13 } from "node:path";
+import { realpath as realpath3, writeFile } from "node:fs/promises";
+import { join as join13, resolve as resolve7 } from "node:path";
 import { randomUUID as randomUUID5 } from "node:crypto";
 
 // ../../../deepseek-harness/vendor/cosmokit/src/misc.ts
@@ -9451,8 +9452,8 @@ var Fiber = class {
     let inFlight;
     let removeWrapper = () => false;
     const waitForSetup = () => {
-      setupBarrier ??= new Promise((resolve8, reject) => {
-        resolveSetup = resolve8;
+      setupBarrier ??= new Promise((resolve9, reject) => {
+        resolveSetup = resolve9;
         rejectSetup = reject;
       });
       return setupBarrier;
@@ -9712,16 +9713,16 @@ function Inject(name, config3) {
   };
 }
 (function(Inject3) {
-  function resolve8(inject, result = /* @__PURE__ */ Object.create(null)) {
+  function resolve9(inject, result = /* @__PURE__ */ Object.create(null)) {
     if (!inject) return result;
     if (Array.isArray(inject)) for (const name of inject) result[name] = null;
     else if (Reflect.has(inject, symbols.checkProto)) {
-      Object.assign(result, resolve8(Object.getPrototypeOf(inject)));
+      Object.assign(result, resolve9(Object.getPrototypeOf(inject)));
       for (const name of Object.keys(inject)) result[name] = inject[name] ?? null;
     } else for (const name of Object.keys(inject)) result[name] = inject[name] ?? null;
     return result;
   }
-  Inject3.resolve = resolve8;
+  Inject3.resolve = resolve9;
 })(Inject || (Inject = {}));
 var RegistryService = class {
   ctx;
@@ -10979,8 +10980,8 @@ var Fiber2 = class {
     let inFlight;
     let removeWrapper = () => false;
     const waitForSetup = () => {
-      setupBarrier ??= new Promise((resolve8, reject) => {
-        resolveSetup = resolve8;
+      setupBarrier ??= new Promise((resolve9, reject) => {
+        resolveSetup = resolve9;
         rejectSetup = reject;
       });
       return setupBarrier;
@@ -11534,14 +11535,14 @@ function Inject2(name, config3) {
   };
 }
 ((Inject3) => {
-  function resolve8(inject, result = /* @__PURE__ */ Object.create(null)) {
+  function resolve9(inject, result = /* @__PURE__ */ Object.create(null)) {
     if (!inject) return result;
     if (Array.isArray(inject)) {
       for (const name of inject) {
         result[name] = null;
       }
     } else if (Reflect.has(inject, symbols2.checkProto)) {
-      Object.assign(result, resolve8(Object.getPrototypeOf(inject)));
+      Object.assign(result, resolve9(Object.getPrototypeOf(inject)));
       for (const name of Object.keys(inject)) {
         result[name] = inject[name] ?? null;
       }
@@ -11552,7 +11553,7 @@ function Inject2(name, config3) {
     }
     return result;
   }
-  Inject3.resolve = resolve8;
+  Inject3.resolve = resolve9;
 })(Inject2 || (Inject2 = {}));
 var RegistryService2 = class {
   constructor(ctx) {
@@ -26643,8 +26644,8 @@ function validateVolatileSchema(schema, path = [], blocked = false, seen = /* @_
     }
   }
 }
-Schema.extend = function extend2(type, resolve8) {
-  resolvers[type] = resolve8;
+Schema.extend = function extend2(type, resolve9) {
+  resolvers[type] = resolve9;
 };
 Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
   if (!schema) return [data];
@@ -28003,7 +28004,7 @@ var NodeFsHandler = class {
         this._addToNodeFs(path, initialAdd, wh, depth + 1);
       }
     }).on(EV.ERROR, this._boundHandleError);
-    return new Promise((resolve8, reject) => {
+    return new Promise((resolve9, reject) => {
       if (!stream)
         return reject();
       stream.once(STR_END, () => {
@@ -28012,7 +28013,7 @@ var NodeFsHandler = class {
           return;
         }
         const wasThrottled = throttler ? throttler.clear() : false;
-        resolve8(void 0);
+        resolve9(void 0);
         previous.getChildren().filter((item) => {
           return item !== directory && !current.has(item);
         }).forEach((item) => {
@@ -28035,7 +28036,7 @@ var NodeFsHandler = class {
    * @param realpath
    * @returns closer for the watcher instance.
    */
-  async _handleDir(dir, stats, initialAdd, depth, target, wh, realpath3) {
+  async _handleDir(dir, stats, initialAdd, depth, target, wh, realpath4) {
     const parentDir = this.fsw._getWatchedDir(sysPath.dirname(dir));
     const tracked = parentDir.has(sysPath.basename(dir));
     if (!(initialAdd && this.fsw.options.ignoreInitial) && !target && !tracked) {
@@ -28046,7 +28047,7 @@ var NodeFsHandler = class {
     let throttler;
     let closer;
     const oDepth = this.fsw.options.depth;
-    if ((oDepth == null || depth <= oDepth) && !this.fsw._symlinkPaths.has(realpath3)) {
+    if ((oDepth == null || depth <= oDepth) && !this.fsw._symlinkPaths.has(realpath4)) {
       if (!target) {
         await this._handleRead(dir, initialAdd, wh, target, dir, depth, throttler);
         if (this.fsw.closed)
@@ -33218,7 +33219,7 @@ function assertPositiveInteger(name, value, minimum = 1) {
 function waitWithAbort(promise3, signal) {
   if (signal === void 0) return promise3;
   throwIfAborted2(signal);
-  return new Promise((resolve8, reject) => {
+  return new Promise((resolve9, reject) => {
     const cleanup = () => {
       signal.removeEventListener("abort", onAbort);
     };
@@ -33230,7 +33231,7 @@ function waitWithAbort(promise3, signal) {
     void promise3.then(
       (value) => {
         cleanup();
-        resolve8(value);
+        resolve9(value);
       },
       (error112) => {
         cleanup();
@@ -34440,7 +34441,7 @@ function validateSubprocessSpec(spec) {
   if (program === void 0 || program.length === 0) throw new Error("invalid argv: expected a non-empty program name at argv[0]");
 }
 function directChildResult(child) {
-  return new Promise((resolve8, reject) => {
+  return new Promise((resolve9, reject) => {
     let completed = false;
     child.once("error", (error112) => {
       if (completed) return;
@@ -34450,7 +34451,7 @@ function directChildResult(child) {
     child.once("exit", (exitCode, signal) => {
       if (completed) return;
       completed = true;
-      resolve8({
+      resolve9({
         exitCode,
         signal
       });
@@ -34525,12 +34526,12 @@ function bindManagedProcess(spec, launch, internals = {}) {
   const stderrCollector = collectStream(errMode, stderr, "stderr");
   const observeOutputStream = (mode, stream) => {
     if (mode === "inherit" || stream === null || stream.readableEnded || stream.destroyed) return void 0;
-    return new Promise((resolve8) => {
+    return new Promise((resolve9) => {
       const settle2 = () => {
         stream.off("end", settle2);
         stream.off("close", settle2);
         stream.off("error", settle2);
-        resolve8();
+        resolve9();
       };
       stream.once("end", settle2);
       stream.once("close", settle2);
@@ -34605,14 +34606,14 @@ function bindManagedProcess(spec, launch, internals = {}) {
     });
     stdin.end(stdinMode.data);
   }
-  const done = new Promise((resolve8, reject) => {
+  const done = new Promise((resolve9, reject) => {
     let pipeDrainTimer;
     const settle2 = (outcome) => {
       if (settled) return;
       settled = true;
       stopCollectors();
       cleanup();
-      resolve8(outcome);
+      resolve9(outcome);
     };
     const fail = (error112) => {
       settled = true;
@@ -35553,11 +35554,11 @@ function launchWindowsJob(spec, targetEnv, internals = {}) {
   };
 }
 function delay(ms, signal) {
-  return new Promise((resolve8) => {
+  return new Promise((resolve9) => {
     const finish = () => {
       clearTimeout(timer);
       signal?.removeEventListener("abort", finish);
-      resolve8();
+      resolve9();
     };
     const timer = setTimeout(finish, ms);
     signal?.addEventListener("abort", finish, { once: true });
@@ -42985,7 +42986,7 @@ var recursive = /* @__PURE__ */ new WeakMap();
 var NONE = 0;
 var ASSUMED = 1;
 var PROVEN = 2;
-function isRecursive(inst, stack, resolve8) {
+function isRecursive(inst, stack, resolve9) {
   const cached5 = recursive.get(inst);
   if (cached5 !== void 0)
     return cached5 ? PROVEN : NONE;
@@ -42995,7 +42996,7 @@ function isRecursive(inst, stack, resolve8) {
   let result = NONE;
   const check3 = (child) => {
     if (result !== PROVEN && child?._zod) {
-      const answer = isRecursive(child, stack, resolve8);
+      const answer = isRecursive(child, stack, resolve9);
       if (answer > result)
         result = answer;
     }
@@ -43006,7 +43007,7 @@ function isRecursive(inst, stack, resolve8) {
       const desc = Object.getOwnPropertyDescriptor(sh, key);
       if (spread && !desc.enumerable)
         continue;
-      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve8) : NONE;
+      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve9) : NONE;
       if (child > answer)
         answer = child;
     }
@@ -43070,7 +43071,7 @@ function isRecursive(inst, stack, resolve8) {
       break;
     // `$ZodLazy` caches its inner on the def, so a resolved edge is followed exactly
     case "lazy": {
-      const inner = def._cachedInner ?? (resolve8 ? inst._zod.innerType : void 0);
+      const inner = def._cachedInner ?? (resolve9 ? inst._zod.innerType : void 0);
       merge4(inner ? isRecursive(inner, stack, false) : ASSUMED);
       break;
     }
@@ -57750,14 +57751,14 @@ var RpcPeer = class extends EventEmitter2 {
     this.queuedBytes += bytes.length;
     const write2 = this.writeTail.then(async () => {
       if (this.failure !== void 0) throw this.failure;
-      if (!this.output.write(bytes)) await new Promise((resolve8, reject) => {
+      if (!this.output.write(bytes)) await new Promise((resolve9, reject) => {
         const cleanup = () => {
           this.output.off("drain", drained);
           this.off("closed", closed);
         };
         const drained = () => {
           cleanup();
-          resolve8();
+          resolve9();
         };
         const closed = (error112) => {
           cleanup();
@@ -57971,9 +57972,9 @@ async function createEndpoint(root, id, options = {}) {
     if (!attached) connected.reject(new Error("workspace daemon stream reservation closed"));
   });
   try {
-    await new Promise((resolve8, reject) => {
+    await new Promise((resolve9, reject) => {
       server.once("error", reject);
-      server.listen(path, resolve8);
+      server.listen(path, resolve9);
     });
     await chmod2(path, 384);
   } catch (error112) {
@@ -57992,8 +57993,8 @@ async function createEndpoint(root, id, options = {}) {
     attached() {
       const live = socket;
       if (attached && live !== void 0 && !live.destroyed) return Promise.resolve(live);
-      return new Promise((resolve8) => {
-        attachHandlers.push(resolve8);
+      return new Promise((resolve9) => {
+        attachHandlers.push(resolve9);
       });
     },
     feed(chunk) {
@@ -58024,7 +58025,7 @@ async function createEndpoint(root, id, options = {}) {
 async function readSync2(socket) {
   const chunks = [];
   let received = 0;
-  return await new Promise((resolve8, reject) => {
+  return await new Promise((resolve9, reject) => {
     const timer = setTimeout(() => {
       failure2(new Error("workspace daemon replay preamble timed out"));
     }, 3e4);
@@ -58072,7 +58073,7 @@ async function readSync2(socket) {
       clearTimeout(timer);
       const offset = raw.sync;
       if (typeof offset === "number" && Number.isFinite(offset)) {
-        resolve8(offset);
+        resolve9(offset);
         return;
       }
       reject(new Error("workspace daemon replay preamble invalid"));
@@ -58608,6 +58609,7 @@ var MAX_FRAME_BYTES = 64 * 1024 * 1024;
 var MAX_TEXT_BYTES = 8 * 1024 * 1024;
 var object3 = external_exports2.object({}).strict();
 var textStreamIdRequest = external_exports2.object({ id: textStreamIdSchema }).strict();
+var MAX_ALLOWED_ROOTS = 64;
 async function mountServices(workspace, defaultMode) {
   const ctx = new Context();
   const fibers = [];
@@ -58658,6 +58660,10 @@ async function serveConnection(socket, options, registry4) {
         instanceId: options.instanceId,
         kind: "daemon"
       };
+    }
+    if (method === "workspace.allow") {
+      const input2 = external_exports2.object({ path: remotePath }).strict().parse(raw);
+      return await registry4.allow(input2.path);
     }
     if (session === void 0) throw new Error("workspace daemon session is not initialized");
     return await dispatch(method, raw, signal, session, registry4);
@@ -58913,8 +58919,11 @@ var ClientRegistry = class {
   constructor(options) {
     registry3 = this;
     this.options = options;
+    this.roots = [...options.roots];
   }
   options;
+  /** Mutable whitelist: the boot roots plus every directory a client allowed. */
+  roots;
   async get(uuid8) {
     const pending = this.sessions.get(uuid8);
     if (pending === void 0) return void 0;
@@ -58926,10 +58935,42 @@ var ClientRegistry = class {
   }
   /** Whether a hello workspace lies under the daemon whitelist. */
   async approvesWorkspace(workspace) {
-    for (const root of this.options.roots) {
+    return this.underRoot(workspace);
+  }
+  /** Whether one path lies under the current whitelist. */
+  underRoot(workspace) {
+    for (const root of this.roots) {
       if (workspace === root || workspace.startsWith(`${root === "/" ? "" : root}/`)) return true;
     }
     return false;
+  }
+  /**
+   * Add one directory to the whitelist and persist it, so a workspace the user
+   * adds from the browser stays usable across daemon restarts. The list keeps
+   * only the most recent entries, because each is a deliberate local opt-in,
+   * not an unbounded audit log.
+   * @param path - directory to allow, canonicalized with `realpath`.
+   * @returns the whitelist after the update.
+   */
+  async allow(path) {
+    const canonical = await realpath3(path).catch(() => resolve7(path));
+    if (!this.underRoot(canonical)) {
+      this.roots.push(canonical);
+      while (this.roots.length > MAX_ALLOWED_ROOTS) this.roots.shift();
+      await this.persist();
+    }
+    return { roots: this.roots };
+  }
+  /** Write the whitelist (and the current mode) back to `config.json`. */
+  async persist() {
+    const body = JSON.stringify({
+      roots: this.roots,
+      defaultMode: this.options.defaultMode,
+      maxProcessHandles: this.options.maxProcessHandles
+    });
+    await writeFile(join13(this.options.dir, "config.json"), `${body}
+`, { mode: 384 }).catch(() => {
+    });
   }
   async create(uuid8, workspace) {
     const pending = this.sessions.get(uuid8);
@@ -58965,8 +59006,8 @@ var ClientRegistry = class {
       await Promise.race([
         session.dispose().catch(() => {
         }),
-        new Promise((resolve8) => {
-          setTimeout(resolve8, budgetMs).unref();
+        new Promise((resolve9) => {
+          setTimeout(resolve9, budgetMs).unref();
         })
       ]);
     }
@@ -58992,7 +59033,7 @@ async function loadConfig(dir) {
   }
 }
 async function boot(dirArg) {
-  const dir = resolve7(dirArg ?? join14(homedir(), ".dsh-workspace"));
+  const dir = resolve8(dirArg ?? join14(homedir(), ".dsh-workspace"));
   await mkdir3(dir, { recursive: true, mode: 448 });
   await chmod3(dir, 448);
   const socketPath = join14(dir, "sock");
@@ -59030,7 +59071,7 @@ async function boot(dirArg) {
     });
   });
   await chmod3(socketPath, 384);
-  await writeFile(pidPath, `${process.pid}
+  await writeFile2(pidPath, `${process.pid}
 `, { mode: 384 });
   await lock.writeFile(`${JSON.stringify({ pid: process.pid, instanceId, dir })}
 `);

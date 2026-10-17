@@ -4,5 +4,23 @@
   "private": true,
   "type": "module",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    }
+  },
+  "files": [
+    "lib",
+    "src"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  }
 }

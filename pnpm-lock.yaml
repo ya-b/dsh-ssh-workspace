@@ -118,7 +118,27 @@ importers:
         specifier: ^4.4.3
         version: 4.6.7
 
-  packages/api: {}
+  packages/api:
+    dependencies:
+      '@deepseek-ai/cordis':
+        specifier: link:../../../deepseek-harness/vendor/cordis
+        version: link:../../../deepseek-harness/vendor/cordis
+    devDependencies:
+      '@deepseek-ai/dsh-client-connection':
+        specifier: link:../../../deepseek-harness/packages/client/connection
+        version: link:../../../deepseek-harness/packages/client/connection
+      '@deepseek-ai/dsh-fs':
+        specifier: link:../../../deepseek-harness/packages/fs/fs
+        version: link:../../../deepseek-harness/packages/fs/fs
+      '@deepseek-ai/dsh-host-execution-worlds':
+        specifier: link:../../../deepseek-harness/packages/host/execution-worlds
+        version: link:../../../deepseek-harness/packages/host/execution-worlds
+      '@deepseek-ai/dsh-host-webserver':
+        specifier: link:../../../deepseek-harness/packages/host/webserver
+        version: link:../../../deepseek-harness/packages/host/webserver
+      '@deepseek-ai/dsh-workspace':
+        specifier: link:../../../deepseek-harness/packages/workspace/workspace
+        version: link:../../../deepseek-harness/packages/workspace/workspace
 
   packages/daemon:
     dependencies:

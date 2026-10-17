@@ -124,6 +124,40 @@
 
 即 D1「Web UI 选机器→选目录→该工作区的 fs/terminal/命令全部在远端执行」的主链路已打通。
 
+### B 段（host API + 连接健壮性）——已完成并实测
+新增 `packages/api`（`@dsh-ssh-workspace/api`），在 `ctx.webServer` 上挂三条只读路由，
+每条都复用 `ctx.connection.admit(req)` 做与 RPC 同级的准入：
+
+| 路由 | 作用 |
+| --- | --- |
+| `GET /ssh-workspace/machines` | 本机（hostname）+ `~/.ssh/config` 全部具名主机（支持 `Include` 递归，过滤 `*`/`?`/`!`），附 `ssh -G` 得到的 user/hostname/port |
+| `GET /ssh-workspace/precheck?host=` | `BatchMode` 非交互登录探测 → `usable` / `needs-credentials` / `unreachable` / `unknown` |
+| `GET /ssh-workspace/browse?host=&path=` | 目录浏览；远端走 `workspaceRuntime.worldForWorkspace`，即**与会话完全相同的 realm**（daemon 执行 fs.list），本地走宿主 fs |
+
+实测（curl + cookie）：machines 返回本机与 6 台 SSH 主机；未带 cookie 返回 **401**；
+precheck(localhost)=usable；browse 本地/远端均 200。
+
+### 本轮修掉的两个真实缺陷（都已验证）
+1. **realm 打开会被"白名单拒绝"永久重试**：daemon 的 `roots` 白名单是启动期配置，
+   先前 `/home/user` 不在其中，`hello` 返回 `WORKSPACE_NOT_ALLOWED`；而 transport 的
+   `connectLoop` 当时对**任何**错误都无限重试，且每次都泄漏一组 ssh master+bridge
+   （一度累积 240 个进程），HTTP 请求因此永不返回。
+   - daemon：新增 `workspace.allow {path}`（hello 之前可用），把目录加入白名单并**持久化**
+     到 `config.json`（保留最近 64 条）。socket 为 0600、属主即该用户，而该用户本就能通过
+     daemon 执行任意命令，所以这是防误操作的护栏，不是安全边界。
+   - transport：`connectLoop` 只在**真实链路丢失**时重试；从未建立过的会话有上限
+     （6 次）后把真实原因抛给调用方；握手失败即 `SIGKILL` 掉该 ssh，不再泄漏。
+   - `bootstrapCommand`：socket 存在但 pid 已死时先清理残留（崩溃后可自愈）。
+2. 修复后：远端 browse 从"永久挂起"变为 **HTTP 200 / 1.5s**。
+
+回归：`probe-transport` 11/11、`probe-providers` 13/13、`probe-realm` 10/10 全绿。
+
+### 客户端半（`packages/ui`）——机制已验证
+`@dsh-ssh-workspace/ui` 通过 `exports["./client"]` + `dsh.client` 声明被宿主自动纳入
+客户端 boot graph；已用一个最小 bundle 实测：宿主启动无告警，浏览器侧 `apply` 执行、
+DOM 探针出现，卸载时正确回收。即浏览器半的加载通路可用（构建产物需满足
+`window.__ModuleLoader__.load({id,factory})` 的 CJS 工厂约定）。
+
 ### B1 机器枚举（`packages/api`）
 - `listHosts()`：递归 `Include`、具名 `Host`、过滤 `*`/`!`、不做 `Match` 展开。
 - `precheck(alias)`：`ssh -G` 为唯一权威 + `BatchMode` 短超时探测 → `usable/needs-credentials/unreachable`。

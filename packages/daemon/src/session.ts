@@ -1,5 +1,6 @@
 /** One authenticated daemon client session: private services plus its RPC dispatch. */
-import { join } from 'node:path'
+import { realpath, writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { Duplex } from 'node:stream'
 import { Context } from '@deepseek-ai/cordis'
@@ -39,6 +40,9 @@ export interface DaemonOptions {
   /** Spill reporter accepts the daemon's owned label plus the spill error. */
   readonly spillFailure: (error: unknown) => void
 }
+
+/** Most recent explicit whitelist entries kept in `config.json`. */
+const MAX_ALLOWED_ROOTS = 64
 
 /** Per-client-uuid session surviving transport loss within one daemon boot. */
 interface ClientSession {
@@ -105,6 +109,14 @@ export async function serveConnection(
         executable: process.execPath, root: options.dir, workspace: session.workspace,
         instanceId: options.instanceId, kind: 'daemon',
       }
+    }
+    if (method === 'workspace.allow') {
+      // Explicit, user-initiated opt-in: the caller names one directory it may
+      // then open a session on. The socket is 0600 and owned by this user, so
+      // whoever can reach it already has the daemon's full power; this gate
+      // guards against accidents, not against other local accounts.
+      const input = z.object({ path: remotePath }).strict().parse(raw)
+      return await registry.allow(input.path)
     }
     if (session === undefined) throw new Error('workspace daemon session is not initialized')
     return await dispatch(method, raw, signal, session, registry)
@@ -350,9 +362,14 @@ export class ClientRegistry {
   constructor(options: DaemonOptions) {
     registry = this
     this.options = options
+    this.roots = [...options.roots]
   }
 
   private readonly options: DaemonOptions
+
+  /** Mutable whitelist: the boot roots plus every directory a client allowed. */
+  private readonly roots: string[]
+
 
   async get(uuid: string): Promise<ClientSession | undefined> {
     const pending = this.sessions.get(uuid)
@@ -362,10 +379,43 @@ export class ClientRegistry {
 
   /** Whether a hello workspace lies under the daemon whitelist. */
   async approvesWorkspace(workspace: string): Promise<boolean> {
-    for (const root of this.options.roots) {
+    return this.underRoot(workspace)
+  }
+
+  /** Whether one path lies under the current whitelist. */
+  private underRoot(workspace: string): boolean {
+    for (const root of this.roots) {
       if (workspace === root || workspace.startsWith(`${root === '/' ? '' : root}/`)) return true
     }
     return false
+  }
+
+  /**
+   * Add one directory to the whitelist and persist it, so a workspace the user
+   * adds from the browser stays usable across daemon restarts. The list keeps
+   * only the most recent entries, because each is a deliberate local opt-in,
+   * not an unbounded audit log.
+   * @param path - directory to allow, canonicalized with `realpath`.
+   * @returns the whitelist after the update.
+   */
+  async allow(path: string): Promise<{ roots: readonly string[] }> {
+    const canonical = await realpath(path).catch(() => resolve(path))
+    if (!this.underRoot(canonical)) {
+      this.roots.push(canonical)
+      while (this.roots.length > MAX_ALLOWED_ROOTS) this.roots.shift()
+      await this.persist()
+    }
+    return { roots: this.roots }
+  }
+
+  /** Write the whitelist (and the current mode) back to `config.json`. */
+  private async persist(): Promise<void> {
+    const body = JSON.stringify({
+      roots: this.roots,
+      defaultMode: this.options.defaultMode,
+      maxProcessHandles: this.options.maxProcessHandles,
+    })
+    await writeFile(join(this.options.dir, 'config.json'), `${body}\n`, { mode: 0o600 }).catch(() => {})
   }
 
   async create(uuid: string, workspace: string): Promise<ClientSession> {

@@ -54,9 +54,14 @@ export interface RemoteWorkspaceConfig {
   readonly controlDir?: string
 }
 
+/** Attempts one never-established session makes before its caller hears the failure. */
+const INITIAL_CONNECT_ATTEMPTS = 6
+
 const PSK_TLS = {
   ciphers: 'PSK-AES256-GCM-SHA384', minVersion: 'TLSv1.2', maxVersion: 'TLSv1.2',
 } as const
+
+const allowResultSchema = z.object({ roots: z.array(z.string()) }).strict()
 
 const helloSchema = z.object({
   protocol: z.literal(1), platform: z.enum(['linux', 'darwin']), nodeVersion: z.string(),
@@ -117,6 +122,10 @@ export function bootstrapCommand(config: RemoteWorkspaceConfig): string {
   return [
     `D=${dir}`,
     'mkdir -p "$D" && chmod 700 "$D"',
+    // A socket without a live owner is the crash residue of a daemon that was
+    // killed outright: clear it, or the boot below would wait on a listener
+    // that no longer exists.
+    'if [ -S "$D/sock" ] && { [ ! -f "$D/pid" ] || ! kill -0 "$(cat "$D/pid" 2>/dev/null)" 2>/dev/null; }; then rm -f "$D/sock" "$D/pid" "$D/lock"; fi',
     `if [ ! -S "$D/sock" ]; then setsid nohup ${node} "$D/workspaced.js" --dir "$D" >>"$D/daemon.log" 2>&1 </dev/null & sleep 0.2; fi`,
     'i=0; while [ ! -S "$D/sock" ] && [ $i -lt 100 ]; do i=$((i+1)); sleep 0.1; done',
     '[ -S "$D/sock" ] || { echo "workspace daemon socket did not appear" >&2; exit 1; }',
@@ -445,9 +454,9 @@ export class RemoteWorkspaceTransport {
   }
 
   private async connectLoop(): Promise<MasterSession> {
-    const attemptsBudget = Number.POSITIVE_INFINITY
     const base = this.config.reconnectBaseMs ?? 250
     const ceiling = this.config.reconnectMaxMs ?? 15_000
+    const established = this.master !== undefined
     let attempt = this.attempt
     for (;;) {
       if (this.stopped) throw new Error('remote workspace transport is closed')
@@ -465,7 +474,14 @@ export class RemoteWorkspaceTransport {
       } catch (error) {
         attempt += 1
         this.attempt = attempt
-        if (attempt >= attemptsBudget && Number.isFinite(attemptsBudget)) throw error
+        // A refusal (unknown host, denied workspace, protocol mismatch) is not
+        // a transient loss: retrying it would loop forever and hide the reason
+        // from whoever asked. Only a lost transport is worth more attempts.
+        if (!this.isTransportLoss(error)) throw error
+        // A session that lost its transport must keep trying forever — its
+        // remote work is still running. A session that was never established
+        // gives up, so a user-initiated call fails with the real reason.
+        if (!established && attempt >= INITIAL_CONNECT_ATTEMPTS) throw error
         await new Promise<void>((resolve) => { setTimeout(resolve, Math.min(ceiling, base * 2 ** Math.min(attempt, 6))).unref() })
       }
     }
@@ -487,9 +503,23 @@ export class RemoteWorkspaceTransport {
     child.stderr.on('error', () => {})
     child.stderr.resume()
     const peer = new RpcPeer(child.stdout, child.stdin, this.config.maxFrameBytes ?? 64 * 1024 * 1024, this.config.maxPending ?? 128)
+    const deadline = this.config.requestTimeoutMs ?? 30_000
+    // Declare the workspace before asking to join it: an older daemon answers
+    // this with an error frame, which is exactly the "no such method" case and
+    // is ignored. A newer one extends its whitelist and persists it.
+    if (this.config.workspace !== '') {
+      await peer.request('workspace.allow', { path: this.config.workspace }, allowResultSchema, AbortSignal.timeout(deadline))
+        .catch(() => undefined)
+    }
     const hello = await peer.request('hello', {
       protocol: 1, workspace: this.config.workspace, clientUuid: this.clientUuid(directory),
-    }, helloSchema, AbortSignal.timeout(this.config.requestTimeoutMs ?? 30_000))
+    }, helloSchema, AbortSignal.timeout(deadline)).catch((error: unknown) => {
+      // The session is unusable: release the SSH channel instead of leaving a
+      // master and its bridge behind for every failed attempt.
+      child.kill('SIGKILL')
+      peer.close(error instanceof Error ? error : new Error(String(error)))
+      throw error
+    })
     peer.once('closed', () => {
       // Transport loss only marks the session stale; the daemon keeps running.
       if (this.master?.peer === peer) { this.master = undefined; this.status = 'reconnecting' }
