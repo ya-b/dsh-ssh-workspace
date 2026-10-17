@@ -106,6 +106,24 @@
   `@deepseek-ai/dsh-host-execution-worlds`、`dsh-fs-ssh`、`dsh-subprocess-ssh`、`dsh-sandbox-ssh`、
   `dsh-bash-sandbox` 依赖（用户层 resolve）。
 
+### 浏览器端到端验证（已完成，2026-10-17）
+本地 harness 构建（`pnpm build:lib` + `pnpm build:web`，均 EXIT=0）后，用本地 CLI 启动实例
+（`node apps/cli/lib/bin.js web --no-open --port 3081`，`DSH_HOME=~/.dsh`），在浏览器中实测：
+
+1. 侧边栏「添加工作区」菜单出现 **「添加远程工作区…」**（门控 `verifyRemote !== undefined` 通过，
+   说明本插件的 `workspaceRemoteVerifier` 已挂载）。
+2. 选择 SSH → 填 `localhost` + `/home/user/dsh-ws-probe` → 点「验证」→ 界面显示
+   **「已验证：/home/user/dsh-ws-probe」**（链路：客户端 → `workspace.verifyRemote` →
+   host `ctx.get('workspaceRemoteVerifier')` → 本插件 realm → daemon 校验）。
+3. 点「添加远程工作区」→ 工作区落库为
+   `{"path":"/home/user/dsh-ws-probe","transport":{"kind":"ssh","host":"localhost"}}`
+   （`~/.dsh/storages/workspace.json`，UUID 77fdd1fb）。
+4. 将该工作区选为新会话的执行世界，让 agent 调用 bash 工具打印自身进程树，返回：
+   `第二行是它的父进程 cmdline：/usr/bin/node /home/user/.dsh-workspace/workspaced.js --dir /home/user/.dsh-workspace`
+   —— 会话内的命令确实由**远端 workspace daemon** 派生执行，而非宿主本地进程。
+
+即 D1「Web UI 选机器→选目录→该工作区的 fs/terminal/命令全部在远端执行」的主链路已打通。
+
 ### B1 机器枚举（`packages/api`）
 - `listHosts()`：递归 `Include`、具名 `Host`、过滤 `*`/`!`、不做 `Match` 展开。
 - `precheck(alias)`：`ssh -G` 为唯一权威 + `BatchMode` 短超时探测 → `usable/needs-credentials/unreachable`。
