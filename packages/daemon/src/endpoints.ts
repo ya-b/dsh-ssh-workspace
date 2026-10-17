@@ -18,6 +18,7 @@ export type StreamEndpoint = { path: string; capability: string }
  * continues exactly where its dead socket was cut.
  */
 export class ReplayBuffer {
+  private readonly maxBytes: number
   private chunks: Buffer[] = []
   private starts: number[] = []
   private buffered = 0
@@ -25,7 +26,7 @@ export class ReplayBuffer {
   total = 0
   truncatedFrom = 0
 
-  constructor(private readonly maxBytes: number) {}
+  constructor(maxBytes: number) { this.maxBytes = maxBytes }
 
   push(chunk: Buffer): void {
     this.chunks.push(chunk)

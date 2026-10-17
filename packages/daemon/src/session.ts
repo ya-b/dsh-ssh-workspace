@@ -51,8 +51,10 @@ interface ClientSession {
   /** opId → sticky write/edit result: a replayed durable write never mutates twice. */
   readonly writeMemo: Map<string, unknown>
   pruneMemo(): void
+  /** Whether the owning transport is currently disconnected. */
   detached: boolean
   detach(): void
+  attach(): void
   dispose(): Promise<void>
 }
 
@@ -97,6 +99,7 @@ export async function serveConnection(
       } else {
         session = session ?? await registry.create(input.clientUuid, input.workspace)
       }
+      session.attach()
       return {
         protocol: 1, platform: process.platform as 'linux' | 'darwin', nodeVersion: process.version,
         executable: process.execPath, root: options.dir, workspace: session.workspace,
@@ -104,21 +107,22 @@ export async function serveConnection(
       }
     }
     if (session === undefined) throw new Error('workspace daemon session is not initialized')
-    return await dispatch(method, raw, signal, session)
+    return await dispatch(method, raw, signal, session, registry)
   })
   const closed = Promise.withResolvers<void>()
   peer.once('closed', () => {
-    // Transport loss: records stay resident; the session detaches until its
-    // next reattach. Only explicit events reclaim it (see dispose below).
+    // Transport loss is NOT an event that may reclaim anything (D7): the
+    // session detaches and stays resident, its processes keep running, and
+    // bounded output keeps accumulating in each stream's replay window. Only
+    // explicit events reclaim it: daemon shutdown (①), an explicit close or
+    // terminate (②), or the outstanding-handle limit (③).
     if (session !== undefined) session.detach()
     closed.resolve()
   })
   await closed.promise
-  // Detached sessions with no live processes are explicitly reclaimed here.
-  if (session !== undefined && session.detached) await session.dispose()
 }
 
-async function dispatch(method: string, raw: unknown, signal: AbortSignal, session: ClientSession): Promise<unknown> {
+async function dispatch(method: string, raw: unknown, signal: AbortSignal, session: ClientSession, registry: ClientRegistry): Promise<unknown> {
   const { ctx, owner, iterators, writeMemo } = session
   switch (method) {
     case 'heartbeat': { object.parse(raw); return null }
@@ -148,6 +152,9 @@ async function dispatch(method: string, raw: unknown, signal: AbortSignal, sessi
       return ctx.sandbox.confine(input.argv, resolved as SandboxPolicy, signal)
     }
     case 'process.prepare': {
+      // Reap event ③ also covers detached, process-less sessions: a client
+      // that reconnected and re-prepared must not accumulate dead sessions.
+      await registry.reapDetached()
       const { spawn, opId } = parsePrepare(raw)
       return await owner.prepare(spawn, opId)
     }
@@ -308,6 +315,7 @@ function constructSession(
     writeMemo: new Map(),
     detached: true,
     detach(): void { session.detached = true },
+    attach(): void { session.detached = false },
     pruneMemo(): void {
       while (session.writeMemo.size > 512) session.writeMemo.delete(session.writeMemo.keys().next().value as string)
     },
@@ -372,6 +380,17 @@ export class ClientRegistry {
   }
 
   drop(uuid: string): void { this.sessions.delete(uuid) }
+
+  /** Reclaim sessions that have detached and own no processes (reap event ③). */
+  async reapDetached(): Promise<void> {
+    const entries = await Promise.allSettled([...this.sessions.values()])
+    for (const entry of entries) {
+      if (entry.status !== 'fulfilled') continue
+      const session = entry.value
+      if (!session.detached || session.owner.size > 0) continue
+      await session.dispose()
+    }
+  }
 
   get size(): number { return this.sessions.size }
 

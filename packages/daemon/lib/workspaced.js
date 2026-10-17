@@ -30123,7 +30123,7 @@ function projectToolUpdates(messages, tools, toolUpdate, history) {
 
 // ../../../deepseek-harness/packages/llm/llm/src/attribution.ts
 import { createRequire } from "node:module";
-var { version: version2 } = createRequire(import.meta.url)("../package.json");
+var { version: version2 } = ({ version: "0.1.0" });
 
 // ../../../deepseek-harness/packages/llm/llm/src/index.ts
 var LlmError = class extends HarnessError {
@@ -57860,9 +57860,6 @@ var SSH_STREAM_TLS_OPTIONS = {
 
 // src/endpoints.ts
 var ReplayBuffer = class {
-  constructor(maxBytes) {
-    this.maxBytes = maxBytes;
-  }
   maxBytes;
   chunks = [];
   starts = [];
@@ -57870,6 +57867,9 @@ var ReplayBuffer = class {
   /** Monotonic write cursor: total bytes ever pushed. */
   total = 0;
   truncatedFrom = 0;
+  constructor(maxBytes) {
+    this.maxBytes = maxBytes;
+  }
   push(chunk) {
     this.chunks.push(chunk);
     this.starts.push(this.total);
@@ -58151,10 +58151,6 @@ var MAX_TEXT_STREAMS = 128;
 var REPLAY_BYTES = 1024 * 1024;
 var processIdRequest = external_exports2.object({ id: external_exports2.string() }).strict();
 var SnapshotForwarder = class {
-  constructor(collector, maxBytes) {
-    this.collector = collector;
-    this.maxBytes = maxBytes;
-  }
   collector;
   maxBytes;
   peer;
@@ -58162,6 +58158,10 @@ var SnapshotForwarder = class {
   running;
   stopped = false;
   socket;
+  constructor(collector, maxBytes) {
+    this.collector = collector;
+    this.maxBytes = maxBytes;
+  }
   attach(socket) {
     if (this.socket === socket) return;
     this.socket = socket;
@@ -58649,6 +58649,7 @@ async function serveConnection(socket, options, registry4) {
       } else {
         session = session ?? await registry4.create(input2.clientUuid, input2.workspace);
       }
+      session.attach();
       return {
         protocol: 1,
         platform: process.platform,
@@ -58661,7 +58662,7 @@ async function serveConnection(socket, options, registry4) {
       };
     }
     if (session === void 0) throw new Error("workspace daemon session is not initialized");
-    return await dispatch(method, raw, signal, session);
+    return await dispatch(method, raw, signal, session, registry4);
   });
   const closed = Promise.withResolvers();
   peer.once("closed", () => {
@@ -58669,9 +58670,8 @@ async function serveConnection(socket, options, registry4) {
     closed.resolve();
   });
   await closed.promise;
-  if (session !== void 0 && session.detached) await session.dispose();
 }
-async function dispatch(method, raw, signal, session) {
+async function dispatch(method, raw, signal, session, registry4) {
   const { ctx, owner, iterators, writeMemo } = session;
   switch (method) {
     case "heartbeat": {
@@ -58707,6 +58707,7 @@ async function dispatch(method, raw, signal, session) {
       return ctx.sandbox.confine(input2.argv, resolved, signal);
     }
     case "process.prepare": {
+      await registry4.reapDetached();
       const { spawn: spawn3, opId } = parsePrepare(raw);
       return await owner.prepare(spawn3, opId);
     }
@@ -58881,6 +58882,9 @@ function constructSession(uuid8, workspace, owner, ctx, fibers, registry4) {
     detach() {
       session.detached = true;
     },
+    attach() {
+      session.detached = false;
+    },
     pruneMemo() {
       while (session.writeMemo.size > 512) session.writeMemo.delete(session.writeMemo.keys().next().value);
     },
@@ -58946,6 +58950,16 @@ var ClientRegistry = class {
   }
   drop(uuid8) {
     this.sessions.delete(uuid8);
+  }
+  /** Reclaim sessions that have detached and own no processes (reap event ③). */
+  async reapDetached() {
+    const entries = await Promise.allSettled([...this.sessions.values()]);
+    for (const entry of entries) {
+      if (entry.status !== "fulfilled") continue;
+      const session = entry.value;
+      if (!session.detached || session.owner.size > 0) continue;
+      await session.dispose();
+    }
   }
   get size() {
     return this.sessions.size;

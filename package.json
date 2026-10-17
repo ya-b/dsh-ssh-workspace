@@ -26,6 +26,7 @@
     "@deepseek-ai/dsh-bash-local": "link:../deepseek-harness/packages/shell/bash-local",
     "@deepseek-ai/dsh-host-directory-picker": "link:../deepseek-harness/packages/host/directory-picker",
     "@deepseek-ai/dsh-fs-local": "link:../deepseek-harness/packages/fs/fs-local",
-    "@deepseek-ai/dsh-session": "link:../deepseek-harness/packages/core/session"
+    "@deepseek-ai/dsh-session": "link:../deepseek-harness/packages/core/session",
+    "@dsh-ssh-workspace/install": "workspace:*"
   }
 }

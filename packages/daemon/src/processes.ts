@@ -45,13 +45,18 @@ const processIdRequest = z.object({ id: z.string() }).strict()
 
 /** Push collector snapshots to the attached client while capture continues independently. */
 class SnapshotForwarder {
+  private readonly collector: OutputCollector
+  private readonly maxBytes: number
   private peer: RpcPeer | undefined
   private dirty = false
   private running: Promise<void> | undefined
   private stopped = false
   private socket: import('node:net').Socket | undefined
 
-  constructor(private readonly collector: OutputCollector, private readonly maxBytes: number) {}
+  constructor(collector: OutputCollector, maxBytes: number) {
+    this.collector = collector
+    this.maxBytes = maxBytes
+  }
 
   attach(socket: import('node:net').Socket): void {
     if (this.socket === socket) return
