@@ -193,7 +193,7 @@ export interface SshHostsService {
 
 - 单测：`directory-picker.host.spec.ts`（hosts 枚举、本地 list 兼容、远程 list 委托、
   createDirectory(远程) 拒绝）；`machines.test.mjs` 保持 10/10（改为服务面）。
-- 探针回归：`probe-transport 11/11`、`probe-providers 13/13`、`probe-mount 28/28`、
+- 探针回归：`probe-transport 11/11`、`probe-providers 13/13`、`probe-mount 34/34`、
   `probe-resilience 11/11`（无协议改动，预期全绿）。
 - 浏览器 e2e（本地构建实例）：
   1. 侧边栏无「远程工作区」图标；加号存在。

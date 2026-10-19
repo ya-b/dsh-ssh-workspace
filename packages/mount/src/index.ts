@@ -185,8 +185,9 @@ export class SshWorkspaceMount extends Service {
    */
   async browse(host: string | null, path: string): Promise<BrowseListing> {
     const remote = host !== null && host !== ''
-    const fs = remote ? this.hosts.pair(host).fs : this.ctx.fs
-    if (remote) await this.hosts.pair(host).ready
+    const runtime = remote ? this.hosts.pair(host) : undefined
+    if (runtime !== undefined) await runtime.ready
+    const fs = runtime?.fs ?? this.ctx.fs
     if (!isAbsolute(path)) throw new Error(`browse needs an absolute path, got ${JSON.stringify(path)}`)
     const resolved = await fs.resolve(path)
     const info = await fs.stat(resolved)

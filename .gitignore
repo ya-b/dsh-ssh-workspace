@@ -3,3 +3,9 @@ lib/
 dist/
 *.log
 .dsh-probe/
+
+# the installable bundle at the repository root is committed
+!/lib/
+!/lib/**
+!/dist/
+!/dist/**

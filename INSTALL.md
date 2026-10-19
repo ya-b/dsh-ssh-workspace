@@ -1,56 +1,59 @@
 # 安装到一个 dsh profile
 
+仓库根本身就是可安装的组合包 `@dsh-ssh-workspace/bundle`：它声明
+`dsh.bundle.patch`，并携带预构建的 host 入口、浏览器 bundle 和 daemon 归档。
 插件走「根平面路由」：不动 profile 里的任何官方行，只 `insert` 三行自有插件
 （`ssh-workspace-mount` + api + ui）。cordis 的 patch 条目不能改行的 `name`，
 `insert` 只允许新增，这正好满足本方案——官方 `execution-worlds` 与 helper 全保持原样。
 
-## 1. 构建产物
+## 1. 从 Git 安装（推荐）
 
 ```bash
-# daemon bundle（远端要跑的字节）
-cd packages/daemon && pnpm run build        # → lib/workspaced.js
-
-# 远端归档（bundle + 裁剪后的 node-pty，约 0.4 MiB）
-cd ../mount && pnpm run archive             # → dist/daemon.tar.gz
-
-# 浏览器半的 bundle（CJS 工厂，供 __ModuleLoader__ 装载）
-cd ../ui && node build.mjs                  # → lib/client.js
+dsh plugin --profile web add https://github.com/ya-b/dsh-ssh-workspace
 ```
 
-改动 `packages/daemon` 或 `packages/ui/src/client` 后必须重新构建对应产物并**重启实例**
-（归档摘要变化会在下次首次使用时重新投递，但已运行的 daemon 需要重启才会换代码）。
-
-## 2. 装入 profile
-
-```bash
-dsh plugin --profile web add 'link:/path/to/dsh-ssh-workspace/packages/mount'
-dsh plugin --profile web add 'link:/path/to/dsh-ssh-workspace/packages/api'
-dsh plugin --profile web add 'link:/path/to/dsh-ssh-workspace/packages/ui'
-```
-
-## 3. 追加 profile 层
-
-追加到 `$DSH_HOME/profiles/web/cordis.patch.yml`：
-
-```yaml
-- insert:
-    - id: ssh-workspace-mount
-      name: '@dsh-ssh-workspace/mount'
-      config:
-        daemonDir: '~/.dsh-workspace'   # 远端状态目录；~ 由远端 shell 展开
-        node: node                      # 远端 node（>= 20；绝对路径更稳）
-        install: true                   # 首次使用时投递 daemon 归档
-    - id: api-ssh-workspace
-      name: '@dsh-ssh-workspace/api'
-    - id: ui-ssh-workspace
-      name: '@dsh-ssh-workspace/ui'
-```
-
-校验组合结果并重启：
+安装会把 `@dsh-ssh-workspace/bundle` 追加进 profile 的 `dsh.profile.bundles`，
+随后按包内 `cordis.patch.yml` 装入三行。CLI 安装后需重启实例才会加载新插件：
 
 ```bash
 dsh --profile web --dump-config | grep -A8 ssh-workspace-mount
 ```
+
+仓库已提交 `lib/` 与 `dist/daemon.tar.gz`，因此 git 安装**不需要** `prepare`
+构建脚本，也不需要在 profile 的 `pnpm-workspace.yaml` 里批准 `allowBuilds`。
+首次连远端主机时，归档会按摘要投递到远端 `~/.dsh-workspace`。
+
+Web 侧也可以在「插件」页安装同一个 URL，安装完成会立即生效（无需重启）。
+
+## 2. 本地开发安装
+
+```bash
+pnpm install
+pnpm run build          # → lib/{mount,api,index,client}.js + dist/daemon.tar.gz
+
+dsh plugin --profile web add 'link:/abs/path/to/dsh-ssh-workspace'
+```
+
+`link:` 安装直接使用该 checkout 的 `lib/`、`dist/`；修改源码后重新执行
+`pnpm run build` 并重启实例。`packages/daemon` 或浏览器半改动时尤其注意：
+构建产物不重新生成，运行中的代码不会变。
+
+## 3. 构建产物
+
+```bash
+pnpm run build
+```
+
+等价于：
+
+1. esbuild 把 `packages/mount`（含 transport/providers/install/rpc）和
+   `packages/api` 打成自包含 ESM：`lib/mount.js`、`lib/api.js`；
+2. 构建 `packages/daemon/lib/workspaced.js`，再生成
+   `packages/mount/dist/daemon.tar.gz` 并复制到根 `dist/`;
+3. 用同一份 UI 源码生成浏览器 bundle `lib/client.js`（模块 id 为
+   `@dsh-ssh-workspace/bundle`）。
+
+`packages/ui` 单独构建时仍可用 `node build.mjs`，产物写到 `packages/ui/lib/client.js`。
 
 ## 4. 设置项
 
@@ -58,19 +61,19 @@ dsh --profile web --dump-config | grep -A8 ssh-workspace-mount
 `reconnectBaseMs`、`reconnectMaxMs`、`controlDir`、`daemonArchive`、`maxFrameBytes`、
 `maxPending`、`statePath`（侧映射 JSON，默认 `${DSH_HOME:-~/.dsh}/storages/ssh-workspaces.json`）。
 
-## 5. 回滚
+组合包默认 `daemonDir: '~/.dsh-workspace'`、`node: node`、`install: true`。要覆盖时，
+在 profile 自己的 `cordis.patch.yml` 用相同 id 重述整行 config（后应用的层整行覆盖）。
 
-删掉上面三个 patch 条目，再
-`dsh plugin --profile web remove @dsh-ssh-workspace/{mount,api,ui}`。
-
-## 升级
-
-插件的三类产物各自独立演进，升级时按需重建：
+## 5. 升级
 
 ```bash
-cd packages/daemon && pnpm run build && cd ../mount && pnpm run archive   # 远端代码变了
-cd ../ui && node build.mjs                                                # 浏览器半变了
-node tests/daemon/probe-mount.mjs                                         # 回归
+# Git 安装
+dsh plugin --profile web update @dsh-ssh-workspace/bundle
+# 或重新 add 并锁定提交
+dsh plugin --profile web add 'https://github.com/ya-b/dsh-ssh-workspace#<sha>'
+
+# 本地 link 安装
+git pull && pnpm install && pnpm run build
 ```
 
 远端 daemon 的替换时机：新归档的**摘要**变化后，下一次首次使用该 (host, daemonDir) 时会
@@ -80,6 +83,14 @@ bootstrap 时自愈），随后客户端按 `clientUuid` 重入会话。
 
 远端 Node 版本不足或路径错误时，bootstrap 会在建连阶段直接报
 `remote workspace daemon preflight failed: <node> is not a usable Node >= 20`。
+
+## 6. 回滚
+
+```bash
+dsh plugin --profile web remove @dsh-ssh-workspace/bundle
+```
+
+只删除依赖与 `dsh.profile.bundles` 中的选择；不会动 profile 自己写的 patch 行。
 
 ## 备注：白名单
 

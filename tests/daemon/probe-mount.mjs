@@ -105,10 +105,31 @@ check('mount service registered', plugin instanceof SshWorkspaceMount)
 const hosts = plugin.hosts
 const state = plugin.state
 check('attribution sidecar instantiated', state instanceof RemoteWorkspaceState)
+// The mount service's own `ctx.fs` must keep resolving the root plane after a
+// host is paired: the provider family registers `fs`/`subprocess`/`sandbox`
+// under names that also live on the root plane, and an isolate alone shares
+// the parent fiber's name-keyed store, which would shadow them for this whole
+// context tree (the local half of the plugin would start reading the remote).
+const mountFs = plugin.ctx.fs
 const runtime = hosts.pair('localhost')
 await runtime.ready
 check('host runtime is daemon-backed', runtime.connection?.constructor?.name === 'DaemonSshConnection', runtime.connection?.constructor?.name)
 check('remote provider family mounted', runtime.fs !== undefined && runtime.subprocess !== undefined && runtime.sandbox !== undefined)
+check('the host family resolves the daemon filesystem', runtime.fs.constructor.name === 'SshFileSystem' && runtime.fs !== mountFs, runtime.fs.constructor.name)
+check('the mount context keeps resolving the root filesystem', plugin.ctx.fs.constructor.name !== 'SshFileSystem', plugin.ctx.fs.constructor.name)
+const localHome = await plugin.browse(null, homedir())
+check('browse on the local machine lists the local home', localHome.path === homedir() && localHome.entries.length > 0, `${localHome.path} entries=${localHome.entries.length}`)
+let localError
+try { await plugin.browse(null, new URL(import.meta.url).pathname) } catch (error) { localError = String(error) }
+check('a local browse of a file fails as local', localError !== undefined && /is not a directory on this machine/u.test(localError), localError)
+// A second host must not disturb the first one's family or the root plane.
+const secondHost = 'dsh-mount-probe-second.invalid'
+hosts.pair(secondHost)
+await Promise.resolve()
+await Promise.resolve()
+const second = hosts.peek(secondHost)
+check('a second host builds its own provider family', second !== undefined && second.fs !== runtime.fs && second.fs.constructor.name === 'SshFileSystem')
+check('the root filesystem survives a second pairing', plugin.ctx.fs.constructor.name !== 'SshFileSystem', plugin.ctx.fs.constructor.name)
 
 // The remote root must exist on the remote side before it can be adopted.
 await new Promise((resolve, reject) => {

@@ -1,12 +1,53 @@
 {
-  "name": "dsh-ssh-workspace-monorepo",
-  "private": true,
+  "name": "@dsh-ssh-workspace/bundle",
+  "description": "Remote workspaces for DeepSeek Harness: pick a machine, pick a directory, run fs/terminal/commands on the remote host",
   "version": "0.1.0",
   "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./mount": "./lib/mount.js",
+    "./api": "./lib/api.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "dist",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  },
   "scripts": {
-    "build": "pnpm -r run build",
+    "build": "node scripts/build-bundle.mjs",
+    "build:packages": "pnpm -r run build",
     "test": "pnpm -r --no-bail run test",
     "typecheck": "pnpm -r run typecheck"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-fs-ssh": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-sandbox-ssh": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-ssh": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-subprocess-ssh": "0.2.1-rc.2"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.5",
+    "@deepseek-ai/dsh-client-connection": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-fs": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-host-webserver": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-sandbox": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-sandbox-policy": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-subprocess": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-workspace": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "~3.18.5"
   },
   "devDependencies": {
     "esbuild": "^0.27.0",

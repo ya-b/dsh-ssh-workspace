@@ -97,7 +97,11 @@ export async function installDaemonArchive(
     const child = execFile('ssh', [
       '-T', config.host, installCommand(config),
     ], { maxBuffer: 1024 * 1024, timeout: deadlineMs }, (error) => { if (error === null) resolve(); else reject(error) })
-    child.stdin?.end(archive)
+    // An unreachable or refusing host kills ssh before the archive is written;
+    // without this handler that EPIPE arrives as an uncaught 'error' event and
+    // takes the whole host process down. The execFile callback already reports
+    // the real failure.
+    child.stdin?.on('error', () => undefined).end(archive)
     child.stderr?.resume()
   })
 }

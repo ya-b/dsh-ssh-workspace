@@ -66,7 +66,7 @@
 >   `indexHeader`/`resolveByPath`/`attachSession`/`delete` 以侧映射
 >   `storages/ssh-workspaces.json` 为准。
 > 包名 `packages/realm` → `packages/mount`；profile 只需 `insert` 三行
-> （`ssh-workspace-mount`/api/ui）。证据：`tests/daemon/probe-mount.mjs` 28/28；
+> （`ssh-workspace-mount`/api/ui）。证据：`tests/daemon/probe-mount.mjs` 34/34；
 > 浏览器端到端见 [`PROGRESS.md`](./PROGRESS.md)。
 
 ### 模块 A0 · probe 探针（最先做，全项目最大架构风险在这里落锤）

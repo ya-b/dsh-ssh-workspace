@@ -12,12 +12,19 @@ agent preset 建隔离上下文，realm 路线（`packages/realm`、替换 `exec
 
 | 面 | 实现 | 证据 |
 |---|---|---|
-| fs 路由 | `ctx.fs` 按路径路由到所属主机 daemon providers；本地兜底；上行 marker 探测（`.git`/指令文件祖先探测）在本地 EACCES/EPERM 时按「相邻远端根」回退到主机 | `probe-mount` 28/28 |
+| fs 路由 | `ctx.fs` 按路径路由到所属主机 daemon providers；本地兜底；上行 marker 探测（`.git`/指令文件祖先探测）在本地 EACCES/EPERM 时按「相邻远端根」回退到主机 | `probe-mount` 34/34 |
 | 进程/沙箱 | `ctx.subprocess` 按 cwd、`ctx.sandbox.confine` 按 `policy.workspaceRoot` | 同上 |
 | 终端 | `terminalController.execution(agent)` 按会话 cwd 换入主机 subprocess | 同上 |
 | 会话 | `sessionController.agents.createAgent` 按 cwd 跳过本地 `mkdir`，远端 `fs.stat` 验证后按上游针脚铸造 | 同上 |
 | 注册表 | `adopt`（`createCanonical`）、`indexHeader`、`resolveByPath` 回退、`attachSession`、`delete`；侧映射 `storages/ssh-workspaces.json` | 同上 |
 | API/UI | `GET /machines`、`/precheck`、`/browse`、`POST /adopt`（zod）；弹窗「打开」= adopt + 默认名时重命名 `<目录>@<主机>` | 浏览器实测（下） |
+
+**provider fiber 隔离修复**：host provider 家族注册的服务名（`ssh`/`fs`/`subprocess`/`sandbox`）与根平面重名，
+而 `ctx.isolate` 只换 isolate 符号、共享父 fiber，`provide` 按名写进该 fiber 的 store——直接构造会把插件
+自己一整棵上下文的 `ctx.fs` 覆盖成远端 provider（表现为本机目录浏览报 `"/home/... " is not a directory on
+this machine`，且多主机后配对者全胜）。现每主机用独立 `ctx.plugin` fiber 承载家族；provider getter 在
+`ready` 前抛错以防误用。证据：`probe-mount` 34/34（含「mount ctx 仍解析根平面 fs」「第二台主机不污染
+第一台」），另修复安装归档时 ssh 早退导致的 stdin EPIPE 未捕获崩溃（`packages/install`）。
 
 **浏览器端到端（临时实例 3081，`DSH_HOME=/tmp/opencode/dsh-home`，独立于 3080）**：
 弹窗选 `192.0.2.12` → `/root/apps/example` → 打开 → 侧栏 `example@192.0.2.12`；

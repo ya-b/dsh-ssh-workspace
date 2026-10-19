@@ -1,0 +1,11 @@
+- insert:
+    - id: ssh-workspace-mount
+      name: '@dsh-ssh-workspace/bundle/mount'
+      config:
+        daemonDir: '~/.dsh-workspace'
+        node: node
+        install: true
+    - id: api-ssh-workspace
+      name: '@dsh-ssh-workspace/bundle/api'
+    - id: ui-ssh-workspace
+      name: '@dsh-ssh-workspace/bundle'

@@ -1,93 +1,207 @@
-# dsh-ssh-workspace
+# dsh-ssh-workspace 【开发中】
 
-DeepSeek Harness 的远程工作区插件：Web UI 里先选机器、再选目录，加出来的工作区其
-**文件读写、终端、命令执行全部发生在远端**。`PLAN.md` 是完整计划，`PROGRESS.md` 是逐项证据台账。
+[English](./README.en.md) | 简体中文
 
-**SSH 只是数据管道。** 远端常驻 `workspace daemon`，客户端断线不影响远端命令；
-重连后自动拉取缓冲与终态，**绝不重放副作用**（opId 幂等门）。
+DeepSeek Harness 的远程工作区插件：在 Web UI 里先选机器（本机或 `~/.ssh/config` 中的主机），
+再选目录，创建出来的工作区其**文件读写、终端和命令执行全部发生在远端**。
 
-## 布局
+SSH 只是数据管道。远端常驻 `workspace daemon`，客户端断线不会中断远端命令；重连后按偏移
+续取输出与终态，写操作经 opId 幂等门，不会重放副作用。
 
-| 包 | 职责 |
+## 环境要求
+
+| 位置 | 要求 |
 | --- | --- |
-| `packages/daemon` | 远端 workspace daemon：单文件 bundle `lib/workspaced.js`（Node ≥ 20），unix socket + TLS-PSK 流端点 + 重放缓冲 |
-| `packages/transport` | 形状兼容 `{request, connectStream, dispose}` 的连接：ssh master、按流 `ssh -L` 转发、重连状态机、opId 自动注入 |
-| `packages/providers` | 把 `ctx.ssh` 换成 daemon 版，官方 `dsh-fs-ssh` / `dsh-subprocess-ssh` / `dsh-sandbox-ssh` / `dsh-bash-sandbox` 原样复用 |
-| `packages/mount` | 根平面路由（rc.2 定案）：patch `ctx.fs`/`ctx.subprocess`/`ctx.sandbox` + terminal/session 控制器 + `WorkspaceRegistry/Entity`，把远端工作区的操作派发到所属主机的 daemon providers；daemon 投递 + 侧映射 `ssh-workspaces.json` |
-| `packages/api` | 宿主侧只读路由：`/ssh-workspace/machines`、`/precheck`、`/browse`（复用连接层准入）、`POST /adopt` |
-| `packages/ui` | 浏览器侧面板：机器列表 → 目录浏览 → 添加工作区（`sidebar.panellist` + `sidebar.footer.action` 弹窗） |
-| `packages/install` | 打包/投递远端归档（bundle + 裁剪 node-pty） |
-| `packages/rpc` | 长度前缀 JSON 帧 + 类型化错误 |
+| 宿主 | Node ≥ 20；`dsh` 0.2.1-rc.2；可用的 OpenSSH 客户端；可读的 `~/.ssh/config` |
+| 远端 | Linux x64；Node ≥ 20；POSIX `sh`；`tar`；OpenSSH 服务端 |
+| 认证 | 密钥或 ssh-agent 等**非交互登录**；不支持交互式密码 |
+| SSH | OpenSSH ≥ 8.2（客户端需支持 `ControlMaster` / `-O forward`） |
+| 终端 | 归档内含 linux-x64 的 node-pty；其他平台缺少 node-pty 时仅终端不可用，文件与命令正常 |
 
-## 快速接入
+## 安装
 
-见 `INSTALL.md`（构建归档 → 装入 profile → 追加 `ssh-workspace-mount` 等三行 patch → 重启）。
-
-## 使用（浏览器）
-
-侧边栏「添加工作区（＋）」→ 菜单「添加工作区…」→ **「选择工作区目录」弹窗**，
-弹窗**最上方**是主机选择：
-
-1. **选机器** — 下拉 = 本机 + `~/.ssh/config` 全部具名主机（含 `Include` 递归）。
-   选定后自动做一次非交互登录探测：
-   `usable` / `needs-credentials` / `unreachable` / `unknown`（徽标显示在弹窗顶部）。
-2. **选目录** — 本机走宿主浏览；远端目录由插件的 daemon 连接列出（与会话完全相同），
-   可「上级」回溯，「显示隐藏文件」开关可用。
-3. **打开** — 本机：走 Harness 原生目录流语义（创建后自动开始会话）；
-   远端：直接创建 SSH 工作区（该弹窗承载 host，无法转交 owner），随后所有
-   fs/终端/命令都在那台机器上执行。
-
-说明（方案 B：Harness 源码零改动）：
-- Harness 自带的「添加远程工作区…」菜单项与文本表单弹窗保留（插件无法隐藏），
-  与本弹窗并存；两边的结果等价（都写入同一工作区 store）。
-- 弹窗由插件以 `priority: -1` 注册进目录流槽位，视觉与交互复刻官方
-  「选择工作区目录」弹窗（`@deepseek-ai/dsh-client-ui-primitives` 的 Modal/Button）。
-
-## 兼容矩阵
-
-| 项 | 要求 |
-| --- | --- |
-| 远端 Node | ≥ 20（daemon 为 ESM bundle，使用 `createRequire` 兼容 node-pty 的原生依赖） |
-| 远端 OpenSSH 客户端/服务端 | ≥ 8.2（`ssh -O forward`、`ControlMaster`） |
-| 远端 shell | POSIX `sh`（bootstrap 只用 `mkdir/chmod/rm/test/kill/setsid/nohup`） |
-| 远端平台 | linux（node-pty 预编译按平台裁剪；darwin 需自备 node-pty） |
-| 宿主 | Node ≥ 20；已装 `ssh`；`~/.ssh/config` 可读 |
-| 认证 | 非交互登录（密钥 / agent / ControlMaster）；不支持交互式密码 |
-
-## 恢复与运维
-
-| 情况 | 行为 |
-| --- | --- |
-| 网络抖动 / SSH 主连接被杀 | transport 自动重连，按已确认字节偏移续播 stdout/stderr/终端；远端进程继续运行 |
-| 客户端进程重启 | 新连接用同一 `clientUuid` 重入同一会话，`fs.*`/`process.*` 终态照常可查 |
-| daemon 被强杀（SIGKILL） | 下次 bootstrap 检测到「socket 在、pid 已死」会清理残留并重启；客户端若声明了旧 instanceId 会收到 `WORKSPACE_PROGRESS_LOST`（明确告知进度不可续，而不是假装续上） |
-| daemon 重启后 | 白名单从 `config.json` 恢复（含用户曾添加的目录，保留最近 64 条） |
-| 远端缺少 node-pty | 一切正常，只有终端不可用 |
-
-## 运行一个带完整 UI 的实例
-
-插件只依赖已发布包（`dsh` 0.2.1-rc.2 及其 `@deepseek-ai/*` 组件），**不需要任何 harness
-源码改动**。用一个独立 `DSH_HOME` 起临时实例即可验证，不打扰 3080 的常驻服务：
+### 从 Git 安装（推荐）
 
 ```bash
-DSH_HOME=/tmp/dsh-ssh-test dsh web --no-open --port 3081
+dsh plugin --profile web add https://github.com/ya-b/dsh-ssh-workspace
 ```
 
-本机 3080 端口的常驻服务由 systemd 用户单元启动；宿主侧代码变更后需要
-`systemctl --user restart dsh-web.service` 才会生效（UI bundle 实时读盘、无需重启）。
+这条命令会：
 
-## 验证
+1. 把 `@dsh-ssh-workspace/bundle` 安装进 `web` profile；
+2. 把该 bundle 追加到 profile 的 `dsh.profile.bundles`；
+3. 按包内 `cordis.patch.yml` 装入 `ssh-workspace-mount`、`api-ssh-workspace`、
+   `ui-ssh-workspace` 三行。
+
+仓库已提交构建产物 `lib/` 与 `dist/daemon.tar.gz`，所以 Git 安装**不需要**额外构建。
+
+安装后重启实例生效。
+
+
+### 本地开发安装
 
 ```bash
-# 每个探针都可独立运行；依赖真实 sshd（默认 ssh localhost）
-node tests/daemon/probe-transport.mjs    # 11/11 执行、断线续取终态、零重复、fs
-node tests/daemon/probe-providers.mjs    # 13/13 官方 provider 家族原样工作
-node tests/daemon/probe-mount.mjs        # 28/28 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射
-node tests/api/machines.test.mjs          # 10/10 ssh config 枚举（通配隐藏、Include 递归、顺序）
-node tests/daemon/probe-resilience.mjs   # 11/11 死亡场景（终端断线续播、换代、回收顺序、大文件 opId 重放、200 次观测）
-PROBE_OUTAGE_MS=120000 node tests/daemon/probe-resilience.mjs   # 同上，断线 2 分钟
-node tests/daemon/check-node-preflight.mjs                      # 远端 Node 缺失/过旧的报错文案
-node tests/daemon/bench-resolve.mjs      # 往返延迟抽样（fs.resolve ≈ 4ms/op）
+pnpm install
+pnpm run build
+dsh plugin --profile web add 'link:/abs/path/to/dsh-ssh-workspace'
 ```
 
-浏览器端的端到端证据（验证 → 添加 → 会话内远端执行）记录在 `PROGRESS.md`。
+`link:` 安装直接使用 checkout 中的 `lib/` 和 `dist/`。修改源码后重新执行
+`pnpm run build`，再重启实例；只改源码不重建不会生效。
+
+## 配置
+
+### SSH 主机
+
+机器列表来自本机 + `~/.ssh/config` 中所有具体的 `Host` 别名（递归跟随 `Include`；
+通配符和取反规则会被跳过，因为它们不是具体机器）。普通 OpenSSH 配置全部有效：
+`HostName`、`Port`、`User`、`IdentityFile`、`ProxyJump`、`ProxyCommand` 等。
+
+```sshconfig
+# ~/.ssh/config
+Host devbox
+  HostName 192.0.2.10
+  User root
+  Port 22
+  IdentityFile ~/.ssh/id_ed25519
+
+Include ~/.ssh/config.d/*
+```
+
+要求 `ssh devbox true` 能在不询问密码的情况下成功（密钥、agent 或 ControlMaster）。
+修改 `~/.ssh/config` 后刷新浏览器页面，主机列表会重新枚举。
+
+不想在弹窗中显示某些别名时，用 `api-ssh-workspace` 的 `hiddenHosts` 隐藏：
+
+```yaml
+# ~/.dsh/profiles/web/cordis.patch.yml
+- id: api-ssh-workspace
+  config:
+    hiddenHosts:
+      - automation
+      - ci-runner
+```
+
+### 插件参数
+
+`ssh-workspace-mount` 的可配置项：
+
+| 项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `daemonDir` | `~/.dsh-workspace` | **远端** daemon 状态目录；`~` 由远端 shell 展开 |
+| `node` | `node` | **远端** Node 可执行文件；非交互 SSH 的 PATH 常找不到 nvm 的 Node，建议写绝对路径，如 `/usr/local/bin/node` |
+| `install` | `true` | 首次使用某主机时投递内置 daemon 归档；按 (host, daemonDir, 归档摘要) 去重 |
+| `daemonArchive` | 内置归档 | 覆盖 daemon 归档路径，主要用于开发调试 |
+| `requestTimeoutMs` | `30000` | 安装、准入、打开等管理请求的超时 |
+| `reconnectBaseMs` | `250` | 重连退避初始值 |
+| `reconnectMaxMs` | `15000` | 重连退避上限 |
+| `controlDir` | 临时目录 | 本地 SSH ControlMaster socket 目录；不填则使用 `/tmp/dsh-ws-*` |
+| `statePath` | `${DSH_HOME:-~/.dsh}/storages/ssh-workspaces.json` | 本地工作区归属侧映射路径 |
+
+`api-ssh-workspace` 的可配置项：
+
+| 项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `probeTimeoutMs` | `8000` | 主机连通性预检的单次超时 |
+| `hiddenHosts` | `[]` | 不显示在机器列表中的 SSH 别名 |
+| `prefix` | `/ssh-workspace` | HTTP 路由前缀；浏览器半固定使用 `/ssh-workspace`，**不要修改** |
+
+`ui-ssh-workspace` 没有配置项。
+
+覆盖参数时，在 profile 自己的 `cordis.patch.yml` 中按相同 `id` 重述整行配置：
+
+```yaml
+# ~/.dsh/profiles/web/cordis.patch.yml
+- id: ssh-workspace-mount
+  config:
+    daemonDir: '~/.dsh-workspace'
+    node: /usr/local/bin/node
+    install: true
+    requestTimeoutMs: 30000
+    reconnectBaseMs: 250
+    reconnectMaxMs: 15000
+```
+
+同一 `id` 的 `config` 会整体替换 bundle 中的配置，未写的字段使用 schema 默认值，
+建议把需要的项写全。若 profile 的 patch 文件还是空数组 `[]`，用条目替换它，而不是
+直接追加到 `[]` 后面。
+
+### 远端 daemon
+
+首次在某个 (主机, `daemonDir`) 上打开目录时，插件会通过 SSH 把归档解压到远端
+`daemonDir`，并执行远端 Node 版本检查。之后：
+
+- daemon 状态在远端 `~/.dsh-workspace`：`sock`、`pid`、`lock`、`config.json`、
+  `streams/`、`daemon.log`；
+- `config.json` 的 `roots` 是允许作为工作区打开的目录白名单，由客户端在打开前写入，
+  保留最近 64 条；
+- daemon 已运行时不重复启动；客户端断线、心跳或租约变化都不会回收远端进程；
+- 远端 Node 缺失或过旧会在建连阶段报
+  `remote workspace daemon preflight failed: <node> is not a usable Node >= 20`。
+
+## 使用
+
+1. 打开 Web UI，侧边栏「添加工作区（＋）」→「添加工作区…」。
+2. 在弹窗顶部的**主机**下拉中选择本机或某个 SSH 主机。
+3. 选择目录（可「上级」回溯、开关隐藏文件），点「打开」。
+4. 远端工作区默认命名为 `<目录名>@<主机别名>`；会话中的 `pwd`、文件读写、终端和命令
+   均在远端执行。
+
+## 升级与卸载
+
+升级 bundle：
+
+```bash
+dsh plugin --profile web update @dsh-ssh-workspace/bundle
+# 或重新安装并锁定提交
+dsh plugin --profile web add 'https://github.com/ya-b/dsh-ssh-workspace#<sha>'
+```
+
+重启 dsh 实例后新代码生效。远端已运行的 daemon 不会自动换代码；必要时杀掉远端 daemon
+进程，让下一次使用重新投递并启动：
+
+```bash
+ssh <host> 'kill "$(cat ~/.dsh-workspace/pid)" 2>/dev/null || true'
+```
+
+卸载：
+
+```bash
+dsh plugin --profile web remove @dsh-ssh-workspace/bundle
+```
+
+卸载只移除依赖、bundle 选择和它带来的三行 patch，不会删除本地侧映射或远端
+`~/.dsh-workspace`。需要彻底清理时，先停掉远端 daemon，再删除数据：
+
+```bash
+rm -f "${DSH_HOME:-$HOME/.dsh}/storages/ssh-workspaces.json"
+ssh <host> 'kill "$(cat ~/.dsh-workspace/pid)" 2>/dev/null || true; rm -rf ~/.dsh-workspace'
+```
+
+## 故障排除
+
+| 现象 | 处理 |
+| --- | --- |
+| 弹窗里没有远端主机 | 确认是具体 `Host` 别名而非通配符；刷新页面；检查 `~/.ssh/config` 与 `Include` |
+| 预检显示 `needs-credentials` | `ssh <alias> true` 必须无需交互即可成功；配置密钥或启动 agent |
+| 报 Node 版本/路径错误 | 把 `node` 配成远端绝对路径，例如 `/usr/local/bin/node`；确认 `node -v` ≥ 20 |
+| 终端打不开，但文件和命令正常 | 远端平台/架构与归档中的 node-pty 不匹配；文件与命令不受影响 |
+| 安装后没有出现菜单 | `dsh --profile web --dump-config` 检查三行 patch；重启 dsh 实例 |
+| 升级后行为仍旧 | 重启 dsh 实例；远端 daemon 也要重启才会加载新归档 |
+
+## 开发
+
+```bash
+pnpm install
+pnpm run build        # → lib/{mount,api,index,client}.js + dist/daemon.tar.gz
+
+node tests/api/machines.test.mjs
+node tests/daemon/probe-transport.mjs
+node tests/daemon/probe-providers.mjs
+node tests/daemon/probe-mount.mjs
+node tests/daemon/probe-resilience.mjs
+```
+
+`lib/` 与 `dist/daemon.tar.gz` 是 Git 安装使用的已提交产物：改源码后必须重建并提交。
+更细的构建、回滚与运维说明见 [`INSTALL.md`](./INSTALL.md)，实现计划和证据台账见
+[`PLAN.md`](./PLAN.md) 与 [`PROGRESS.md`](./PROGRESS.md)。

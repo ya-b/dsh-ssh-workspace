@@ -29,6 +29,7 @@ DeepSeek Harness 远程工作区插件（monorepo，`pnpm`）。
 
 | 包 | 职责 |
 | --- | --- |
+| 仓库根（`@dsh-ssh-workspace/bundle`） | 可安装组合包：`cordis.patch.yml` 三行 + 自包含 `lib/{mount,api,index,client}.js` + `dist/daemon.tar.gz`；git 装进 profile 后即生效 |
 | `packages/daemon` | 远端常驻 daemon：单文件 bundle `lib/workspaced.js`（Node ≥ 20）；unix socket + TLS-PSK 流端点 + 按偏移重放 `ReplayBuffer`；opId 门 + 终态缓存；`workspace.allow` 动态白名单（落盘 `config.json`，保留最近 64 条） |
 | `packages/transport` | 形状兼容 `{request, connectStream, dispose}`：ssh master、按流 `ssh -L` 转发、重连状态机、`DurableStream` 续接、opId 自动注入；**只在真实链路丢失时重试**（首次连接有上限），握手失败即杀 ssh 不留泄漏 |
 | `packages/providers` | `DaemonSshConnection` = daemon 版 `ctx.ssh`，官方 `dsh-fs-ssh`/`dsh-subprocess-ssh`/`dsh-sandbox-ssh`/`dsh-bash-sandbox` 原样复用 |
@@ -56,20 +57,24 @@ DeepSeek Harness 远程工作区插件（monorepo，`pnpm`）。
 ```bash
 pnpm install                      # 首次；harness vendor/packages 用 link: 目录引用
 
-# 三类产物（改了对应源码必须重建，且重建后重启实例才会生效）
+# 安装产物（改了对应源码必须重建，且重建后重启实例才会生效）
+pnpm run build                    # → 根 lib/{mount,api,index,client}.js + dist/daemon.tar.gz
+# 等价的单项构建：
 cd packages/daemon && pnpm run build      # → lib/workspaced.js
 cd packages/mount && pnpm run archive     # → dist/daemon.tar.gz（bundle + node-pty）
-cd packages/ui && node build.mjs          # → lib/client.js（CJS 工厂 + __ModuleLoader__）
+cd packages/ui && node build.mjs          # → packages/ui/lib/client.js（默认 id 仍是 ui 包）
 
 # 单测/端到端（需真实 sshd，默认 ssh localhost；daemon 部署在 ~/.dsh-workspace）
 node tests/api/machines.test.mjs          # ssh config 枚举 10/10
 node tests/daemon/probe-transport.mjs     # 11/11 执行/断线续取/零重复/fs
 node tests/daemon/probe-providers.mjs     # 13/13 官方 provider 家族
-node tests/daemon/probe-mount.mjs         # 28/28 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射
+node tests/daemon/probe-mount.mjs         # 34/34 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射 + provider fiber 隔离回归
 node tests/daemon/probe-resilience.mjs    # 11/11 死亡场景；PROBE_OUTAGE_MS=120000 跑 2 分钟断线
 node tests/daemon/check-node-preflight.mjs# 远端 Node 缺失/过旧报错文案
 ```
 
+- 根 `lib/` 与 `dist/daemon.tar.gz` 是 git 安装用的已提交产物：改源码后必须重建再提交，
+  否则 `dsh plugin add <git-url>` 装到的仍是旧代码。
 - 类型检查：`cd packages/<pkg> && ../../node_modules/.bin/tsc --noEmit`（daemon 内
   `pnpm run typecheck`）。
 - 环境注意：daemon/transport/mount 直接由 Node 运行（strip-only 模式）——**不要用
@@ -83,8 +88,8 @@ node tests/daemon/check-node-preflight.mjs# 远端 Node 缺失/过旧报错文�
 DSH_HOME=/tmp/opencode/dsh-home systemd-run --user --unit dsh-test --collect /home/user/.local/bin/dsh web --no-open --port 3081
 ```
 
-- 插件装入 profile：`dsh plugin --profile web add 'link:.../packages/{mount,api,ui}'` +
-  `~/.dsh/profiles/web/cordis.patch.yml` `insert` `ssh-workspace-mount`/api/ui 三行（详见 `INSTALL.md`）。
+- 插件装入 profile：`dsh plugin --profile web add 'link:/abs/path/to/dsh-ssh-workspace'`
+  （根组合包自带 `cordis.patch.yml` 三行；git 安装见 `INSTALL.md`）。
 - 验证路径：侧边栏「添加工作区」→ 菜单「添加工作区…」→ 弹窗顶部选主机 → 选目录 →「打开」；
   会话内发消息即验证远端执行（`pwd` 应回远端目录）。
 - 不要动 3080（systemd 用户单元启动的已发布版本）；临时 ssh 别名测试后必须还原

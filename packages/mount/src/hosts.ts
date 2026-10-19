@@ -7,7 +7,7 @@
  * @module @dsh-ssh-workspace/mount/hosts
  */
 
-import { Context } from '@deepseek-ai/cordis'
+import { Context, type Fiber } from '@deepseek-ai/cordis'
 import { SshFileSystem } from '@deepseek-ai/dsh-fs-ssh'
 import { SshSandboxProvider } from '@deepseek-ai/dsh-sandbox-ssh'
 import { SshSubprocessRuntime } from '@deepseek-ai/dsh-subprocess-ssh'
@@ -48,6 +48,14 @@ export interface HostRuntime {
   allow(path: string): Promise<void>
 }
 
+/** One host's official provider family, owned by its own plugin fiber. */
+interface HostProviderFamily {
+  connection: DaemonSshConnection
+  fs: SshFileSystem
+  subprocess: SshSubprocessRuntime
+  sandbox: SshSandboxProvider
+}
+
 /** Installs in flight or finished, keyed by host, state directory, and digest. */
 const installs = new Map<string, Promise<void>>()
 
@@ -78,6 +86,7 @@ function readArchive(path: string): Promise<Buffer> {
 /** The runtime pool. */
 export class RemoteHosts {
   private readonly runtimes = new Map<string, HostRuntime>()
+  private readonly fibers = new Map<string, Fiber>()
 
   private readonly ctx: Context
   private readonly config: HostsConfig
@@ -108,8 +117,10 @@ export class RemoteHosts {
 
   /**
    * The runtime of one host, creating it on first use. Creation itself is
-   * synchronous; installation and the handshake run behind {@link HostRuntime.ready}
-   * and every RPC awaits the transport's own open.
+   * synchronous; the provider family binds one microtask later inside its own
+   * fiber, and installation and the handshake run behind {@link HostRuntime.ready}.
+   * Reading the provider getters before `ready` settles throws by design, so
+   * await `ready` first; every RPC additionally awaits the transport's own open.
    * @param host - OpenSSH host alias.
    */
   pair(host: string): HostRuntime {
@@ -121,33 +132,78 @@ export class RemoteHosts {
     return runtime
   }
 
-  /** Dispose every transport; remote daemons keep running by design. */
+  /** Dispose every transport and provider fiber; remote daemons keep running by design. */
   async dispose(): Promise<void> {
     const closing = [...this.runtimes.values()]
+    const fibers = [...this.fibers.values()]
     this.runtimes.clear()
-    await Promise.allSettled(closing.map(runtime => runtime.connection.dispose()))
+    this.fibers.clear()
+    await Promise.allSettled([
+      ...closing.map(runtime => runtime.transport.dispose()),
+      ...fibers.map(fiber => fiber.dispose()),
+    ])
   }
 
-  /** Install the daemon (once per digest) and build the provider family. */
+  /**
+   * Build the provider family inside a plugin fiber of its own, then install
+   * the daemon once per archive digest.
+   *
+   * The family registers services named `ssh`, `fs`, `subprocess` and
+   * `sandbox`, which also exist on the root plane (and, in a profile that
+   * loads the official SSH plugins, could come from anywhere else). An
+   * isolated scope alone does not keep those registrations private:
+   * `ctx.isolate` shares the parent fiber, and registration writes into the
+   * parent fiber's name-keyed service store — which then shadows the root
+   * plane for every context derived from this plugin, with each later host
+   * winning for every earlier one. A plugin fiber of its own gives the family
+   * a private name-keyed store, so `ctx.fs` resolves to the daemon-backed
+   * filesystem inside the family and to the genuine local filesystem
+   * everywhere else, no matter how many hosts are paired.
+   */
   private create(host: string): HostRuntime {
     const config = this.transportConfig(host)
-    // The provider family registers services (`ssh`, `fs`, `subprocess`,
-    // `sandbox`) that also exist on the root plane; an isolated scope per host
-    // keeps those registrations private, so many hosts coexist in one process.
-    const context = this.ctx.isolate('ssh').isolate('fs').isolate('subprocess').isolate('sandbox')
+    const scope = this.ctx.isolate('ssh').isolate('fs').isolate('subprocess').isolate('sandbox')
     const transport = new RemoteWorkspaceTransport(config)
-    const connection = new DaemonSshConnection(context, { transport })
-    const fs = new SshFileSystem(context)
-    const subprocess = new SshSubprocessRuntime(context)
-    const sandbox = new SshSandboxProvider(context)
+    let family: HostProviderFamily | undefined
+    const built = new Promise<HostProviderFamily>((resolve, reject) => {
+      let fiber: Fiber
+      try {
+        fiber = scope.plugin({
+          name: `ssh-workspace-host:${host}`,
+          apply(hostCtx: Context) {
+            try {
+              family = {
+                connection: new DaemonSshConnection(hostCtx, { transport }),
+                fs: new SshFileSystem(hostCtx),
+                subprocess: new SshSubprocessRuntime(hostCtx),
+                sandbox: new SshSandboxProvider(hostCtx),
+              }
+              resolve(family)
+            } catch (error) {
+              reject(error)
+            }
+          },
+        })
+      } catch (error) {
+        reject(error)
+        return
+      }
+      this.fibers.set(host, fiber)
+    })
+    const requireFamily = (): HostProviderFamily => {
+      if (family === undefined) {
+        throw new Error(`remote host '${host}' providers are still starting; await the runtime's ready promise first`)
+      }
+      return family
+    }
     const runtime: HostRuntime = {
       host,
       transport,
-      connection,
-      fs,
-      subprocess,
-      sandbox,
-      ready: this.deploy(host, config).then(() => transport.open()),
+      get connection() { return requireFamily().connection },
+      get fs() { return requireFamily().fs },
+      get subprocess() { return requireFamily().subprocess },
+      get sandbox() { return requireFamily().sandbox },
+      ready: built.then(() => this.deploy(host, config)).then(() => transport.open()),
       allow: async (path: string) => {
         if (path === '') return
         await transport.request('workspace.allow', { path }, allowSchema, AbortSignal.timeout(config.requestTimeoutMs ?? 30_000))
@@ -155,6 +211,10 @@ export class RemoteHosts {
     }
     const ready = runtime.ready.catch((error: unknown) => {
       this.runtimes.delete(host)
+      const fiber = this.fibers.get(host)
+      this.fibers.delete(host)
+      void fiber?.dispose().catch(() => undefined)
+      void transport.dispose().catch(() => undefined)
       throw error
     })
     runtime.ready = ready
