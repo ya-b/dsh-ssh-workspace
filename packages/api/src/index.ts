@@ -211,13 +211,14 @@ function writeJson(response: ServerResponse, status: number, body: unknown): voi
  */
 async function listMachines(hidden: Set<string>): Promise<MachineEntry[]> {
   const local: MachineEntry = { alias: null, label: hostname(), local: true }
-  const machines: MachineEntry[] = [local]
-  for (const alias of await hostAliases(homedir())) {
-    if (hidden.has(alias)) continue
-    const facts = await sshConfigFacts(alias)
-    machines.push({ alias, label: alias, local: false, ...facts })
-  }
-  return machines
+  // `ssh -G` is per-alias work; run it together so a slow config evaluation
+  // cannot stack into one long picker load.
+  const remotes = await Promise.all(
+    (await hostAliases(homedir()))
+      .filter(alias => !hidden.has(alias))
+      .map(async (alias): Promise<MachineEntry> => ({ alias, label: alias, local: false, ...await sshConfigFacts(alias) })),
+  )
+  return [local, ...remotes]
 }
 
 /**

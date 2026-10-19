@@ -1,5 +1,6 @@
 /** Durable remote process ownership: opId idempotency, reconnectable streams, explicit-only reap. */
 import { randomUUID } from 'node:crypto'
+import { access } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Duplex, Readable, Writable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
@@ -109,6 +110,17 @@ export class RemoteProcessOwner {
 
   /** Live (not yet settled) handled processes; the reap limit applies to these. */
   get size(): number { return this.records.size }
+
+  /**
+   * Whether a published stream endpoint still exists. Completed processes
+   * close their endpoints (and remove every socket path), so a client chasing
+   * one would otherwise re-attach forever.
+   * @param path - absolute endpoint path from a preparation.
+   */
+  async present(path: string): Promise<boolean> {
+    if (!path.startsWith(`${this.root}/`)) return false
+    try { await access(path); return true } catch { return false }
+  }
 
   /**
    * Allocate private stream listeners; no target executes until start().

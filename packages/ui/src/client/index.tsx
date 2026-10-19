@@ -288,7 +288,7 @@ export function RemoteDirectoryBrowser(props: RemoteDirectoryBrowserProps): Reac
             }}
           >
             {machines === undefined
-              ? <option value="">读取 ~/.ssh/config…</option>
+              ? <option value="">{error === undefined ? '读取 ~/.ssh/config…' : '读取 ~/.ssh/config 失败'}</option>
               : machines.map(machine => (
                 <option key={machine.alias ?? 'local'} value={machine.alias ?? ''}>
                   {machine.local ? `${machine.label}（本机）` : machine.label}

@@ -62,6 +62,7 @@ const PSK_TLS = {
 } as const
 
 const allowResultSchema = z.object({ roots: z.array(z.string()) }).strict()
+const presentResultSchema = z.object({ present: z.boolean() }).strict()
 
 const helloSchema = z.object({
   protocol: z.literal(1), platform: z.enum(['linux', 'darwin']), nodeVersion: z.string(),
@@ -191,6 +192,13 @@ class DurableStream extends Duplex {
 
   private readonly transport: RemoteWorkspaceTransport
   private readonly lifetime: AbortSignal
+  /** At most one attach attempt is in flight; recovery is scheduled, never spun. */
+  private attaching = false
+  /** Pending recovery timer (exponential backoff, capped below). */
+  private retry: NodeJS.Timeout | undefined
+  private attempt = 0
+  /** Readable side already finished because the daemon released the endpoint. */
+  private ended = false
 
   constructor(transport: RemoteWorkspaceTransport, endpoint: StreamEndpoint, lifetime: AbortSignal) {
     super({ allowHalfOpen: true })
@@ -210,18 +218,23 @@ class DurableStream extends Duplex {
 
   /** Force a re-attach after the transport reconnected (dead sockets may never emit 'close'). */
   rebind(): void {
-    if (this.closed || this.lifetime.aborted) return
+    if (this.closed || this.lifetime.aborted || this.ended) return
     void this.attach()
   }
 
   private async attach(): Promise<void> {
-    if (this.closed || this.lifetime.aborted) return
+    if (this.closed || this.lifetime.aborted || this.ended || this.attaching) return
+    if (this.retry !== undefined) { clearTimeout(this.retry); this.retry = undefined }
+    this.attaching = true
     try {
       const socket = await this.transport.attachStream(this.endpoint, this.channel, this.acknowledged, this.lifetime)
-      if (this.closed) { socket.destroy(); return }
+      this.attaching = false
+      if (this.closed || this.lifetime.aborted) { socket.destroy(); return }
+      this.attempt = 0
       this.socket?.destroy()
       this.socket = socket
       socket.on('data', (chunk: Buffer) => {
+        if (this.socket !== socket) return
         this.acknowledged += chunk.length
         if (!this.push(chunk)) { socket.pause(); this.once('_readable_resume', () => { socket.resume() }) }
       })
@@ -229,23 +242,56 @@ class DurableStream extends Duplex {
       // soon as the replay preamble is answered, so resume explicitly here.
       socket.resume()
       // Socket end means this attachment died, never the logical stream: the
-      // consumer's end of stream is decided by process.done, not by SSH.
-      socket.on('end', () => { if (!this.closed && !this.lifetime.aborted) void this.recover() })
+      // consumer's end of stream is decided by process.done, not by SSH. A
+      // replaced socket's close must be ignored, or every re-attach would
+      // trigger the next one.
+      socket.on('end', () => {
+        if (this.socket !== socket) return
+        this.socket = undefined
+        // Half-open TLS keeps 'close' pending; destroy here so the forward
+        // release hook runs for the attachment that just ended.
+        socket.destroy()
+        this.recover()
+      })
       socket.on('error', () => { /* reconnect loop owns recovery */ })
       socket.on('close', () => {
-        if (this.closed || this.lifetime.aborted) return
-        void this.recover()
+        if (this.socket !== socket) return
+        this.socket = undefined
+        this.recover()
       })
       this.emit('attach')
     } catch {
-      void this.recover()
+      this.attaching = false
+      if (this.closed || this.lifetime.aborted) return
+      // A released process closes its endpoint (and removes the socket). The
+      // daemon answers definitively; chasing the path would spawn an SSH
+      // forward per attempt forever. Only an unanswerable probe (transport
+      // loss, older daemon) falls through to the retry below.
+      if (await this.transport.endpointGone(this.endpoint.path)) { this.finish(); return }
+      this.scheduleRetry()
     }
   }
 
-  private async recover(): Promise<void> {
-    if (this.closed || this.lifetime.aborted) return
-    await this.transport.awaitReady().catch(() => {})
+  private recover(): void {
+    if (this.closed || this.lifetime.aborted || this.ended) return
     void this.attach()
+  }
+
+  private scheduleRetry(): void {
+    if (this.closed || this.lifetime.aborted || this.ended || this.retry !== undefined) return
+    this.attempt += 1
+    const delay = Math.min(5000, 100 * 2 ** Math.min(this.attempt - 1, 6))
+    this.retry = setTimeout(() => { this.retry = undefined; void this.attach() }, delay)
+    this.retry.unref()
+  }
+
+  /** End the readable side once the daemon has released this stream's endpoint. */
+  private finish(): void {
+    if (this.closed || this.ended) return
+    this.ended = true
+    this.socket?.destroy()
+    this.socket = undefined
+    this.push(null)
   }
 
   override _read(): void {
@@ -258,7 +304,7 @@ class DurableStream extends Duplex {
     if (socket === undefined || socket.destroyed) {
       // Queue until the transport reconnects: stdin/control writes are durable.
       const wait = (): void => {
-        if (this.closed) { callback(new Error('remote workspace stream closed before write')); return }
+        if (this.closed || this.ended) { callback(new Error('remote workspace stream closed before write')); return }
         const live = this.socket
         if (live !== undefined && !live.destroyed) { live.write(chunk, callback); return }
         setTimeout(wait, 25).unref()
@@ -276,6 +322,7 @@ class DurableStream extends Duplex {
 
   override _destroy(error: Error | null, callback: (error?: Error | null) => void): void {
     this.closed = true
+    if (this.retry !== undefined) { clearTimeout(this.retry); this.retry = undefined }
     this.socket?.destroy()
     this.socket = undefined
     this.emit('close')
@@ -399,57 +446,106 @@ export class RemoteWorkspaceTransport {
     return stream
   }
 
+  /**
+   * Whether a published stream endpoint no longer exists. Only a live daemon
+   * can answer; transport loss stays `false` (keep retrying). Daemons from
+   * before `stream.present` are asked over the same SSH master instead, so a
+   * client upgrade does not need a remote daemon restart to stop the churn.
+   * @param path - endpoint path from a preparation.
+   */
+  async endpointGone(path: string): Promise<boolean> {
+    const session = this.master
+    if (session === undefined || this.status !== 'ready') return false
+    try {
+      const answer = await session.peer.request('stream.present', { path }, presentResultSchema, AbortSignal.timeout(2000))
+      return answer.present === false
+    } catch {
+      return await this.remoteSocket(session, path) === false
+    }
+  }
+
+  /** Old-daemon fallback: does the endpoint socket still exist on the remote side? */
+  private remoteSocket(session: MasterSession, path: string): Promise<boolean | undefined> {
+    return new Promise((resolve) => {
+      const child = execFile('ssh', ['-S', session.controlPath, this.config.host, `test -S ${shellQuote(path)}`], { timeout: 5000 }, (error) => {
+        if (error === null) { resolve(true); return }
+        const code = (error as { code?: unknown }).code
+        resolve(code === 1 || code === 2 ? false : undefined)
+      })
+      child.stderr?.resume()
+    })
+  }
+
   /** Attach one TLS-PSK socket to a forwarded endpoint, replaying from `offset`. */
   async attachStream(endpoint: StreamEndpoint, channel: string, offset: number, lifetime: AbortSignal): Promise<TLSSocket> {
     const session = await this.ensureSession()
     const local = join(this.directory as string, `s${this.nextStream++}`)
-    await this.control(session, ['-O', 'forward', '-o', 'ExitOnForwardFailure=yes', '-L', `${local}:${endpoint.path}`])
+    const target = `${local}:${endpoint.path}`
+    await this.control(session, ['-O', 'forward', '-o', 'ExitOnForwardFailure=yes', '-L', target])
+    // The forward is a live resource on the SSH master: cancel it when this
+    // attachment ends, or every outage/re-attach leaks one forward and its
+    // local socket for the life of the master.
+    const release = (): void => { this.releaseForward(session.controlPath, target, local) }
     lifetime.throwIfAborted()
     const raw = createConnection({ path: local, allowHalfOpen: true })
     raw.on('error', () => {})
-    await new Promise<void>((resolve, reject) => {
-      const connected = (): void => { cleanup(); resolve() }
-      const failed = (error: Error): void => { cleanup(); reject(error) }
-      const aborted = (): void => { raw.destroy(lifetime.reason as Error); failed(new Error('stream attach aborted')) }
-      const cleanup = (): void => {
-        raw.off('connect', connected)
-        raw.off('error', failed)
-        lifetime.removeEventListener('abort', aborted)
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const connected = (): void => { cleanup(); resolve() }
+        const failed = (error: Error): void => { cleanup(); reject(error) }
+        const aborted = (): void => { raw.destroy(lifetime.reason as Error); failed(new Error('stream attach aborted')) }
+        const cleanup = (): void => {
+          raw.off('connect', connected)
+          raw.off('error', failed)
+          lifetime.removeEventListener('abort', aborted)
+        }
+        raw.once('connect', connected)
+        raw.once('error', failed)
+        lifetime.addEventListener('abort', aborted, { once: true })
+      })
+      const tls = connect({
+        ...PSK_TLS, socket: raw, rejectUnauthorized: true, checkServerIdentity: () => undefined,
+        pskCallback: () => ({ psk: Buffer.from(endpoint.capability, 'hex'), identity: 'dsh-stream' }),
+      })
+      tls.on('error', () => {})
+      await new Promise<void>((resolve, reject) => {
+        const secured = (): void => { cleanup(); resolve() }
+        const failed = (error: Error): void => { cleanup(); reject(error) }
+        const closed = (): void => { failed(new Error('workspace daemon stream closed during authentication')) }
+        const aborted = (): void => { tls.destroy(lifetime.reason as Error) }
+        const cleanup = (): void => {
+          tls.off('secureConnect', secured)
+          tls.off('error', failed)
+          tls.off('close', closed)
+          lifetime.removeEventListener('abort', aborted)
+        }
+        tls.once('secureConnect', secured)
+        tls.once('error', failed)
+        tls.once('close', closed)
+        lifetime.addEventListener('abort', aborted, { once: true })
+      })
+      tls.disableRenegotiation()
+      if (REPLAY_CHANNELS.has(channel)) {
+        const body = Buffer.from(JSON.stringify({ sync: offset }))
+        const header = Buffer.alloc(4)
+        header.writeUInt32BE(body.length)
+        tls.write(Buffer.concat([header, body]))
       }
-      raw.once('connect', connected)
-      raw.once('error', failed)
-      lifetime.addEventListener('abort', aborted, { once: true })
-    })
-    const tls = connect({
-      ...PSK_TLS, socket: raw, rejectUnauthorized: true, checkServerIdentity: () => undefined,
-      pskCallback: () => ({ psk: Buffer.from(endpoint.capability, 'hex'), identity: 'dsh-stream' }),
-    })
-    tls.on('error', () => {})
-    await new Promise<void>((resolve, reject) => {
-      const secured = (): void => { cleanup(); resolve() }
-      const failed = (error: Error): void => { cleanup(); reject(error) }
-      const closed = (): void => { failed(new Error('workspace daemon stream closed during authentication')) }
-      const aborted = (): void => { tls.destroy(lifetime.reason as Error) }
-      const cleanup = (): void => {
-        tls.off('secureConnect', secured)
-        tls.off('error', failed)
-        tls.off('close', closed)
-        lifetime.removeEventListener('abort', aborted)
-      }
-      tls.once('secureConnect', secured)
-      tls.once('error', failed)
-      tls.once('close', closed)
-      lifetime.addEventListener('abort', aborted, { once: true })
-    })
-    tls.disableRenegotiation()
-    if (REPLAY_CHANNELS.has(channel)) {
-      const body = Buffer.from(JSON.stringify({ sync: offset }))
-      const header = Buffer.alloc(4)
-      header.writeUInt32BE(body.length)
-      tls.write(Buffer.concat([header, body]))
+      tls.pause()
+      tls.once('close', release)
+      return tls
+    } catch (error) {
+      raw.destroy()
+      release()
+      throw error
     }
-    tls.pause()
-    return tls
+  }
+
+  private releaseForward(controlPath: string, target: string, local: string): void {
+    const child = execFile('ssh', ['-S', controlPath, '-O', 'cancel', '-L', target, this.config.host], { timeout: 5000 }, () => {
+      void rm(local, { force: true }).catch(() => {})
+    })
+    child.stderr?.resume()
   }
 
   private isTransportLoss(error: unknown): boolean {

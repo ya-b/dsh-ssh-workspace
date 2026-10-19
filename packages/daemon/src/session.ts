@@ -143,6 +143,13 @@ async function dispatch(method: string, raw: unknown, signal: AbortSignal, sessi
       object.parse(raw)
       return { workspace: session.workspace }
     }
+    case 'stream.present': {
+      // A client re-attaching a durable stream asks whether its endpoint still
+      // exists: absent means the process was released and re-attaching forever
+      // would only burn SSH forwards.
+      const input = z.object({ path: remotePath }).strict().parse(raw)
+      return { present: await owner.present(input.path) }
+    }
     case 'close': { object.parse(raw); return null }
     case 'executable': {
       const input = z.object({ command: z.string(), env: environmentSchema.optional() }).strict().parse(raw)

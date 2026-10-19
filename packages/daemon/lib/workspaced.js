@@ -55821,6 +55821,7 @@ var RpcPeer = class extends EventEmitter2 {
 
 // src/processes.ts
 import { randomUUID as randomUUID4 } from "node:crypto";
+import { access as access2 } from "node:fs/promises";
 import { join as join11 } from "node:path";
 import { pipeline } from "node:stream/promises";
 
@@ -56193,6 +56194,21 @@ var RemoteProcessOwner = class {
   /** Live (not yet settled) handled processes; the reap limit applies to these. */
   get size() {
     return this.records.size;
+  }
+  /**
+   * Whether a published stream endpoint still exists. Completed processes
+   * close their endpoints (and remove every socket path), so a client chasing
+   * one would otherwise re-attach forever.
+   * @param path - absolute endpoint path from a preparation.
+   */
+  async present(path) {
+    if (!path.startsWith(`${this.root}/`)) return false;
+    try {
+      await access2(path);
+      return true;
+    } catch {
+      return false;
+    }
   }
   /**
    * Allocate private stream listeners; no target executes until start().
@@ -56659,6 +56675,10 @@ async function dispatch(method, raw, signal, session, registry4) {
     case "session.reattach": {
       object3.parse(raw);
       return { workspace: session.workspace };
+    }
+    case "stream.present": {
+      const input2 = external_exports2.object({ path: remotePath }).strict().parse(raw);
+      return { present: await owner.present(input2.path) };
     }
     case "close": {
       object3.parse(raw);

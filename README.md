@@ -1,4 +1,4 @@
-# dsh-ssh-workspace 【开发中】
+# dsh-ssh-workspace
 
 [English](./README.en.md) | 简体中文
 
