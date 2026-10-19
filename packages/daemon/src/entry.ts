@@ -1,10 +1,11 @@
 /** Workspace daemon entry: single-instance unix-socket server with a boot token. */
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { open, rm } from 'node:fs/promises'
 import { createServer, type Server } from 'node:net'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { homedir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import { logSpillFailure } from '@deepseek-ai/dsh-subprocess-local/output'
 import { ClientRegistry, serveConnection, type DaemonOptions } from './session.ts'
 
@@ -43,6 +44,11 @@ export async function boot(dirArg?: string): Promise<BootResult> {
   }
   const config = await loadConfig(dir)
   const instanceId = `${randomUUID().replaceAll('-', '')}.${process.pid}.${process.hrtime.bigint().toString(16)}`
+  // The bundle this process loaded, published for the bootstrap's upgrade
+  // check. Written before the socket exists, so a visible socket always
+  // implies a fresh digest.
+  const digest = createHash('sha256').update(await readFile(fileURLToPath(import.meta.url))).digest('hex')
+  await writeFile(join(dir, 'running.digest'), `${digest}\n`)
   const spillReporter = logSpillFailure(console as unknown as { error(message: string, ...detail: unknown[]): void }, 'workspace daemon')
   const options: DaemonOptions = {
     dir,
@@ -74,6 +80,9 @@ export async function boot(dirArg?: string): Promise<BootResult> {
     } finally {
       await rm(socketPath, { force: true })
       await rm(pidPath, { force: true })
+      // Remove the digest while the lock still blocks a successor: a new
+      // daemon may only publish its own after this one is gone.
+      await rm(join(dir, 'running.digest'), { force: true })
       await lock.close()
       await rm(lockPath, { force: true })
     }

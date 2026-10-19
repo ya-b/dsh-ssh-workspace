@@ -94,6 +94,7 @@ Options for `ssh-workspace-mount`:
 | `daemonDir` | `~/.dsh-workspace` | **Remote** daemon state directory; `~` is expanded by the remote shell |
 | `node` | `node` | **Remote** Node executable; the PATH of a non-interactive SSH session often cannot find nvm's Node, so an absolute path such as `/usr/local/bin/node` is recommended |
 | `install` | `true` | Deliver the built-in daemon archive the first time a host is used; deduplicated by (host, daemonDir, archive digest) |
+| `autoUpgrade` | `true` | On connect, if the running daemon's loaded bundle differs from the installed `workspaced.js` digest and it has no child processes, restart it; a busy daemon is kept and retried on the next connection |
 | `daemonArchive` | built-in archive | Override the daemon archive path, mainly for development and debugging |
 | `requestTimeoutMs` | `30000` | Timeout for management requests such as install, admit, and open |
 | `reconnectBaseMs` | `250` | Initial reconnect backoff |
@@ -135,12 +136,16 @@ array `[]`, replace it with the entry rather than appending after `[]`.
 The first time a directory is opened on a given (host, `daemonDir`), the plugin extracts the
 archive over SSH into the remote `daemonDir` and runs the remote Node version check. After that:
 
-- daemon state lives in remote `~/.dsh-workspace`: `sock`, `pid`, `lock`, `config.json`,
-  `streams/`, and `daemon.log`;
+- daemon state lives in remote `~/.dsh-workspace`: `sock`, `pid`, `lock`, `running.digest`,
+  `config.json`, `streams/`, and `daemon.log`;
 - `roots` in `config.json` is the whitelist of directories allowed to be opened as workspaces,
   written by the client before opening, keeping the most recent 64 entries;
 - a running daemon is not started twice; client disconnects, heartbeats, or lease changes never
   reap remote processes;
+- the daemon writes its own bundle digest to `running.digest` at boot; when a connection finds it
+  different from the installed `workspaced.js` and no child process is running, the bootstrap
+  gracefully restarts the daemon on the new code (disable with `autoUpgrade: false`); daemons
+  from before this file existed are upgraded on their first connect;
 - missing or too-old remote Node reports
   `remote workspace daemon preflight failed: <node> is not a usable Node >= 20` during connection
   setup.
@@ -164,8 +169,9 @@ dsh plugin --profile web add 'https://github.com/ya-b/dsh-ssh-workspace#<sha>'
 ```
 
 The new code takes effect after restarting the dsh instance. A daemon already running on the remote
-side does not switch code automatically; if necessary, kill the remote daemon process so the next
-use re-delivers and starts it:
+side switches code automatically: the next connection re-delivers the archive, sees that the running
+digest differs, and restarts the daemon if it has no child processes — a busy daemon is left alone
+and upgraded by a later connection. To force it manually:
 
 ```bash
 ssh <host> 'kill "$(cat ~/.dsh-workspace/pid)" 2>/dev/null || true'

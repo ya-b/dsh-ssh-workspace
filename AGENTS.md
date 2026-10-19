@@ -51,6 +51,10 @@ DeepSeek Harness 远程工作区插件（monorepo，`pnpm`）。
 - 远端 daemon 是多进程常量：`bootstrapCommand` 只在 socket 不存在时 `setsid nohup` 启动；
   bootstrap 前置检查远端 Node ≥ 20（报
   `remote workspace daemon preflight failed: <node> is not a usable Node >= 20`）。
+- 自动升级（mount `autoUpgrade`，默认开）：daemon boot 时写 `running.digest`（自身
+  bundle sha256，socket 可见前写完，shutdown 时删除）；bootstrap 每次连接对比它与
+  已安装 `workspaced.js` 的 sha256，不一致（含旧版 daemon 无该文件）且 `pgrep -P`
+  确认无子进程时才 SIGTERM 重启，忙则保留旧版等下次连接；无 `pgrep` 不重启（fail-closed）。
 
 ## 构建与测试
 
@@ -70,6 +74,7 @@ node tests/daemon/probe-transport.mjs     # 11/11 执行/断线续取/零重复/
 node tests/daemon/probe-providers.mjs     # 13/13 官方 provider 家族
 node tests/daemon/probe-mount.mjs         # 34/34 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射 + provider fiber 隔离回归
 node tests/daemon/probe-resilience.mjs    # 11/11 死亡场景；PROBE_OUTAGE_MS=120000 跑 2 分钟断线
+node tests/daemon/probe-upgrade.mjs       # 9/9 自动升级：空闲换新版/忙保留/空闲后补升级
 node tests/daemon/check-node-preflight.mjs# 远端 Node 缺失/过旧报错文案
 ```
 

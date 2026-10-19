@@ -50,6 +50,12 @@ export interface Config {
   controlDir?: string
   /** Install the shipped daemon archive on first use of a host. */
   install?: boolean
+  /**
+   * Replace a remote daemon whose loaded bundle no longer matches the installed
+   * one. Only an idle daemon (no live child processes) is replaced, so running
+   * commands are never interrupted.
+   */
+  autoUpgrade?: boolean
   /** Override the shipped daemon archive path, for development. */
   daemonArchive?: string
   /** Attribution sidecar path; defaults under the harness home's storages. */
@@ -64,6 +70,7 @@ type ResolvedConfig = {
   reconnectMaxMs: number
   controlDir?: string
   install: boolean
+  autoUpgrade: boolean
   daemonArchive?: string
   maxFrameBytes?: number
   maxPending?: number
@@ -113,6 +120,7 @@ export class SshWorkspaceMount extends Service {
     reconnectMaxMs: schema.number().min(100).max(600_000).default(15_000),
     controlDir: schema.string(),
     install: schema.boolean().default(true),
+    autoUpgrade: schema.boolean().default(true),
     daemonArchive: schema.string(),
     maxFrameBytes: schema.number(),
     maxPending: schema.number(),
@@ -128,7 +136,7 @@ export class SshWorkspaceMount extends Service {
     super(ctx, 'sshWorkspace')
     const resolved = SshWorkspaceMount.Config({
       daemonDir: '~/.dsh-workspace', node: 'node', requestTimeoutMs: 30_000,
-      reconnectBaseMs: 250, reconnectMaxMs: 15_000, install: true, ...config,
+      reconnectBaseMs: 250, reconnectMaxMs: 15_000, install: true, autoUpgrade: true, ...config,
     }) as unknown as ResolvedConfig
     this.state = new RemoteWorkspaceState(resolved.statePath === undefined || resolved.statePath === '' ? defaultStatePath() : resolved.statePath)
     this.hosts = new RemoteHosts(ctx, {
@@ -138,6 +146,7 @@ export class SshWorkspaceMount extends Service {
       reconnectBaseMs: resolved.reconnectBaseMs,
       reconnectMaxMs: resolved.reconnectMaxMs,
       install: resolved.install,
+      autoUpgrade: resolved.autoUpgrade,
       ...(resolved.controlDir === undefined ? {} : { controlDir: resolved.controlDir }),
       ...(resolved.daemonArchive === undefined ? {} : { daemonArchive: resolved.daemonArchive }),
       ...(resolved.maxFrameBytes === undefined ? {} : { maxFrameBytes: resolved.maxFrameBytes }),

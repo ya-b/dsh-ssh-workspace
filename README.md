@@ -91,6 +91,7 @@ Include ~/.ssh/config.d/*
 | `daemonDir` | `~/.dsh-workspace` | **远端** daemon 状态目录；`~` 由远端 shell 展开 |
 | `node` | `node` | **远端** Node 可执行文件；非交互 SSH 的 PATH 常找不到 nvm 的 Node，建议写绝对路径，如 `/usr/local/bin/node` |
 | `install` | `true` | 首次使用某主机时投递内置 daemon 归档；按 (host, daemonDir, 归档摘要) 去重 |
+| `autoUpgrade` | `true` | 连接时若运行中的 daemon 加载的 bundle 与已安装的 `workspaced.js` 摘要不一致，且无子进程在跑，就自动重启它；忙则保留旧版，下次连接再试 |
 | `daemonArchive` | 内置归档 | 覆盖 daemon 归档路径，主要用于开发调试 |
 | `requestTimeoutMs` | `30000` | 安装、准入、打开等管理请求的超时 |
 | `reconnectBaseMs` | `250` | 重连退避初始值 |
@@ -131,11 +132,14 @@ Include ~/.ssh/config.d/*
 首次在某个 (主机, `daemonDir`) 上打开目录时，插件会通过 SSH 把归档解压到远端
 `daemonDir`，并执行远端 Node 版本检查。之后：
 
-- daemon 状态在远端 `~/.dsh-workspace`：`sock`、`pid`、`lock`、`config.json`、
-  `streams/`、`daemon.log`；
+- daemon 状态在远端 `~/.dsh-workspace`：`sock`、`pid`、`lock`、`running.digest`、
+  `config.json`、`streams/`、`daemon.log`；
 - `config.json` 的 `roots` 是允许作为工作区打开的目录白名单，由客户端在打开前写入，
   保留最近 64 条；
 - daemon 已运行时不重复启动；客户端断线、心跳或租约变化都不会回收远端进程；
+- daemon 启动时把自己的 bundle 摘要写进 `running.digest`；连接时若与已安装的
+  `workspaced.js` 不一致，且它没有子进程在跑，bootstrap 会优雅重启它以运行新代码
+  （`autoUpgrade: false` 可关闭）；旧版本 daemon 没有该文件，首次连接时同样会被升级；
 - 远端 Node 缺失或过旧会在建连阶段报
   `remote workspace daemon preflight failed: <node> is not a usable Node >= 20`。
 

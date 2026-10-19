@@ -31,6 +31,7 @@ export interface HostsConfig {
   maxFrameBytes?: number
   maxPending?: number
   install: boolean
+  autoUpgrade: boolean
   daemonArchive?: string
 }
 
@@ -238,6 +239,7 @@ export class RemoteHosts {
       requestTimeoutMs: config.requestTimeoutMs,
       reconnectBaseMs: config.reconnectBaseMs,
       reconnectMaxMs: config.reconnectMaxMs,
+      autoUpgrade: config.autoUpgrade,
       ...(config.controlDir === undefined ? {} : { controlDir: config.controlDir }),
       ...(config.maxFrameBytes === undefined ? {} : { maxFrameBytes: config.maxFrameBytes }),
       ...(config.maxPending === undefined ? {} : { maxPending: config.maxPending }),

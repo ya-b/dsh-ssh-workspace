@@ -52,6 +52,12 @@ export interface RemoteWorkspaceConfig {
   readonly reconnectMaxMs?: number
   /** Local control directory; a temp directory when absent. */
   readonly controlDir?: string
+  /**
+   * Restart an idle daemon whose loaded bundle no longer matches the installed
+   * one. Off unless explicitly enabled; only a daemon without live child
+   * processes is replaced, so a running command is never interrupted.
+   */
+  readonly autoUpgrade?: boolean
 }
 
 /** Attempts one never-established session makes before its caller hears the failure. */
@@ -120,22 +126,60 @@ export function daemonDirExpr(directory: string): string {
 export function bootstrapCommand(config: RemoteWorkspaceConfig): string {
   const dir = daemonDirExpr(config.daemonDir)
   const node = shellQuote(config.node)
-  return [
+  const steps = [
     `D=${dir}`,
     'mkdir -p "$D"',
     // A socket without a live owner is the crash residue of a daemon that was
     // killed outright: clear it, or the boot below would wait on a listener
-    // that no longer exists.
-    'if [ -S "$D/sock" ] && { [ ! -f "$D/pid" ] || ! kill -0 "$(cat "$D/pid" 2>/dev/null)" 2>/dev/null; }; then rm -f "$D/sock" "$D/pid" "$D/lock"; fi',
+    // that no longer exists. Its digest is residue too.
+    'if [ -S "$D/sock" ] && { [ ! -f "$D/pid" ] || ! kill -0 "$(cat "$D/pid" 2>/dev/null)" 2>/dev/null; }; then rm -f "$D/sock" "$D/pid" "$D/lock" "$D/running.digest"; fi',
     // Preflight the interpreter so a missing or ancient remote Node names the
     // requirement instead of surfacing as "the socket never appeared".
     `${node} -e ${shellQuote(NODE_PREFLIGHT)} || { echo "remote workspace daemon preflight failed: ${node} is not a usable Node >= 20" >&2; exit 1; }`,
+  ]
+  if (config.autoUpgrade === true) steps.push(...upgradeSteps(node))
+  steps.push(
     `if [ ! -S "$D/sock" ]; then setsid nohup ${node} "$D/workspaced.js" --dir "$D" >>"$D/daemon.log" 2>&1 </dev/null & sleep 0.2; fi`,
     'i=0; while [ ! -S "$D/sock" ] && [ $i -lt 100 ]; do i=$((i+1)); sleep 0.1; done',
     '[ -S "$D/sock" ] || { echo "workspace daemon socket did not appear" >&2; exit 1; }',
     `exec ${node} -e ${shellQuote(BRIDGE)} "$D/sock"`,
-  ].join('; ')
+  )
+  return steps.join('; ')
 }
+
+/**
+ * Remote steps that replace a daemon still running an older bundle than the
+ * installed `workspaced.js`. The comparison uses the digest the daemon wrote at
+ * boot, so it detects a swapped file even across unrelated restarts. Only an
+ * idle daemon is replaced — `pgrep` must exist and report no child processes;
+ * otherwise the old daemon keeps serving and the next connection retries. A
+ * daemon killed with SIGKILL never removed its own socket, so that residue is
+ * cleared explicitly here.
+ */
+function upgradeSteps(node: string): string[] {
+  const installed = `$(${node} -e ${shellQuote(BUNDLE_DIGEST)} "$D/workspaced.js" 2>/dev/null)`
+  return [`if [ -S "$D/sock" ] && [ -f "$D/pid" ] && [ -f "$D/workspaced.js" ] && kill -0 "$(cat "$D/pid" 2>/dev/null)" 2>/dev/null
+then
+  INSTALLED=${installed}
+  RUNNING=$(cat "$D/running.digest" 2>/dev/null)
+  if [ -n "$INSTALLED" ] && [ "$INSTALLED" != "$RUNNING" ] && command -v pgrep >/dev/null 2>&1
+  then
+    pgrep -P "$(cat "$D/pid")" >/dev/null 2>&1
+    if [ $? -eq 1 ]
+    then
+      kill "$(cat "$D/pid")" 2>/dev/null
+      i=0; while [ -S "$D/sock" ] && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.1; done
+      if [ -S "$D/sock" ]; then kill -9 "$(cat "$D/pid")" 2>/dev/null; rm -f "$D/sock" "$D/pid" "$D/lock" "$D/running.digest"; fi
+    fi
+  fi
+fi`]
+}
+
+/** Remote helper: print sha256 of the file named in argv[1] (used for `workspaced.js`). */
+const BUNDLE_DIGEST = [
+  'const c = require("node:crypto"), f = require("node:fs")',
+  'process.stdout.write(c.createHash("sha256").update(f.readFileSync(process.argv[1])).digest("hex"))',
+].join('; ')
 
 /** Remote preflight: the daemon needs a Node that can run its single-file bundle. */
 const NODE_PREFLIGHT = [

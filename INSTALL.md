@@ -57,11 +57,13 @@ pnpm run build
 
 ## 4. 设置项
 
-`ssh-workspace-mount` 行的 config：`daemonDir`、`node`、`install`、`requestTimeoutMs`、
-`reconnectBaseMs`、`reconnectMaxMs`、`controlDir`、`daemonArchive`、`maxFrameBytes`、
-`maxPending`、`statePath`（侧映射 JSON，默认 `${DSH_HOME:-~/.dsh}/storages/ssh-workspaces.json`）。
+`ssh-workspace-mount` 行的 config：`daemonDir`、`node`、`install`、`autoUpgrade`、
+`requestTimeoutMs`、`reconnectBaseMs`、`reconnectMaxMs`、`controlDir`、`daemonArchive`、
+`maxFrameBytes`、`maxPending`、`statePath`（侧映射 JSON，默认
+`${DSH_HOME:-~/.dsh}/storages/ssh-workspaces.json`）。
 
-组合包默认 `daemonDir: '~/.dsh-workspace'`、`node: node`、`install: true`。要覆盖时，
+组合包默认 `daemonDir: '~/.dsh-workspace'`、`node: node`、`install: true`、
+`autoUpgrade: true`。要覆盖时，
 在 profile 自己的 `cordis.patch.yml` 用相同 id 重述整行 config（后应用的层整行覆盖）。
 
 ## 5. 升级
@@ -77,9 +79,11 @@ git pull && pnpm install && pnpm run build
 ```
 
 远端 daemon 的替换时机：新归档的**摘要**变化后，下一次首次使用该 (host, daemonDir) 时会
-重新投递；但**正在运行的 daemon 进程不会自动换代码**——需要重启它（
-`kill "$(cat ~/.dsh-workspace/pid)"` 后删掉 `sock`/`pid`/`lock`，或直接让它在下一次
-bootstrap 时自愈），随后客户端按 `clientUuid` 重入会话。
+重新投递；**正在运行的 daemon 进程由后续连接自动升级**——daemon 启动时把自身 bundle 摘要
+写进 `running.digest`，连接时摘要不符且它没有子进程在跑，就优雅重启运行新代码；有远端命令
+在跑则保留旧版，等之后某次连接空闲时再升级（`autoUpgrade: false` 关闭该行为）。手动强杀
+仍可用 `kill "$(cat ~/.dsh-workspace/pid)"` 后删掉 `sock`/`pid`/`lock`/`running.digest`，
+随后客户端按 `clientUuid` 重入会话。
 
 远端 Node 版本不足或路径错误时，bootstrap 会在建连阶段直接报
 `remote workspace daemon preflight failed: <node> is not a usable Node >= 20`。

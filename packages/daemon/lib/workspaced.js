@@ -7762,12 +7762,13 @@ var require_dist = __commonJS({
 });
 
 // src/entry.ts
-import { randomUUID as randomUUID6 } from "node:crypto";
+import { createHash as createHash2, randomUUID as randomUUID6 } from "node:crypto";
 import { open as open4, rm as rm4 } from "node:fs/promises";
 import { createServer as createServer2 } from "node:net";
 import { mkdir as mkdir3, readFile as readFile3, writeFile as writeFile2 } from "node:fs/promises";
 import { join as join13, resolve as resolve8 } from "node:path";
 import { homedir } from "node:os";
+import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // ../../node_modules/@deepseek-ai/dsh-subprocess-local/lib/output.js
 import { closeSync, mkdtempSync, openSync, rmdirSync, unlinkSync, writeSync } from "node:fs";
@@ -57049,6 +57050,9 @@ async function boot(dirArg) {
   }
   const config3 = await loadConfig(dir);
   const instanceId = `${randomUUID6().replaceAll("-", "")}.${process.pid}.${process.hrtime.bigint().toString(16)}`;
+  const digest = createHash2("sha256").update(await readFile3(fileURLToPath5(import.meta.url))).digest("hex");
+  await writeFile2(join13(dir, "running.digest"), `${digest}
+`);
   const spillReporter = logSpillFailure(console, "workspace daemon");
   const options = {
     dir,
@@ -57084,6 +57088,7 @@ async function boot(dirArg) {
     } finally {
       await rm4(socketPath, { force: true });
       await rm4(pidPath, { force: true });
+      await rm4(join13(dir, "running.digest"), { force: true });
       await lock.close();
       await rm4(lockPath, { force: true });
     }
