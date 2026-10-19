@@ -9,15 +9,16 @@
  * footer) extended with the one feature the plan requires: **a host selector
  * at the very top of the dialog**. 本机 + every `~/.ssh/config` alias; after a
  * host is chosen its directory tree is listed (本机 via the host plane, 远端
- * via the workspace daemon realm). Nothing in the harness is modified: the
+ * via the plugin's daemon connection). Nothing in the harness is modified: the
  * shadow is a lower `priority` registration, and all data comes from this
  * plugin's own host routes.
  *
  * 打开语义（场景 A：本机）= 由所属 owner 走既有 `onPicked(path)` →
  * `createWorkspace({path})`（本地工作区，随后自动开始会话）。
- * 打开语义（场景 B：远端）= 本弹窗直接调用 Host Controller 的
- * `workspaces.create({path, transport:'ssh', host})`，随后关闭弹窗 ——
- * owner 的 `onPicked` 只会按本地语义创建工作区，不能承载 host。
+ * 打开语义（场景 B：远端）= 本弹窗调用 Host 的 `/ssh-workspace/adopt`，
+ * 由挂载插件把远端目录登记成工作区（记录里存远端规范路径，宿主侧映射到
+ * 主机），随后关闭弹窗 —— owner 的 `onPicked` 只会按本地语义创建工作区，
+ * 不能承载 host。
  *
  * @module @dsh-ssh-workspace/ui/client
  */
@@ -60,24 +61,48 @@ interface Listing {
 }
 
 /** The slice of the Host Controller this dialog uses. */
-interface WorkspaceCreator {
-  create(input: { path: string, transport?: 'local' | 'ssh', host?: string }): Promise<{ workspaceId: string }>
+interface WorkspaceRenamer {
+  rename(workspaceId: string, title: string): Promise<unknown>
+}
+
+/**
+ * The Host's own default title for a path (final segment, or the root), so a
+ * rename added here only ever replaces an untouched default — a title the
+ * user already customized is left alone.
+ * @param path - canonical absolute path.
+ */
+function defaultTitleOf(path: string): string {
+  const trimmed = path.replace(/\/+$/u, '')
+  if (trimmed === '') return '/'
+  const cut = trimmed.lastIndexOf('/')
+  return cut === -1 ? trimmed : trimmed.slice(cut + 1) || '/'
 }
 
 /** How long one host route may take before the dialog reports the failure. */
 const CALL_TIMEOUT_MS = 15_000
 
+/**
+ * The harness Modal card is `min(380px, 100%)`; this dialog carries a host
+ * selector plus a monospace path and needs more. The doubled class beats the
+ * Modal's own `.dialog` rule regardless of stylesheet order (same trick the
+ * shipped directory browser uses), and the rule is injected at activation
+ * because this bundle has no CSS pipeline.
+ */
+const DIALOG_CLASS = 'dsh-ssh-workspace-dialog'
+const DIALOG_CSS = `.${DIALOG_CLASS}.${DIALOG_CLASS}{width:min(720px,100%)}`
+
 /** Call one host route and unwrap its JSON body or its error message. */
-async function call<T>(route: string, query: Record<string, string> = {}): Promise<T> {
+async function call<T>(route: string, query: Record<string, string> = {}, body?: unknown): Promise<T> {
   const url = new URL(`${API}${route}`, window.location.origin)
   for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value)
   const response = await fetch(url, {
-    headers: { accept: 'application/json' },
+    headers: { accept: 'application/json', ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
+    ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
     signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
   })
-  const body = await response.json().catch(() => undefined) as (T & { error?: string }) | undefined
-  if (!response.ok) throw new Error(body?.error ?? `${String(response.status)} ${response.statusText}`)
-  return body as T
+  const responseBody = await response.json().catch(() => undefined) as (T & { error?: string }) | undefined
+  if (!response.ok) throw new Error(responseBody?.error ?? `${String(response.status)} ${response.statusText}`)
+  return responseBody as T
 }
 
 /** Machine list, fetched once per page session. */
@@ -199,13 +224,20 @@ export function RemoteDirectoryBrowser(props: RemoteDirectoryBrowserProps): Reac
       props.onPicked(listing.path)
       return
     }
-    // Remote: the owner's onPicked cannot carry a host, so the dialog creates
-    // the SSH workspace itself and closes; the new row appears in the sidebar.
+    // Remote: the owner's onPicked cannot carry a host, so the dialog asks the
+    // mount plugin to adopt the directory on its machine and closes; the new
+    // row appears in the sidebar. The Host titles a fresh workspace after the
+    // directory alone, which is ambiguous across machines: a remote row is
+    // retitled `<folder>@<host>` unless the caller already renamed it.
     setCreating(true)
     setError(undefined)
     try {
-      const workspaces = props.ctx.get('workspaces') as unknown as WorkspaceCreator
-      await workspaces.create({ path: listing.path, transport: 'ssh', host: host.alias as string })
+      const alias = host.alias as string
+      const created = await call<{ workspaceId: string, title: string }>('/adopt', {}, { host: alias, path: listing.path })
+      if (created.title === defaultTitleOf(listing.path)) {
+        const workspaces = props.ctx.get('workspaces') as unknown as WorkspaceRenamer
+        await workspaces.rename(created.workspaceId, `${defaultTitleOf(listing.path)}@${alias}`)
+      }
       props.onCancel()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
@@ -231,6 +263,7 @@ export function RemoteDirectoryBrowser(props: RemoteDirectoryBrowserProps): Reac
       onClose={() => { if (!busy && !creating) props.onCancel() }}
       title="选择工作区目录"
       closeLabel="关闭"
+      className={DIALOG_CLASS}
       footer={(
         <>
           <Button variant="outline" onClick={() => { if (!busy && !creating) props.onCancel() }}>取消</Button>
@@ -303,8 +336,8 @@ export function RemoteDirectoryBrowser(props: RemoteDirectoryBrowserProps): Reac
 
 /** Colour per verdict tone. */
 const TONE_COLOR = { ok: '#3f9a4a', warn: '#b07d18', bad: '#c0392b', busy: '#888888' } as const
-const PANEL_STYLE = { display: 'flex', flexDirection: 'column', gap: 8, minWidth: 560 } as const
-const HOST_ROW_STYLE = { display: 'flex', alignItems: 'center', gap: 8 } as const
+const PANEL_STYLE = { display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 } as const
+const HOST_ROW_STYLE = { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } as const
 const PATH_ROW_STYLE = { display: 'flex', alignItems: 'center', gap: 8 } as const
 const LABEL_STYLE = { fontWeight: 600, fontSize: 13 } as const
 const SELECT_STYLE = {
@@ -336,6 +369,13 @@ export const inject = ['slots', 'workspaces']
  * @param ctx - client root context.
  */
 export function apply(ctx: Context): void {
+  ctx.effect(() => {
+    const style = document.createElement('style')
+    style.dataset.dshSshWorkspace = 'dialog-width'
+    style.textContent = DIALOG_CSS
+    document.head.append(style)
+    return () => { style.remove() }
+  }, 'ssh-workspace: dialog width')
   const bound = (owner: DirectoryFlowOwnerProps): ReactElement =>
     <RemoteDirectoryBrowser {...owner} ctx={ctx} />
   ctx.slots.inject('conversation.hero.workspace.directoryFlow', () =>

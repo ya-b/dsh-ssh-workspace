@@ -3,6 +3,33 @@
 > 更新于 A0–A4、B1–B3、C1–C2 全部完成并实测通过之后。
 > 实测环境：`ssh localhost`（真实 sshd；daemon 部署在 `~/.dsh-workspace`）。
 
+## 2025-10-19 · rc.2 适配（Option B 根平面路由）——当前实现
+
+目标 harness 换成 npm 发布的 `dsh@0.2.1-rc.2`；rc.2 无 `mountRealmProviders` 扩缝、realm 也不给
+agent preset 建隔离上下文，realm 路线（`packages/realm`、替换 `execution-worlds` 行）整体作废，
+重做为 `packages/mount`：不覆写任何官方行，只在 profile `insert` 三行
+（`ssh-workspace-mount`/api/ui）。
+
+| 面 | 实现 | 证据 |
+|---|---|---|
+| fs 路由 | `ctx.fs` 按路径路由到所属主机 daemon providers；本地兜底；上行 marker 探测（`.git`/指令文件祖先探测）在本地 EACCES/EPERM 时按「相邻远端根」回退到主机 | `probe-mount` 28/28 |
+| 进程/沙箱 | `ctx.subprocess` 按 cwd、`ctx.sandbox.confine` 按 `policy.workspaceRoot` | 同上 |
+| 终端 | `terminalController.execution(agent)` 按会话 cwd 换入主机 subprocess | 同上 |
+| 会话 | `sessionController.agents.createAgent` 按 cwd 跳过本地 `mkdir`，远端 `fs.stat` 验证后按上游针脚铸造 | 同上 |
+| 注册表 | `adopt`（`createCanonical`）、`indexHeader`、`resolveByPath` 回退、`attachSession`、`delete`；侧映射 `storages/ssh-workspaces.json` | 同上 |
+| API/UI | `GET /machines`、`/precheck`、`/browse`、`POST /adopt`（zod）；弹窗「打开」= adopt + 默认名时重命名 `<目录>@<主机>` | 浏览器实测（下） |
+
+**浏览器端到端（临时实例 3081，`DSH_HOME=/tmp/opencode/dsh-home`，独立于 3080）**：
+弹窗选 `192.0.2.12` → `/root/apps/example` → 打开 → 侧栏 `example@192.0.2.12`；
+新建会话（曾报 `EACCES ... mkdir '/root/apps/example'`，`agents.createAgent` patch 后修复）；
+会话内 bash `pwd` → `/root/apps/example`、`cat /etc/hostname` → `cloud-instance-01`（远端机）；
+write/read 工具创建 `/root/apps/example/mount-probe.txt`，本机 ssh 复核内容 `mount-ok`。
+回归：`machines 10/10`、`probe-transport 11/11`、`probe-providers 13/13`、`probe-resilience 11/11`、
+`check-node-preflight` 通过。
+
+> 下表为 alpha.2/本地树时期（realm 路线）的记录，保留作对照；其中 A4/B2/B3 与最终验收
+> 第 1/2 条的 realm 表述已被上方 rc.2 段落取代。
+
 ## 已完成并验证
 
 | 模块 | 状态 | 证据 |

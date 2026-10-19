@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import { open, rm } from 'node:fs/promises'
 import { createServer, type Server } from 'node:net'
-import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { logSpillFailure } from '@deepseek-ai/dsh-subprocess-local/output'
@@ -29,15 +29,14 @@ export interface BootResult { server: Server; instanceId: string; socketPath: st
 /** Boot one daemon on `dir` (socket/pid/lock state) and serve until shutdown. */
 export async function boot(dirArg?: string): Promise<BootResult> {
   const dir = resolve(dirArg ?? join(homedir(), '.dsh-workspace'))
-  await mkdir(dir, { recursive: true, mode: 0o700 })
-  await chmod(dir, 0o700)
+  await mkdir(dir, { recursive: true })
   const socketPath = join(dir, 'sock')
   const pidPath = join(dir, 'pid')
   const lockPath = join(dir, 'lock')
-  await mkdir(join(dir, 'streams'), { recursive: true, mode: 0o700 })
+  await mkdir(join(dir, 'streams'), { recursive: true })
 
   // Single instance per state directory: an exclusive lock file refuses boot two.
-  const lock = await open(lockPath, 'wx', 0o600).catch(() => undefined)
+  const lock = await open(lockPath, 'wx').catch(() => undefined)
   if (lock === undefined) {
     const prior = await readFile(pidPath, 'utf8').catch(() => undefined)
     throw new Error(`workspace daemon already holds ${lockPath}${prior === undefined ? '' : ` (pid ${prior.trim()})`}`)
@@ -65,8 +64,7 @@ export async function boot(dirArg?: string): Promise<BootResult> {
       startResolve()
     })
   })
-  await chmod(socketPath, 0o600)
-  await writeFile(pidPath, `${process.pid}\n`, { mode: 0o600 })
+  await writeFile(pidPath, `${process.pid}\n`)
   await lock.writeFile(`${JSON.stringify({ pid: process.pid, instanceId, dir })}\n`)
   const shutdown = async (): Promise<void> => {
     server.close()

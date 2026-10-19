@@ -12,12 +12,14 @@ DeepSeek Harness 远程工作区插件（monorepo，`pnpm`）。
 
 1. **`../deepseek-harness` 字节级不可改**（含 dsh helper）。一切新代码只在本仓库内；
    对 harness 的接入一律走 profile/bundle 组合（`~/.dsh/profiles/web/cordis.patch.yml` 的
-   `disabled` + `insert`，或 client/module 表机制）。
+   `insert`，或 client/module 表机制）。
 2. **深路径 import 禁止**：不得 `import '@deepseek-ai/dsh-*/src/*'`；只允许公开发布面
    （`@deepseek-ai/cordis`、`dsh-ssh` 家族、`dsh-workspace` 记录 schema 等）。
 3. **不中 helper**：daemon 是唯一远端依赖；helper 只允许作为对照探针出现。
-4. **安全面不放宽**：`BatchMode=yes`、`StrictHostKeyChecking=yes`、`ForwardAgent=no`、
-   `ClearAllForwardings=yes`；远端状态目录 `0700`、socket `0600`；每次 TLS 握手新 PSK。
+4. **安全面不设限（项目决策，勿擅自恢复）**：ssh 一律走普通默认行为，不强制
+   `BatchMode` / `StrictHostKeyChecking` / `ForwardAgent` / `ClearAllForwardings`；远端状态
+   目录、socket、状态文件不强制权限；TLS-PSK 流端点使用公开静态 capability（不轮换）。
+   恢复任一安全面都必须有用户明确指示。
 5. **不盲重发**：断线后唯一合法写路径 = 重连成功后按 opId 查询/提交；重放只能走 opId 幂等门
    （`fs.write`/`fs.edit`/`process.prepare`/`process.start`/`terminal.write`）。
 6. **reap 只由三类显式事件触发**：① daemon 关闭 ② 显式 terminate/abandon
@@ -30,9 +32,9 @@ DeepSeek Harness 远程工作区插件（monorepo，`pnpm`）。
 | `packages/daemon` | 远端常驻 daemon：单文件 bundle `lib/workspaced.js`（Node ≥ 20）；unix socket + TLS-PSK 流端点 + 按偏移重放 `ReplayBuffer`；opId 门 + 终态缓存；`workspace.allow` 动态白名单（落盘 `config.json`，保留最近 64 条） |
 | `packages/transport` | 形状兼容 `{request, connectStream, dispose}`：ssh master、按流 `ssh -L` 转发、重连状态机、`DurableStream` 续接、opId 自动注入；**只在真实链路丢失时重试**（首次连接有上限），握手失败即杀 ssh 不留泄漏 |
 | `packages/providers` | `DaemonSshConnection` = daemon 版 `ctx.ssh`，官方 `dsh-fs-ssh`/`dsh-subprocess-ssh`/`dsh-sandbox-ssh`/`dsh-bash-sandbox` 原样复用 |
-| `packages/realm` | `RemoteWorkspaceRegistry extends WorkspaceRuntimeRegistry`，仅覆写 `mountRealmProviders`；宿主服务经 `ctx.extend` 桥接进 realm（`sandboxPolicy` 等）；`dist/daemon.tar.gz` 按 (host, dir, 摘要) 幂等投递 |
-| `packages/api` | 宿主侧 `SshHostsService`：`~/.ssh/config` 枚举（Include 递归/通配隐藏）、`precheck`、远端 `browse`（走 realm）；以 HTTP 路由暴露给浏览器 |
-| `packages/ui` | 浏览器半：以 `priority:-1` 占据目录流槽位，复刻「选择工作区目录」弹窗，顶部主机选择条；远端「打开」直接 `ctx.workspaces.create({path, transport:'ssh', host})` |
+| `packages/mount` | rc.2 根平面路由（Option B，不覆写 `execution-worlds`）：patch `ctx.fs` 按路径、`ctx.subprocess` 按 cwd、`ctx.sandbox` 按 `workspaceRoot`、`terminalController.execution(agent)` 按会话 cwd、`sessionController.agents.createAgent` 按 cwd（跳过本地 `mkdir`）、`WorkspaceRegistry/Entity`（adopt/indexHeader/resolveByPath/attachSession/delete）；daemon 按 (host, dir, 摘要) 幂等投递；侧映射 `${DSH_HOME}/storages/ssh-workspaces.json` |
+| `packages/api` | 宿主侧 `SshHostsService`：`~/.ssh/config` 枚举（Include 递归/通配隐藏）、`precheck`、远端 `browse`（走 mount 服务）、`POST /adopt` 收养远端工作区；以 HTTP 路由暴露给浏览器 |
+| `packages/ui` | 浏览器半：以 `priority:-1` 占据目录流槽位，复刻「选择工作区目录」弹窗，顶部主机选择条；远端「打开」= `POST /ssh-workspace/adopt` 后按需重命名 `<目录>@<主机名>` |
 | `packages/install` | 打包/投递远端归档（bundle + 裁剪 node-pty） |
 | `packages/rpc` | 4 字节长度前缀 JSON 帧（64MiB 上限、128 pending）；`RemoteOperationError` / `RpcTransportError` |
 
@@ -56,35 +58,35 @@ pnpm install                      # 首次；harness vendor/packages 用 link: �
 
 # 三类产物（改了对应源码必须重建，且重建后重启实例才会生效）
 cd packages/daemon && pnpm run build      # → lib/workspaced.js
-cd packages/realm && pnpm run archive     # → dist/daemon.tar.gz（bundle + node-pty）
+cd packages/mount && pnpm run archive     # → dist/daemon.tar.gz（bundle + node-pty）
 cd packages/ui && node build.mjs          # → lib/client.js（CJS 工厂 + __ModuleLoader__）
 
 # 单测/端到端（需真实 sshd，默认 ssh localhost；daemon 部署在 ~/.dsh-workspace）
 node tests/api/machines.test.mjs          # ssh config 枚举 10/10
 node tests/daemon/probe-transport.mjs     # 11/11 执行/断线续取/零重复/fs
 node tests/daemon/probe-providers.mjs     # 13/13 官方 provider 家族
-node tests/daemon/probe-realm.mjs         # 12/12 execution-worlds 路由 + verifier
+node tests/daemon/probe-mount.mjs         # 28/28 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射
 node tests/daemon/probe-resilience.mjs    # 11/11 死亡场景；PROBE_OUTAGE_MS=120000 跑 2 分钟断线
 node tests/daemon/check-node-preflight.mjs# 远端 Node 缺失/过旧报错文案
 ```
 
 - 类型检查：`cd packages/<pkg> && ../../node_modules/.bin/tsc --noEmit`（daemon 内
   `pnpm run typecheck`）。
-- 环境注意：daemon/transport/realm 直接由 Node 运行（strip-only 模式）——**不要用
+- 环境注意：daemon/transport/mount 直接由 Node 运行（strip-only 模式）——**不要用
   TS 参数属性**；单文件构建用 esbuild（`build.mjs`）。
-- 后台进程：测试/实例用 `setsid nohup ... </dev/null & disown`，普通 `&` 会被杀掉（exit 143）。
+- 后台进程：测试/临时实例用 systemd 瞬态单元 `systemd-run --user --unit <name> --collect ...`
+  （普通 `&` 会被杀掉；`setsid nohup` 也可能被工具超时连带清掉）。
 
-## 浏览器验证（本地实例）
+## 浏览器验证（临时实例）
 
 ```bash
-cd ../deepseek-harness && pnpm build:lib && pnpm build:web   # 一次性
-DSH_HOME=~/.dsh node apps/cli/lib/bin.js web --no-open --port 3081
+DSH_HOME=/tmp/opencode/dsh-home systemd-run --user --unit dsh-test --collect /home/user/.local/bin/dsh web --no-open --port 3081
 ```
 
-- 插件装入 profile：`dsh plugin --profile web add 'link:.../packages/{realm,api,ui}'` +
-  `~/.dsh/profiles/web/cordis.patch.yml` 覆写 `execution-worlds`（`disabled` + `insert`），
-  api/ui 各 `insert` 一行（详见 `INSTALL.md`）。
-- 验证路径：侧边栏「添加工作区」→ 菜单「添加工作区…」→ 弹窗顶部选主机 → 选目录 →「打开」。
+- 插件装入 profile：`dsh plugin --profile web add 'link:.../packages/{mount,api,ui}'` +
+  `~/.dsh/profiles/web/cordis.patch.yml` `insert` `ssh-workspace-mount`/api/ui 三行（详见 `INSTALL.md`）。
+- 验证路径：侧边栏「添加工作区」→ 菜单「添加工作区…」→ 弹窗顶部选主机 → 选目录 →「打开」；
+  会话内发消息即验证远端执行（`pwd` 应回远端目录）。
 - 不要动 3080（systemd 用户单元启动的已发布版本）；临时 ssh 别名测试后必须还原
   `~/.ssh/config` 并清理 store 测试条目（`~/.dsh/storages/workspace.json`）。
 

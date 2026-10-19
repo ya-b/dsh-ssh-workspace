@@ -17,7 +17,7 @@ let failed = 0
 for (const item of cases) {
   const command = bootstrapCommand({ host: 'localhost', workspace: join(homedir(), 'dsh-ws-probe'), daemonDir: dir, node: item.node })
   const result = await new Promise(resolve => {
-    const child = execFile('ssh', ['-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', 'localhost', command], { timeout: 20_000 }, (error, stdout, stderr) => resolve({ code: error?.code ?? 0, stdout, stderr }))
+    const child = execFile('ssh', ['-T', 'localhost', command], { timeout: 20_000 }, (error, stdout, stderr) => resolve({ code: error?.code ?? 0, stdout, stderr }))
     child.stdout?.resume()
   })
   const text = `${result.stdout}\n${result.stderr}`

@@ -25,7 +25,7 @@
 
 1. **harness 仓库与运行时 = 不可见不可改**：插件代码里 `import` 只允许公开发布面（`@deepseek-ai/cordis`、`@deepseek-ai/dsh-ssh` 家族 package、`dsh-workspace` 记录 schema、`dsh-host` 等）；**import 任何 `packages/*` 的深路径（`@deepseek-ai/dsh-*/src/*`）都视为跑偏**，除 bundle/组合文件自身的 patch 叠层。
 2. **不中 helper**：任何设计/代码路径不得「require dsh helper 安装且 RSA client 只能通过 helper 通信」；daemon 是唯一远端依赖；helper 仅在插件探针中作为对照。
-3. **不放宽安全面**：BatchMode、严格 host-key、无 agent forwarding、私有 socket 目录 `0700`/socket `0600`、每次 TLS 握手新 PSK.
+3. **安全面不设限（2026-06 项目决策）**：ssh 走普通默认行为（不强制 BatchMode、host-key、agent forwarding、ClearAllForwardings）；远端目录/socket 不强制权限；TLS-PSK 用公开静态 capability。
 4. **不盲发写命令**：ssh 断线后唯一合法的人工写路径 =「重连成功后按 opId 向 daemon 查询/submit」；python/其它语言缓存里不得有「任意重发送」的聚类动能 — 重放只能通过 opId 幂等门。
 5. **复用优先**：daemon 侧 fs/进程/terminal 的上层接口能复用官方家族（`SshFileSystem` 等）就复用，不自己写一分。
 6. **文档/生成物**：新写任何 harness 包都会破坏「meta-lessness 约束」 — 本计划无此要求；插件包自带 README + 升级指南 + profile patch 使用说明。
@@ -38,7 +38,7 @@
 > `packages/daemon/`（远端 daemon，单文件 bundle 产物 + 源码）
 > `packages/transport/`（客户端传输：形状兼容 Connection + ssh forward + 重连状态机）
 > `packages/providers/`（薄壳：复用官方 fs-ssh/subprocess-ssh/sandbox-ssh，注入形状兼容 ctx）
-> `packages/realm/`（WorkspaceRuntimeRegistry 子类 + verifier 语义）
+> `packages/mount/`（rc.2 根平面路由 + adopt + daemon 投递 + 侧映射）
 > `packages/api/`+`packages/ui/`（添加工作区 UX、机器枚举、远端目录浏览的 Web 面）
 > `profile/`（cordis.patch 叠层 + bundle 文件，不 prime harness 源码）
 
@@ -50,6 +50,24 @@
 > **实施状态（2025-10-17）**：A0 核心项 + A1 + A2 已完成并通过真实 `ssh localhost` 端到端验证
 > （`tests/daemon/probe-transport.mjs`，11/11）。A3/A4/B1/B2/B3/C1/C2 未开始，
 > 详情、实测结论与下一步见 [`PROGRESS.md`](./PROGRESS.md)。
+
+> **修订（2025-10-19，适配 `dsh@0.2.1-rc.2`）**：目标 harness 从本地未发布树换成 npm 发布的
+> `dsh@0.2.1-rc.2`（`@deepseek-ai/*@0.2.1-rc.2`、cordis `~4.0.5`、schemastery `~3.18.5`）。
+> rc.2 的 `execution-worlds` 已无 `mountRealmProviders` 扩缝，realm 也不再给 agent preset 建
+> 隔离上下文，**D4/A4 的「子类替换 row」路线作废**，改为 **Option B · 根平面路由**（不覆写任何
+> 官方行）：
+> - `ctx.fs` 按路径、`ctx.subprocess` 按 cwd、`ctx.sandbox.confine` 按 `policy.workspaceRoot`
+>   路由到所属主机的 daemon providers（官方本地 provider 兜底）；上行 marker 探测
+>   （`.git` / 指令文件的祖先目录探测）走「只读 + 本地 EACCES/EPERM + 相邻远端根」兜底；
+> - `terminalController.execution(agent)` 按会话 cwd 换入主机 subprocess；
+> - `sessionController.agents.createAgent` 按 cwd 跳过本地 `mkdir`，经远端 `fs.stat` 验证后
+>   按上游针脚（`ctx.agents.create` + `agentOptions` + `meta.cwd` + `setup`）铸造会话；
+> - `WorkspaceRegistry`/`WorkspaceEntity` patch：`adopt` 走 `createCanonical`；
+>   `indexHeader`/`resolveByPath`/`attachSession`/`delete` 以侧映射
+>   `storages/ssh-workspaces.json` 为准。
+> 包名 `packages/realm` → `packages/mount`；profile 只需 `insert` 三行
+> （`ssh-workspace-mount`/api/ui）。证据：`tests/daemon/probe-mount.mjs` 28/28；
+> 浏览器端到端见 [`PROGRESS.md`](./PROGRESS.md)。
 
 ### 模块 A0 · probe 探针（最先做，全项目最大架构风险在这里落锤）
 
@@ -171,4 +189,4 @@
 2. 会话内 fs/搜索/bash/terminal 全部作用于远端（host 侧 `ctx.fs` 零副作用）。
 3. ssh 断线任何时长：daemon 原地继续执行且**无任何心跳式清扫**；重连后 agent **不重发命令**即拿到完整 exit code 与（环形缓冲内的）过程输出，terminal 自断点续播；**远端无第二个进程**。
 4. daemon 重启/丢失 → 明确「进度丢失」错误，不挂死；绝不窥 helper。
-5. 全局红线复核：harness 仓库 diff = 0；无 import `@deepseek-ai/dsh-*/src/*`；BatchMode/StrictHostKey/不 agent-forward/socket 权限不变；无盲重发；reap 仅由三类显式事件触发。
+5. 全局红线复核：harness 仓库 diff = 0；无 import `@deepseek-ai/dsh-*/src/*`；不强制 ssh 安全选项/权限/PSK 轮换（见红线 3）；无盲重发；reap 仅由三类显式事件触发。

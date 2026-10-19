@@ -1,5 +1,5 @@
 /**
- * The daemon-backed `ctx.ssh` service and the realm mount that pairs it with
+ * The daemon-backed `ctx.ssh` service and the mount that pairs it with
  * the official SSH provider family. The providers bind to the shape
  * `{request, connectStream, dispose}`; this class supplies exactly that shape
  * over `RemoteWorkspaceTransport`, so `SshFileSystem`,
@@ -18,9 +18,9 @@ import { RemoteWorkspaceTransport, type RemoteWorkspaceConfig, type StreamEndpoi
 // type stays the upstream `SshConnection`; this class is a runtime-compatible
 // substitute, so no context augmentation is added here.
 
-/** Holds the transport instance a realm's providers share. */
+/** Holds the transport instance a host's providers share. */
 export interface DaemonSshConfig {
-  /** Live transport for the target host; the realm owns its lifetime. */
+  /** Live transport for the target host; the mount plugin owns its lifetime. */
   transport: RemoteWorkspaceTransport
 }
 

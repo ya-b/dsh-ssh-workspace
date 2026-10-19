@@ -1,29 +1,29 @@
 /**
  * Host half of the remote-workspace UI: the machine list behind `~/.ssh/config`,
- * a per-machine connectivity precheck, and a directory browser that speaks
- * through the same realm a session uses. The browser half consumes these over
- * three read-only routes under one prefix; every handler reuses the host
+ * a per-machine connectivity precheck, a directory browser, and the adoption
+ * call that turns a chosen remote directory into a workspace. The browser half
+ * consumes these over routes under one prefix; every handler reuses the host
  * connection's own request admission, so an unauthenticated request is rejected
  * exactly like an unauthenticated RPC call.
  *
  * The routes are deliberately thin: host enumeration is pure filesystem work,
- * while browse and verify go through `workspaceRuntime`, which means a remote
- * listing is produced by the durable workspace daemon rather than by a new
- * transport path invented here.
+ * while browse and adopt go through `sshWorkspace`, whose daemon-backed
+ * providers are the same ones a session uses.
  * @module @dsh-ssh-workspace/api
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 // Type-only: pulls the Context merges this half reads (`connection`,
-// `webServer`, `workspaceRuntime`).
+// `webServer`, `sshWorkspace`).
 import type {} from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-host-webserver'
-import type {} from '@deepseek-ai/dsh-host-execution-worlds'
+import type {} from '@dsh-ssh-workspace/mount'
 import { execFile } from 'node:child_process'
 import { globSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { homedir, hostname } from 'node:os'
-import { dirname, isAbsolute, join, posix } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
+import { z } from 'zod'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
 /** Default route prefix owned by this plugin. */
@@ -81,7 +81,7 @@ export interface BrowseListing {
 }
 
 /** Services the routes read. */
-export const inject = ['webServer', 'workspaceRuntime', 'connection']
+export const inject = ['webServer', 'connection', 'sshWorkspace']
 
 /** SSH config statements this parser understands. */
 const INCLUDE_PATTERN = /^\s*Include\s+(.+)$/iu
@@ -122,8 +122,18 @@ async function handle(
   }
   const url = new URL(request.url ?? '/', 'http://localhost')
   const route = url.pathname.slice(options.prefix.length)
+  if (request.method === 'POST') {
+    switch (route) {
+      case '/adopt':
+        writeJson(response, 200, await adopt(ctx, await readJsonBody(request)))
+        return
+      default:
+        writeJson(response, 404, { error: `unknown route ${JSON.stringify(route)}` })
+        return
+    }
+  }
   if (request.method !== 'GET') {
-    writeJson(response, 405, { error: 'these routes are read-only' })
+    writeJson(response, 405, { error: 'unsupported method' })
     return
   }
   switch (route) {
@@ -139,6 +149,38 @@ async function handle(
     default:
       writeJson(response, 404, { error: `unknown route ${JSON.stringify(route)}` })
   }
+}
+
+/** Read one bounded JSON request body. */
+async function readJsonBody(request: IncomingMessage, limitBytes = 64 * 1024): Promise<unknown> {
+  const chunks: Buffer[] = []
+  let size = 0
+  for await (const chunk of request) {
+    const buffer = chunk as Buffer
+    size += buffer.length
+    if (size > limitBytes) throw new Error('request body too large')
+    chunks.push(buffer)
+  }
+  const text = Buffer.concat(chunks).toString('utf8')
+  if (text.trim() === '') return {}
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    throw new Error('request body is not valid JSON')
+  }
+}
+
+/**
+ * Adopt one remote directory as a workspace.
+ * @param ctx - host plugin context.
+ * @param raw - request body: `{ host, path, title? }`.
+ */
+async function adopt(ctx: Context, raw: unknown): Promise<{ workspaceId: string, host: string, path: string, title: string }> {
+  const input = z.object({
+    host: z.string().min(1), path: z.string().min(1), title: z.string().min(1).optional(),
+  }).strict().parse(raw)
+  if (!isAbsolute(input.path)) throw new Error(`adopt needs an absolute path, got ${JSON.stringify(input.path)}`)
+  return await ctx.sshWorkspace.adopt(input)
 }
 
 /** One required query parameter. */
@@ -251,8 +293,7 @@ export async function precheck(alias: string, timeoutMs = 8000): Promise<Prechec
   }
   try {
     await run('ssh', [
-      '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ForwardAgent=no',
-      '-o', 'ClearAllForwardings=yes', '-o', 'ConnectTimeout=4', alias, 'true',
+      '-T', '-o', 'ConnectTimeout=4', alias, 'true',
     ], timeoutMs)
     return { alias, status: 'usable', detail: `non-interactive SSH login works on ${alias}` }
   } catch (error) {
@@ -270,9 +311,9 @@ function firstLine(text: string): string {
 }
 
 /**
- * List one directory level on one machine through the execution world a session
- * would use: the local host plane for the local machine, and the durable
- * workspace daemon realm for a remote alias.
+ * List one directory level on one machine through `sshWorkspace`: the local
+ * host plane for the local machine, and the daemon-backed remote providers for
+ * an alias.
  * @param ctx - host plugin context.
  * @param host - OpenSSH alias, or null/absent for the local machine.
  * @param path - absolute directory path; empty selects the machine's home.
@@ -280,25 +321,15 @@ function firstLine(text: string): string {
 export async function browse(ctx: Context, host: string | null, path: string): Promise<BrowseListing> {
   const remote = host !== null && host !== ''
   const machine = host ?? 'this machine'
-  const world = await withDeadline(worldFor(ctx, host, path), BROWSE_DEADLINE_MS, `opening the execution world for ${machine}`)
   const requested = path === '' ? (remote ? await remoteHome(ctx, host) : homedir()) : path
-  const resolved = await world.fs.resolve(requested)
-  const info = await world.fs.stat(resolved)
-  if (info?.type !== 'directory') throw new Error(`${JSON.stringify(requested)} is not a directory on ${machine}`)
-  const canonical = world.fs.processPath(resolved)
-  const entries = await world.fs.listDir(resolved)
-  const parent = posix.dirname(canonical)
-  return {
-    path: canonical,
-    ...(parent === canonical ? {} : { parent }),
-    entries: entries
-      .filter(entry => entry.type === 'directory')
-      .map(entry => ({ name: entry.name, path: world.fs.processPath(entry.target), hidden: entry.name.startsWith('.') }))
-      .sort((left, right) => left.name.localeCompare(right.name)),
-  }
+  return await withDeadline(
+    ctx.sshWorkspace.browse(remote ? host : null, requested),
+    BROWSE_DEADLINE_MS,
+    `listing ${requested} on ${machine}`,
+  )
 }
 
-/** Budget for resolving a world plus the listing that follows it. */
+/** Budget for one picker listing, including pairing the host daemon. */
 const BROWSE_DEADLINE_MS = 30_000
 
 /**
@@ -324,22 +355,11 @@ async function withDeadline<T>(value: Promise<T>, ms: number, what: string): Pro
   }
 }
 
-/** The execution world of one machine, exactly as a session would resolve it. */
-async function worldFor(ctx: Context, host: string | null, path: string) {
-  const remote = host !== null && host !== ''
-  return await ctx.workspaceRuntime.worldForWorkspace({
-    id: `picker:${host ?? 'local'}`,
-    path: path === '' ? '/' : path,
-    transport: remote ? 'ssh' : 'local',
-    ...(remote ? { host } : {}),
-  } as never)
-}
-
 /** Homes already discovered, so repeated browsing does not re-ask. */
 const homes = new Map<string, Promise<string>>()
 
 /**
- * The home directory of one remote machine. The realm's filesystem resolves
+ * The home directory of one remote machine. The host's filesystem resolves
  * paths literally (a `~` is not expanded by a provider), so the shell is asked
  * once per machine and the answer cached.
  * @param _ctx - host plugin context (kept for symmetry with the other lookups).
@@ -349,8 +369,7 @@ async function remoteHome(_ctx: Context, host: string): Promise<string> {
   let pending = homes.get(host)
   if (pending === undefined) {
     pending = run('ssh', [
-      '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ForwardAgent=no',
-      '-o', 'ClearAllForwardings=yes', '-o', 'ConnectTimeout=4', host, 'printf %s "$HOME"',
+      '-T', '-o', 'ConnectTimeout=4', host, 'printf %s "$HOME"',
     ], 8000).then(result => result.stdout.trim() || '/')
     homes.set(host, pending)
   }

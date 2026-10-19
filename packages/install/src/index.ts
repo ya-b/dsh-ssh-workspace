@@ -30,9 +30,8 @@ export function installCommand(config: RemoteWorkspaceConfig): string {
   const dir = daemonDirExpr(config.daemonDir)
   return [
     `D=${dir}`,
-    'mkdir -p "$D" && chmod 700 "$D"',
+    'mkdir -p "$D"',
     'tar -xzf - -C "$D"',
-    'chmod 700 "$D/workspaced.js"',
   ].join('; ')
 }
 
@@ -96,8 +95,7 @@ export async function installDaemonArchive(
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = execFile('ssh', [
-      '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ForwardAgent=no',
-      '-o', 'ClearAllForwardings=yes', config.host, installCommand(config),
+      '-T', config.host, installCommand(config),
     ], { maxBuffer: 1024 * 1024, timeout: deadlineMs }, (error) => { if (error === null) resolve(); else reject(error) })
     child.stdin?.end(archive)
     child.stderr?.resume()

@@ -1,6 +1,5 @@
 /** Reconnectable TLS-PSK stream endpoints and byte-anchored replay buffers. */
-import { randomBytes } from 'node:crypto'
-import { chmod, mkdir, rm } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Socket } from 'node:net'
 import { createServer, type Server } from 'node:tls'
@@ -9,6 +8,13 @@ import { SSH_STREAM_TLS_OPTIONS } from './security.ts'
 /** Streams a prepared process publishes. */
 export type Channel = 'stdin' | 'stdout' | 'stderr' | 'control' | 'terminal'
 export type StreamEndpoint = { path: string; capability: string }
+
+/**
+ * Static capability of every stream endpoint. The per-handshake random PSK was
+ * removed by project decision (security surface intentionally opened): the
+ * value is public and authentication is not a property the daemon provides.
+ */
+const STATIC_CAPABILITY = Buffer.alloc(32)
 
 /**
  * Byte-offset anchored replay store. `push` advances a monotonic byte
@@ -67,7 +73,7 @@ export class ReplayBuffer {
 export interface Endpoint {
   /** Remote unix socket path (absolute). */
   readonly path: string
-  /** 256-bit PSK capability as hex. */
+  /** Static PSK capability as hex (see `STATIC_CAPABILITY`). */
   readonly capability: string
   /** The live attached socket, when one is connected. */
   current(): Socket | undefined
@@ -97,7 +103,7 @@ export interface EndpointOptions {
 export async function createEndpoint(root: string, id: string, options: EndpointOptions = {}): Promise<Endpoint> {
   const connected = Promise.withResolvers<Socket>()
   void connected.promise.catch(() => {})
-  const capability = randomBytes(32)
+  const capability = STATIC_CAPABILITY
   const path = join(root, id)
   const pending = new Set<Socket>()
   const attachHandlers: Array<(socket: Socket) => void> = []
@@ -146,7 +152,6 @@ export async function createEndpoint(root: string, id: string, options: Endpoint
 
   try {
     await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(path, resolve) })
-    await chmod(path, 0o600)
   } catch (error) {
     server.close()
     throw error
@@ -224,8 +229,8 @@ async function readSync(socket: Socket): Promise<number> {
   })
 }
 
-/** Ensure a 0700 directory exists (removed first so stream ids never collide across boots). */
+/** Ensure the stream directory exists (removed first so stream ids never collide across boots). */
 export async function prepareDirectory(dir: string): Promise<void> {
   await rm(dir, { recursive: true, force: true })
-  await mkdir(dir, { mode: 0o700 })
+  await mkdir(dir)
 }

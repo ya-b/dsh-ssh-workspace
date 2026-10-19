@@ -13,15 +13,15 @@ DeepSeek Harness 的远程工作区插件：Web UI 里先选机器、再选目�
 | `packages/daemon` | 远端 workspace daemon：单文件 bundle `lib/workspaced.js`（Node ≥ 20），unix socket + TLS-PSK 流端点 + 重放缓冲 |
 | `packages/transport` | 形状兼容 `{request, connectStream, dispose}` 的连接：ssh master、按流 `ssh -L` 转发、重连状态机、opId 自动注入 |
 | `packages/providers` | 把 `ctx.ssh` 换成 daemon 版，官方 `dsh-fs-ssh` / `dsh-subprocess-ssh` / `dsh-sandbox-ssh` / `dsh-bash-sandbox` 原样复用 |
-| `packages/realm` | `WorkspaceRuntimeRegistry` 子类（drop-in 替换 `execution-worlds` 行）+ daemon 安装 + 宿主服务桥接 |
-| `packages/api` | 宿主侧只读路由：`/ssh-workspace/machines`、`/precheck`、`/browse`（复用连接层准入） |
+| `packages/mount` | 根平面路由（rc.2 定案）：patch `ctx.fs`/`ctx.subprocess`/`ctx.sandbox` + terminal/session 控制器 + `WorkspaceRegistry/Entity`，把远端工作区的操作派发到所属主机的 daemon providers；daemon 投递 + 侧映射 `ssh-workspaces.json` |
+| `packages/api` | 宿主侧只读路由：`/ssh-workspace/machines`、`/precheck`、`/browse`（复用连接层准入）、`POST /adopt` |
 | `packages/ui` | 浏览器侧面板：机器列表 → 目录浏览 → 添加工作区（`sidebar.panellist` + `sidebar.footer.action` 弹窗） |
 | `packages/install` | 打包/投递远端归档（bundle + 裁剪 node-pty） |
 | `packages/rpc` | 长度前缀 JSON 帧 + 类型化错误 |
 
 ## 快速接入
 
-见 `INSTALL.md`（构建归档 → 装入 profile → 覆写 `execution-worlds` 行 → 重启）。
+见 `INSTALL.md`（构建归档 → 装入 profile → 追加 `ssh-workspace-mount` 等三行 patch → 重启）。
 
 ## 使用（浏览器）
 
@@ -29,9 +29,9 @@ DeepSeek Harness 的远程工作区插件：Web UI 里先选机器、再选目�
 弹窗**最上方**是主机选择：
 
 1. **选机器** — 下拉 = 本机 + `~/.ssh/config` 全部具名主机（含 `Include` 递归）。
-   选定后自动做一次 `BatchMode` 非交互登录探测：
+   选定后自动做一次非交互登录探测：
    `usable` / `needs-credentials` / `unreachable` / `unknown`（徽标显示在弹窗顶部）。
-2. **选目录** — 本机走宿主浏览；远端目录由 workspace daemon realm 列出（与会话完全相同），
+2. **选目录** — 本机走宿主浏览；远端目录由插件的 daemon 连接列出（与会话完全相同），
    可「上级」回溯，「显示隐藏文件」开关可用。
 3. **打开** — 本机：走 Harness 原生目录流语义（创建后自动开始会话）；
    远端：直接创建 SSH 工作区（该弹窗承载 host，无法转交 owner），随后所有
@@ -48,7 +48,7 @@ DeepSeek Harness 的远程工作区插件：Web UI 里先选机器、再选目�
 | 项 | 要求 |
 | --- | --- |
 | 远端 Node | ≥ 20（daemon 为 ESM bundle，使用 `createRequire` 兼容 node-pty 的原生依赖） |
-| 远端 OpenSSH 客户端/服务端 | ≥ 8.2（`ssh -O forward`、`ControlMaster`、`ClearAllForwardings`） |
+| 远端 OpenSSH 客户端/服务端 | ≥ 8.2（`ssh -O forward`、`ControlMaster`） |
 | 远端 shell | POSIX `sh`（bootstrap 只用 `mkdir/chmod/rm/test/kill/setsid/nohup`） |
 | 远端平台 | linux（node-pty 预编译按平台裁剪；darwin 需自备 node-pty） |
 | 宿主 | Node ≥ 20；已装 `ssh`；`~/.ssh/config` 可读 |
@@ -66,20 +66,15 @@ DeepSeek Harness 的远程工作区插件：Web UI 里先选机器、再选目�
 
 ## 运行一个带完整 UI 的实例
 
-原生「添加远程工作区…」入口与 `verifyRemote` 客户端通路在**本地 harness 构建**里
-（`~/repo/deepseek-harness` 工作树中的未发布改动）。因此：
+插件只依赖已发布包（`dsh` 0.2.1-rc.2 及其 `@deepseek-ai/*` 组件），**不需要任何 harness
+源码改动**。用一个独立 `DSH_HOME` 起临时实例即可验证，不打扰 3080 的常驻服务：
 
 ```bash
-# 一次性构建（宿主半 + 客户端半 + 前端）
-cd ~/repo/deepseek-harness && pnpm build:lib && pnpm build:web
-
-# 启动（本插件的面板与入口都在）
-DSH_HOME=~/.dsh node apps/cli/lib/bin.js web --no-open --port 3081
+DSH_HOME=/tmp/dsh-ssh-test dsh web --no-open --port 3081
 ```
 
-本机 3080 端口的常驻服务由 systemd 用户单元启动的是**已发布版本**的 `dsh`，
-它不含上面的 harness 改动，因此那个实例只有本插件提供的 🌐 面板本身可用
-（面板依赖的宿主路由与本插件同装即可），原生「添加远程工作区…」入口不会出现。
+本机 3080 端口的常驻服务由 systemd 用户单元启动；宿主侧代码变更后需要
+`systemctl --user restart dsh-web.service` 才会生效（UI bundle 实时读盘、无需重启）。
 
 ## 验证
 
@@ -87,7 +82,7 @@ DSH_HOME=~/.dsh node apps/cli/lib/bin.js web --no-open --port 3081
 # 每个探针都可独立运行；依赖真实 sshd（默认 ssh localhost）
 node tests/daemon/probe-transport.mjs    # 11/11 执行、断线续取终态、零重复、fs
 node tests/daemon/probe-providers.mjs    # 13/13 官方 provider 家族原样工作
-node tests/daemon/probe-realm.mjs        # 10/10 execution-worlds 路由与 verifier
+node tests/daemon/probe-mount.mjs        # 28/28 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射
 node tests/api/machines.test.mjs          # 10/10 ssh config 枚举（通配隐藏、Include 递归、顺序）
 node tests/daemon/probe-resilience.mjs   # 11/11 死亡场景（终端断线续播、换代、回收顺序、大文件 opId 重放、200 次观测）
 PROBE_OUTAGE_MS=120000 node tests/daemon/probe-resilience.mjs   # 同上，断线 2 分钟

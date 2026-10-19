@@ -1,5 +1,6 @@
 /** One authenticated daemon client session: private services plus its RPC dispatch. */
 import { realpath, writeFile } from 'node:fs/promises'
+import { userInfo } from 'node:os'
 import { join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { Duplex } from 'node:stream'
@@ -157,6 +158,10 @@ async function dispatch(method: string, raw: unknown, signal: AbortSignal, sessi
         throw error
       }
     }
+    case 'terminal.environment': {
+      object.parse(raw)
+      return terminalEnvironment()
+    }
     case 'sandbox': {
       const input = z.object({ argv: z.array(z.string()).min(1), policy: policySchema }).strict().parse(raw)
       const resolved = await canonicalPolicy(input.policy, ctx, signal)
@@ -313,6 +318,13 @@ async function dispatch(method: string, raw: unknown, signal: AbortSignal, sessi
 const asTarget = (raw: unknown): FsTarget => targetSchema.parse(raw) as FsTarget
 const remoteError = (message: string, code: string): RemoteOperationError => new RemoteOperationError(message, code)
 
+/** Terminal facts the published SSH providers expect, resolved locally. */
+function terminalEnvironment(): { platform: 'posix' | 'windows', defaultShell?: string } {
+  const platform = process.platform === 'win32' ? 'windows' as const : 'posix' as const
+  const shell = (platform === 'windows' ? process.env.ComSpec : process.env.SHELL ?? userInfo().shell) ?? undefined
+  return { platform, ...shell === undefined || shell === '' ? {} : { defaultShell: shell } }
+}
+
 async function canonicalPolicy(policy: z.output<typeof policySchema>, ctx: Context, signal: AbortSignal): Promise<SandboxPolicy> {
   const target = await ctx.fs.resolve(policy.workspaceRoot, { signal })
   return { ...policy, workspaceRoot: ctx.fs.processPath(target) } as SandboxPolicy
@@ -415,7 +427,7 @@ export class ClientRegistry {
       defaultMode: this.options.defaultMode,
       maxProcessHandles: this.options.maxProcessHandles,
     })
-    await writeFile(join(this.options.dir, 'config.json'), `${body}\n`, { mode: 0o600 }).catch(() => {})
+    await writeFile(join(this.options.dir, 'config.json'), `${body}\n`).catch(() => {})
   }
 
   async create(uuid: string, workspace: string): Promise<ClientSession> {

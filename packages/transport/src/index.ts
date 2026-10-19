@@ -121,7 +121,7 @@ export function bootstrapCommand(config: RemoteWorkspaceConfig): string {
   const node = shellQuote(config.node)
   return [
     `D=${dir}`,
-    'mkdir -p "$D" && chmod 700 "$D"',
+    'mkdir -p "$D"',
     // A socket without a live owner is the crash residue of a daemon that was
     // killed outright: clear it, or the boot below would wait on a listener
     // that no longer exists.
@@ -149,8 +149,8 @@ const NODE_PREFLIGHT = [
 export function installCommand(config: RemoteWorkspaceConfig): string {
   return [
     `D=${daemonDirExpr(config.daemonDir)}`,
-    'mkdir -p "$D" && chmod 700 "$D"',
-    'cat > "$D/workspaced.js.tmp" && chmod 700 "$D/workspaced.js.tmp" && mv "$D/workspaced.js.tmp" "$D/workspaced.js"',
+    'mkdir -p "$D"',
+    'cat > "$D/workspaced.js.tmp" && mv "$D/workspaced.js.tmp" "$D/workspaced.js"',
   ].join('; ')
 }
 
@@ -158,8 +158,7 @@ export function installCommand(config: RemoteWorkspaceConfig): string {
 export async function installDaemon(config: RemoteWorkspaceConfig, bundle: Buffer, deadlineMs = 60_000): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = execFile('ssh', [
-      '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ForwardAgent=no',
-      '-o', 'ClearAllForwardings=yes', config.host, installCommand(config),
+      '-T', config.host, installCommand(config),
     ], { maxBuffer: 1024 * 1024, timeout: deadlineMs }, (error) => { if (error === null) resolve(); else reject(error) })
     child.stdin?.end(bundle)
     child.stderr?.on('error', () => {})
@@ -528,8 +527,7 @@ export class RemoteWorkspaceTransport {
     const directory = this.directory
     const controlPath = join(directory, 'master')
     const child = spawn('ssh', [
-      '-T', '-M', '-S', controlPath, '-o', 'ControlPersist=no', '-o', 'BatchMode=yes',
-      '-o', 'StrictHostKeyChecking=yes', '-o', 'ForwardAgent=no', '-o', 'ClearAllForwardings=yes',
+      '-T', '-M', '-S', controlPath, '-o', 'ControlPersist=no',
       '-o', 'ServerAliveInterval=10', '-o', 'ServerAliveCountMax=3',
       this.config.host, bootstrapCommand(this.config),
     ], { stdio: ['pipe', 'pipe', 'pipe'] })

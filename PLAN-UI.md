@@ -20,8 +20,8 @@
 | R1 | 侧边栏不再出现「远程工作区」独立图标按钮 | 侧边栏只有原生「添加工作区（＋）」；本插件不再注册 `sidebar.footer.action` / `sidebar.panellist` |
 | R2 | 点「添加工作区」→ 不再出现菜单，直接弹出弹窗 | 点击后 300ms 内出现 `选择工作区目录` 弹窗，无中间菜单 |
 | R3 | 弹窗最上方是主机选择区 | 弹窗内 header 之下、目录区之上，第一个可交互控件是主机选择（本机 + ssh config 主机） |
-| R4 | 选完主机再选目录 | 主机=本机 → 列出本机目录；主机=别名 → 列出远端目录（经本插件 daemon realm） |
-| R5 | 选目录后确认 → 创建对应工作区 | 本机 → `{path}`；远端 → `{path, transport:'ssh', host}`，落入现有 store，重启不丢 |
+| R4 | 选完主机再选目录 | 主机=本机 → 列出本机目录；主机=别名 → 列出远端目录（经插件的 daemon 连接） |
+| R5 | 选目录后确认 → 创建对应工作区 | 本机 → 走原生目录流；远端 → `POST /ssh-workspace/adopt`（`createCanonical`，默认名时重命名 `<目录>@<主机>`），落入工作区 store，重启不丢 |
 
 ## 2. 现状分析（权威代码路径）
 
@@ -55,7 +55,7 @@
 - `api/workspace-controller/src/directory-picker.ts:72` `list(path, signal)` → `ctx.directoryPicker` seam
   （`packages/host/directory-picker*`，只管本机）。
 - 本插件已提供：`packages/api/src/index.ts` 的 `listMachines()`（`~/.ssh/config` 枚举）、
-  `browse(ctx, host, path)`（远端经 `workspaceRuntime.worldForWorkspace` → daemon realm），
+  `browse(ctx, host, path)`（远端经插件的 daemon 连接），
   以及浏览器面板 `packages/ui/src/client/index.tsx`（本次**整个移除**）。
 
 ### 2.4 结论：为什么只能改 Harness 自身弹窗
@@ -193,7 +193,7 @@ export interface SshHostsService {
 
 - 单测：`directory-picker.host.spec.ts`（hosts 枚举、本地 list 兼容、远程 list 委托、
   createDirectory(远程) 拒绝）；`machines.test.mjs` 保持 10/10（改为服务面）。
-- 探针回归：`probe-transport 11/11`、`probe-providers 13/13`、`probe-realm 12/12`、
+- 探针回归：`probe-transport 11/11`、`probe-providers 13/13`、`probe-mount 28/28`、
   `probe-resilience 11/11`（无协议改动，预期全绿）。
 - 浏览器 e2e（本地构建实例）：
   1. 侧边栏无「远程工作区」图标；加号存在。
@@ -233,9 +233,9 @@ export interface SshHostsService {
   4. 选 `192.0.2.11`（不可达）→ 徽标 `unreachable：No ED25519 host key…`，无目录。
   5. 临时别名 `example-alias`（HostName localhost，已知 host key）→ 徽标
      `usable：non-interactive SSH login works on example-alias` → 远端 `/home/user` 树
-     （经 daemon realm 列出）。
+     （经 daemon 连接列出）。
   6. 本机「打开」→ owner 创建本地工作区（store `{path:'/home/user'}`）；远端「打开」→
      弹窗自建 `{path:'/home/user', transport:{kind:'ssh'}, host:'example-alias'}`，
      弹窗关闭、无错误。
   7. 清理：ssh config 临时别名已移除（`config.bak-dsh-ui-test` 已删）、store 测试条目已删。
-  8. 回归：`probe-transport` 11/11、`probe-realm` 12/12。
+  8. 回归：`probe-transport` 11/11、`probe-mount` 28/28。

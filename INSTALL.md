@@ -1,7 +1,8 @@
 # 安装到一个 dsh profile
 
-插件把 profile 里的 `execution-worlds` 行替换成 daemon 版实现。cordis 的 patch 条目
-**不能改行的 `name`**（那是校验而非覆写），因此做法是 `disabled` 原行 + 用同一个 id `insert` 本插件。
+插件走「根平面路由」：不动 profile 里的任何官方行，只 `insert` 三行自有插件
+（`ssh-workspace-mount` + api + ui）。cordis 的 patch 条目不能改行的 `name`，
+`insert` 只允许新增，这正好满足本方案——官方 `execution-worlds` 与 helper 全保持原样。
 
 ## 1. 构建产物
 
@@ -9,8 +10,8 @@
 # daemon bundle（远端要跑的字节）
 cd packages/daemon && pnpm run build        # → lib/workspaced.js
 
-# 远端归档（bundle + 裁剪后的 node-pty，约 450 KiB）
-cd ../realm && pnpm run archive             # → dist/daemon.tar.gz
+# 远端归档（bundle + 裁剪后的 node-pty，约 0.4 MiB）
+cd ../mount && pnpm run archive             # → dist/daemon.tar.gz
 
 # 浏览器半的 bundle（CJS 工厂，供 __ModuleLoader__ 装载）
 cd ../ui && node build.mjs                  # → lib/client.js
@@ -22,24 +23,22 @@ cd ../ui && node build.mjs                  # → lib/client.js
 ## 2. 装入 profile
 
 ```bash
-dsh plugin --profile web add 'link:/path/to/dsh-ssh-workspace/packages/realm'
+dsh plugin --profile web add 'link:/path/to/dsh-ssh-workspace/packages/mount'
 dsh plugin --profile web add 'link:/path/to/dsh-ssh-workspace/packages/api'
 dsh plugin --profile web add 'link:/path/to/dsh-ssh-workspace/packages/ui'
 ```
 
-## 3. 覆写 profile 层
+## 3. 追加 profile 层
 
 追加到 `$DSH_HOME/profiles/web/cordis.patch.yml`：
 
 ```yaml
-- id: execution-worlds
-  disabled: true
 - insert:
-    - id: execution-worlds
-      name: '@dsh-ssh-workspace/realm'
+    - id: ssh-workspace-mount
+      name: '@dsh-ssh-workspace/mount'
       config:
         daemonDir: '~/.dsh-workspace'   # 远端状态目录；~ 由远端 shell 展开
-        node: /usr/bin/node             # 远端 node 绝对路径（>= 20）
+        node: node                      # 远端 node（>= 20；绝对路径更稳）
         install: true                   # 首次使用时投递 daemon 归档
     - id: api-ssh-workspace
       name: '@dsh-ssh-workspace/api'
@@ -50,30 +49,28 @@ dsh plugin --profile web add 'link:/path/to/dsh-ssh-workspace/packages/ui'
 校验组合结果并重启：
 
 ```bash
-dsh --profile web --dump-config | grep -A6 execution-worlds
+dsh --profile web --dump-config | grep -A8 ssh-workspace-mount
 ```
 
 ## 4. 设置项
 
-被替换的行仍共享 `execution-worlds` 设置命名空间，Plugins 页可继续编辑：
-`daemonDir`、`node`、`install`、`reconnectBaseMs`、`reconnectMaxMs`、`controlDir`、
-`requestTimeoutMs`、`maxFrameBytes`、`maxPending`。页面上仍显示的 helper 类字段
-（`helper`、`helperHash`、`launchKind`、`bootstrapPath`、`bootstrapHash`、`leaseMs`）
-会被接受并忽略。
+`ssh-workspace-mount` 行的 config：`daemonDir`、`node`、`install`、`requestTimeoutMs`、
+`reconnectBaseMs`、`reconnectMaxMs`、`controlDir`、`daemonArchive`、`maxFrameBytes`、
+`maxPending`、`statePath`（侧映射 JSON，默认 `${DSH_HOME:-~/.dsh}/storages/ssh-workspaces.json`）。
 
 ## 5. 回滚
 
-删掉上面三个 patch 条目（`execution-worlds` 回到官方 helper 实现），再
-`dsh plugin --profile web remove @dsh-ssh-workspace/{realm,api,ui}`。
+删掉上面三个 patch 条目，再
+`dsh plugin --profile web remove @dsh-ssh-workspace/{mount,api,ui}`。
 
 ## 升级
 
 插件的三类产物各自独立演进，升级时按需重建：
 
 ```bash
-cd packages/daemon && pnpm run build && cd ../realm && pnpm run archive   # 远端代码变了
+cd packages/daemon && pnpm run build && cd ../mount && pnpm run archive   # 远端代码变了
 cd ../ui && node build.mjs                                                # 浏览器半变了
-node ../transport/../../tests/daemon/probe-transport.mjs                   # 回归
+node tests/daemon/probe-mount.mjs                                         # 回归
 ```
 
 远端 daemon 的替换时机：新归档的**摘要**变化后，下一次首次使用该 (host, daemonDir) 时会
@@ -87,5 +84,5 @@ bootstrap 时自愈），随后客户端按 `clientUuid` 重入会话。
 ## 备注：白名单
 
 daemon 的 `config.json` 里 `roots` 是允许作为工作区打开的目录。客户端在打开某个目录前会先
-发 `workspace.allow`，daemon 落盘保存（保留最近 64 条）。socket 权限 `0600`、属主即该用户，
-而该用户本就能通过 daemon 执行任意命令，因此这是防误操作的护栏而非安全边界。
+发 `workspace.allow`，daemon 落盘保存（保留最近 64 条）。daemon 不设权限/认证边界
+（socket、状态目录无强制权限），白名单只是防误操作的护栏。

@@ -62,8 +62,7 @@ async function install(maxProcessHandles) {
  */
 async function bridge(clientUuid, instanceId) {
   const child = spawn('ssh', [
-    '-T', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ForwardAgent=no',
-    '-o', 'ClearAllForwardings=yes', config.host, bootstrapCommand(config),
+    '-T', config.host, bootstrapCommand(config),
   ], { stdio: ['pipe', 'pipe', 'pipe'] })
   child.stderr.resume()
   const peer = new RpcPeer(child.stdout, child.stdin, 64 * 1024 * 1024, 128)
