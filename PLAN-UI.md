@@ -1,9 +1,17 @@
 # UI 重做计划：主机选择融入 Harness 自身弹窗
 
-> 目标：左侧侧边栏去掉本插件的「远程工作区」图标；「添加工作区」图标点击后**直接弹出
-> Harness 自己的目录选择弹窗**，弹窗**最上方**是主机选择（本机 + `~/.ssh/config` 主机），
-> 选完主机再选目录。**只改 Harness 自身弹窗内部**，任何其他界面形态（独立面板、页脚弹窗、
-> 双弹窗、文本路径输入）都不符合要求。
+> 目标：左侧侧边栏去掉本插件的「远程工作区」图标；「添加工作区」图标点击后弹出目录选择
+> 弹窗（**Harness 同款**「选择工作区目录」），弹窗**最上方**是主机选择（本机 +
+> `~/.ssh/config` 主机），选完主机再选目录。
+>
+> **路线决策（已确认）＝ 方案 B：harness 源码零改动**。插件在目录流槽位注册
+> `priority: -1` 的 occupant，以**复刻的同款弹窗** shadow 官方 browse occupant（单槽位
+> 同类目不同优先级可并存，最低优先级渲染，已由 `entriesOfSlot` 的升序排序确认）。
+> 已知边界（方案 B 固有，均已在浏览器验证）：
+> - 点「添加工作区」后菜单仍在（`addEntries` 恒为「添加工作区…」+「添加远程工作区…」两项，
+>   `remoteAvailable` 由 harness 的 `workspaces.verifyRemote` 决定，插件无法隐藏），
+>   需要再点「添加工作区…」才进入弹窗。
+> - harness 自带的「添加远程工作区…」（文本路径表单弹窗）无法移除，与插件弹窗并存。
 
 ## 1. 需求拆解与验收
 
@@ -198,10 +206,36 @@ export interface SshHostsService {
 
 ## 7. 决策点（需确认）
 
-1. **是否放行修改 Harness 源码**：本方案必须改 `ui-directory-picker-browse` / `ui-workspace` /
-   `api/workspace-controller` / `host/directory-picker`（约 10 个文件）。旧约束是「harness
-   字节级不可改」，两者冲突。若**不放行**，则只能走插件复制弹窗（方案 B，不符合 R3 的
-   「Harness 自身弹窗」表述，需要用户重新确认）。
-2. **旧「添加远程工作区…」菜单项**：收敛为「打开同一个弹窗」还是**直接删除**（只留加号入口）？
-   默认：收敛，保留 hero 菜单入口。
-3. **远端「新建文件夹」**：本次不做（daemon 无 mkdir 语义），隐藏按钮；是否后续补 fs.mkdir？
+## 决策记录
+
+1. **方案 B（不动 harness）已确认并实施完毕**（2026-10-19）：
+   `packages/ui/src/client/index.tsx` 重写为目录流 occupant，复刻「选择工作区目录」弹窗
+   （`@deepseek-ai/dsh-client-ui-primitives` 的 `Modal` + `Button`），顶部主机选择条，
+   本地/远端目录树与「打开」双语义；`sidebar.panellist` / `sidebar.footer.action` /
+   `main` 注册全部删除（「远程工作区」图标消失）。
+2. 数据通路维持插件 HTTP 路由（`/ssh-workspace/machines|precheck|browse`），未改 harness；
+   本地「打开」走 owner 的 `onPicked`（borrow 官方目录流语义），远端「打开」由弹窗直接调用
+   `ctx.workspaces.create({path, transport:'ssh', host})` 后 `onCancel()` 关闭。
+3. 新建文件夹：本次不做（daemon 无 mkdir；面板不提供）。
+4. 后续若允许改 harness（方案 A），可将「添加远程工作区…」菜单项与 remoteForm 移除、主机选择
+   直接进官方 `DirectoryBrowser`、以及「添加工作区」免菜单直开弹窗（`addIsTheOnlyEntry` 需要
+   `addEntries.length === 1`）。
+
+## 实施记录（2026-10-19，浏览器全链路验证）
+
+- 根因修复：重写时漏了 `export const inject = ['slots', 'workspaces']`，导致
+  `ctx.slots` 抛「cannot get property without inject」、entry activate 失败（第 1 次重写
+  bundle 加载失败的真正原因；曾用减量 probe 定位到 apply 内部而非 import primitives）。
+- 验证步骤与证据：
+  1. 侧边栏 `sidebar.footer.action` 无按钮、「远程工作区」aria-label 计数 0。
+  2. 「添加工作区」→ 菜单两项 →「添加工作区…」→ 弹窗「选择工作区目录」出现。
+  3. 下拉 = workstation（本机）+ 6 台 ssh config 主机；默认本机 → `/home/user` 列表。
+  4. 选 `192.0.2.11`（不可达）→ 徽标 `unreachable：No ED25519 host key…`，无目录。
+  5. 临时别名 `example-alias`（HostName localhost，已知 host key）→ 徽标
+     `usable：non-interactive SSH login works on example-alias` → 远端 `/home/user` 树
+     （经 daemon realm 列出）。
+  6. 本机「打开」→ owner 创建本地工作区（store `{path:'/home/user'}`）；远端「打开」→
+     弹窗自建 `{path:'/home/user', transport:{kind:'ssh'}, host:'example-alias'}`，
+     弹窗关闭、无错误。
+  7. 清理：ssh config 临时别名已移除（`config.bak-dsh-ui-test` 已删）、store 测试条目已删。
+  8. 回归：`probe-transport` 11/11、`probe-realm` 12/12。
