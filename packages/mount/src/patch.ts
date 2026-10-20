@@ -304,7 +304,11 @@ interface SessionControllerLike {
  * `agents.createMinted` → `agents.createAgent`, so the roster instance is the
  * single choke point. The remote directory is verified through the owning
  * host's filesystem, then the session is minted exactly as upstream does
- * after its mkdir.
+ * after its mkdir. Creation pairs the host on demand and awaits its `ready`
+ * promise: a host whose startup handshake failed has no runtime left in the
+ * pool, and only an awaited pair reconnects it, so a host that came back
+ * after being down recovers on the next creation instead of demanding a
+ * process restart.
  * @param controller - the live `ctx.sessionController` instance.
  * @param hosts - host runtime pool.
  * @param state - remote workspace attribution records.
@@ -322,8 +326,8 @@ export function patchSessionController(
   agents.createAgent = async (sessionId, cwd, composition) => {
     const record = state.covering(cwd)
     if (record === undefined) return await original(sessionId, cwd, composition)
-    const runtime = hosts.peek(record.host)
-    if (runtime === undefined) throw new Error(`remote host '${record.host}' is not connected in this process yet; retry once the workspace reconnects`)
+    const runtime = hosts.pair(record.host)
+    await runtime.ready
     const target = await runtime.fs.resolve(cwd)
     const info = await runtime.fs.stat(target)
     if (info?.type !== 'directory') throw new Error(`${JSON.stringify(cwd)} is not a directory on ${record.host}`)

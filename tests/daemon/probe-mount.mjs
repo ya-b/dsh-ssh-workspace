@@ -239,9 +239,17 @@ const input = sessionCreates[0]
 check('the mint request mirrors upstream', input?.sessionId === 'session-x' && input.meta?.cwd === REMOTE_ROOT && input.meta?.agentPreset === 'preset-a' && input.agentOptions?.provider === 'p' && input.setup === 'setup-fn')
 const localMinted = await sessionController.agents.createAgent('session-y', LOCAL_ROOT, {})
 check('local session creation keeps the original path', localMinted === 'local-agent' && originalCreates[0] === LOCAL_ROOT, `original=${originalCreates.length}`)
-let sessionThrew = false
-try { await sessionController.agents.createAgent('session-z', '/nowhere/at/all', {}) } catch (error) { sessionThrew = /not connected/u.test(String(error)) }
-check('a remote cwd on an unpaired host fails loudly', sessionThrew)
+let sessionError
+try { await sessionController.agents.createAgent('session-z', '/nowhere/at/all', {}) } catch (error) { sessionError = error }
+check('a remote cwd on an unreachable host fails loudly without minting locally', sessionError !== undefined && /no-such-host/u.test(String(sessionError)) && sessionCreates.length === 1 && originalCreates.length === 1, String(sessionError))
+
+// ── host recovery ───────────────────────────────────────────────────────────
+// A failed startup handshake evicts the runtime from the pool; the next
+// session creation must pair the host again instead of failing until restart.
+await hosts.dispose()
+check('disposing the pool forgets every host runtime', hosts.peek('localhost') === undefined)
+const reconnected = await sessionController.agents.createAgent('session-r', REMOTE_ROOT, {})
+check('session creation reconnects a host after its runtime was evicted', reconnected === 'minted-agent' && sessionCreates.length === 2, `minted=${sessionCreates.length}`)
 
 // ── deletion bookkeeping ────────────────────────────────────────────────────
 await registry.delete(adopted.workspaceId)
