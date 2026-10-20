@@ -141,6 +141,74 @@ async function main() {
   }, z.array(z.object({ name: z.string() }).loose()))
   check('fs.list sees the new file', listed.some(entry => entry.name === 'note.txt'))
 
+  // 5. Deadline retries: replayable calls reuse the opId, caller aborts and
+  //    unclassified calls are never replayed.
+  {
+    const fake = new RemoteWorkspaceTransport({
+      ...config, requestTimeoutMs: 80, requestTimeoutRetries: 2, requestTimeoutRetryBaseMs: 10,
+      reconnectBaseMs: 10, reconnectMaxMs: 20,
+    })
+    const seen = []
+    fake.ensureSession = async () => ({
+      hello: { root: WORKSPACE, instanceId: 'fake', kind: 'daemon' },
+      peer: {
+        request: (method, params, schema, signal) => new Promise((resolve, reject) => {
+          seen.push({ method, params })
+          if (seen.length === 1) {
+            signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+            return
+          }
+          resolve(schema.parse('replayed'))
+        }),
+      },
+    })
+    const replayed = await fake.request('fs.stat', {}, z.string())
+    check('deadline replay returns the retried result', replayed === 'replayed' && seen.length === 2, `attempts=${seen.length}`)
+
+    seen.length = 0
+    await fake.request('process.start', { id: 'fake-process' }, z.string())
+    check('deadline replay keeps one opId across attempts',
+      seen.length === 2 && seen[0].params.opId !== undefined && seen[0].params.opId === seen[1].params.opId,
+      `opId=${seen[0]?.params?.opId}`)
+
+    seen.length = 0
+    let unclassified
+    try { await fake.request('workspace.allow', {}, z.string()) } catch (error) { unclassified = error }
+    check('deadline does not replay unclassified calls', unclassified?.name === 'TimeoutError' && seen.length === 1, `attempts=${seen.length}`)
+
+    seen.length = 0
+    let callerAbort
+    try { await fake.request('fs.stat', {}, z.string(), AbortSignal.timeout(10)) } catch (error) { callerAbort = error }
+    check('caller abort is not retried', callerAbort?.name === 'TimeoutError' && seen.length === 1, `attempts=${seen.length}`)
+    await fake.dispose()
+  }
+
+  // 6. Replaying the start of a process that never started must fail with a
+  //    typed code: the daemon aborted it before a target was created.
+  {
+    const schema = z.object({ id: z.string(), streams: z.record(z.string(), z.object({ path: z.string(), capability: z.string() })) }).loose()
+    const prepared = await transport.request('process.prepare', {
+      argv: ['/bin/sh'], cwd: WORKSPACE, graceMs: 2000,
+      terminal: { terminalType: 'xterm-256color', rows: 24, cols: 80 },
+    }, schema)
+    const controller = new AbortController()
+    const startSchema = z.object({ pid: z.number() }).loose()
+    const first = transport.request('process.start', { id: prepared.id }, startSchema, controller.signal)
+      .then(value => value, error => error)
+    await new Promise(r => setTimeout(r, 100))
+    controller.abort()
+    const aborted = await first
+    check('cancelled start rejects the caller', aborted?.name === 'AbortError', String(aborted?.name ?? aborted))
+    await new Promise(r => setTimeout(r, 500))
+    const attached = await transport.connectStream(prepared.streams.terminal)
+    attached.end()
+    await new Promise(r => setTimeout(r, 200))
+    const replay = await transport.request('process.start', { id: prepared.id }, startSchema)
+      .then(value => value, error => error)
+    check('replayed cancelled start carries PROCESS_START_CANCELLED',
+      replay?.code === 'PROCESS_START_CANCELLED', `${replay?.code ?? replay?.name}: ${replay?.message}`)
+  }
+
   await transport.dispose()
   const logText = await readRemoteLog()
   if (/error/i.test(logText) && !/daemon socket did not appear/.test(logText)) log('daemon log tail:', logText.split('\n').slice(-4).join(' | '))

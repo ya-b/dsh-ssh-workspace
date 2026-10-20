@@ -25,6 +25,8 @@ export interface HostsConfig {
   daemonDir: string
   node: string
   requestTimeoutMs: number
+  requestTimeoutRetries: number
+  requestTimeoutRetryBaseMs: number
   reconnectBaseMs: number
   reconnectMaxMs: number
   controlDir?: string
@@ -237,6 +239,8 @@ export class RemoteHosts {
       daemonDir: config.daemonDir,
       node: config.node,
       requestTimeoutMs: config.requestTimeoutMs,
+      requestTimeoutRetries: config.requestTimeoutRetries,
+      requestTimeoutRetryBaseMs: config.requestTimeoutRetryBaseMs,
       reconnectBaseMs: config.reconnectBaseMs,
       reconnectMaxMs: config.reconnectMaxMs,
       autoUpgrade: config.autoUpgrade,

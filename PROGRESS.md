@@ -31,7 +31,7 @@ this machine`，且多主机后配对者全胜）。现每主机用独立 `ctx.p
 新建会话（曾报 `EACCES ... mkdir '/root/apps/example'`，`agents.createAgent` patch 后修复）；
 会话内 bash `pwd` → `/root/apps/example`、`cat /etc/hostname` → `cloud-instance-01`（远端机）；
 write/read 工具创建 `/root/apps/example/mount-probe.txt`，本机 ssh 复核内容 `mount-ok`。
-回归：`machines 10/10`、`probe-transport 11/11`、`probe-providers 14/14`、`probe-resilience 11/11`、
+回归：`machines 10/10`、`probe-transport 17/17`、`probe-providers 14/14`、`probe-resilience 11/11`、
 `check-node-preflight` 通过。
 
 **远端终端修复**：`zsh` 缺失时报「终端错误：subprocess-local: command "zsh" was not found on PATH」。
@@ -42,6 +42,17 @@ RPC 错误转成官方类再抛；`probe-providers` 增加断言（14/14）。�
 node-pty（原来只带构建机架构，aarch64 远端会报 `Failed to load native module: pty.node`）。
 实测 aarch64 远端（`10.144.144.12`）新建终端出提示符、`pwd` 回 `/root/apps/trae2api`；
 回归 `probe-upgrade 9/9`。
+
+**弱网 deadline 重试**：此前 `requestTimeoutMs`（默认 30s）触发时 `AbortSignal.timeout` 直接冒泡成
+`The operation was aborted due to timeout`，即使请求本身可安全重放。现在 transport 在**调用方未取消**且
+方法可重放（`REISSUABLE` 读操作，或带 opId 的 `process.prepare/start`、`terminal.write`、`fs.write/edit`）
+时，按同一 opId 重试最多 `requestTimeoutRetries`（默认 5）次，退避按
+`requestTimeoutRetryBaseMs`（默认 10s）逐次翻倍（10s → 20s → 40s …）；
+`process.start` 重复提交由 daemon 返回首次启动结果，不会双开进程；若首次 start 在进程创建前已被
+cancel（或失败），重放不再返回空结果，而是带 `PROCESS_START_CANCELLED` / `PROCESS_START_FAILED`
+错误码的 `RemoteOperationError`。调用方 abort、不可重放的 `workspace.allow` 等仍在 deadline 首次触发时失败。
+证据：`probe-transport` 新增 6 项断言（17/17），含 opId 跨尝试一致、caller abort 不重试与
+`PROCESS_START_CANCELLED` 重放。
 
 > 下表为 alpha.2/本地树时期（realm 路线）的记录，保留作对照；其中 A4/B2/B3 与最终验收
 > 第 1/2 条的 realm 表述已被上方 rc.2 段落取代。

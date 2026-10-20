@@ -42,7 +42,11 @@ export interface Config {
   node?: string
   /** Per-request administrative deadline, in milliseconds. */
   requestTimeoutMs?: number
-  /** Reconnect backoff base in milliseconds. */
+  /** Extra attempts after the deadline on replayable operations. */
+  requestTimeoutRetries?: number
+  /** First delay before a deadline retry, doubling per attempt. */
+  requestTimeoutRetryBaseMs?: number
+  /** Reconnect backoff base, in milliseconds. */
   reconnectBaseMs?: number
   /** Reconnect backoff ceiling in milliseconds. */
   reconnectMaxMs?: number
@@ -66,6 +70,8 @@ type ResolvedConfig = {
   daemonDir: string
   node: string
   requestTimeoutMs: number
+  requestTimeoutRetries: number
+  requestTimeoutRetryBaseMs: number
   reconnectBaseMs: number
   reconnectMaxMs: number
   controlDir?: string
@@ -116,6 +122,8 @@ export class SshWorkspaceMount extends Service {
     daemonDir: schema.string().default('~/.dsh-workspace'),
     node: schema.string().default('node'),
     requestTimeoutMs: schema.number().min(1).max(2_147_483_647).default(30_000),
+    requestTimeoutRetries: schema.number().min(0).max(20).default(5),
+    requestTimeoutRetryBaseMs: schema.number().min(10).max(2_147_483_647).default(10_000),
     reconnectBaseMs: schema.number().min(10).max(60_000).default(250),
     reconnectMaxMs: schema.number().min(100).max(600_000).default(15_000),
     controlDir: schema.string(),
@@ -136,13 +144,16 @@ export class SshWorkspaceMount extends Service {
     super(ctx, 'sshWorkspace')
     const resolved = SshWorkspaceMount.Config({
       daemonDir: '~/.dsh-workspace', node: 'node', requestTimeoutMs: 30_000,
-      reconnectBaseMs: 250, reconnectMaxMs: 15_000, install: true, autoUpgrade: true, ...config,
+      requestTimeoutRetries: 5, requestTimeoutRetryBaseMs: 10_000, reconnectBaseMs: 250, reconnectMaxMs: 15_000,
+      install: true, autoUpgrade: true, ...config,
     }) as unknown as ResolvedConfig
     this.state = new RemoteWorkspaceState(resolved.statePath === undefined || resolved.statePath === '' ? defaultStatePath() : resolved.statePath)
     this.hosts = new RemoteHosts(ctx, {
       daemonDir: resolved.daemonDir,
       node: resolved.node,
       requestTimeoutMs: resolved.requestTimeoutMs,
+      requestTimeoutRetries: resolved.requestTimeoutRetries,
+      requestTimeoutRetryBaseMs: resolved.requestTimeoutRetryBaseMs,
       reconnectBaseMs: resolved.reconnectBaseMs,
       reconnectMaxMs: resolved.reconnectMaxMs,
       install: resolved.install,

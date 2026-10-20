@@ -94,7 +94,9 @@ Include ~/.ssh/config.d/*
 | `autoUpgrade` | `true` | 连接时若运行中的 daemon 加载的 bundle 与已安装的 `workspaced.js` 摘要不一致，且无子进程在跑，就自动重启它；忙则保留旧版，下次连接再试 |
 | `daemonArchive` | 内置归档 | 覆盖 daemon 归档路径，主要用于开发调试 |
 | `requestTimeoutMs` | `30000` | 安装、准入、打开等管理请求的超时 |
-| `reconnectBaseMs` | `250` | 重连退避初始值 |
+| `requestTimeoutRetries` | `5` | 管理超时后对可重放操作（读或带 opId 的写）的额外重试次数；调用方取消不重试 |
+| `requestTimeoutRetryBaseMs` | `10000` | 超时重试的首次等待，逐次翻倍（10s → 20s → 40s …），上限 `2147483647` |
+| `reconnectBaseMs` | `250` | SSH 链路重连的退避初始值 |
 | `reconnectMaxMs` | `15000` | 重连退避上限 |
 | `controlDir` | 临时目录 | 本地 SSH ControlMaster socket 目录；不填则使用 `/tmp/dsh-ws-*` |
 | `statePath` | `${DSH_HOME:-~/.dsh}/storages/ssh-workspaces.json` | 本地工作区归属侧映射路径 |
@@ -119,6 +121,8 @@ Include ~/.ssh/config.d/*
     node: /usr/local/bin/node
     install: true
     requestTimeoutMs: 30000
+    requestTimeoutRetries: 5
+    requestTimeoutRetryBaseMs: 10000
     reconnectBaseMs: 250
     reconnectMaxMs: 15000
 ```

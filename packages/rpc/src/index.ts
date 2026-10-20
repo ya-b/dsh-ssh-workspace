@@ -97,6 +97,7 @@ export class RpcPeer extends EventEmitter {
     void result.promise.catch(() => {})
     this.pending.set(id, { ...result, management: false })
     const abort = (): void => {
+      this.pending.delete(id)
       result.reject(signal!.reason instanceof Error ? signal!.reason : new Error('RPC operation cancelled'))
       void this.send({ type: 'cancel', id }).catch(() => {})
     }

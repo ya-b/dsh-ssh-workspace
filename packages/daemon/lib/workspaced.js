@@ -55678,6 +55678,7 @@ var RpcPeer = class extends EventEmitter2 {
     });
     this.pending.set(id, { ...result, management: false });
     const abort = () => {
+      this.pending.delete(id);
       result.reject(signal.reason instanceof Error ? signal.reason : new Error("RPC operation cancelled"));
       void this.send({ type: "cancel", id }).catch(() => {
       });
@@ -56177,6 +56178,16 @@ var SnapshotForwarder = class {
     }
   }
 };
+function startFailure(record3) {
+  if (record3.controller.signal.aborted) {
+    return {
+      message: "workspace daemon process start was cancelled before the process was created",
+      code: "PROCESS_START_CANCELLED"
+    };
+  }
+  const message = record3.startError instanceof Error ? record3.startError.message : String(record3.startError ?? "workspace daemon process start failed");
+  return { message, code: "PROCESS_START_FAILED" };
+}
 var RemoteProcessOwner = class {
   constructor(ctx, root, limit, reportSpillFailure) {
     this.ctx = ctx;
@@ -56267,7 +56278,12 @@ var RemoteProcessOwner = class {
    */
   async start(id, signal) {
     const completed = this.completed.get(id);
-    if (completed !== void 0) return completed.startResult;
+    if (completed !== void 0) {
+      if (completed.startFailure !== void 0) {
+        throw new RemoteOperationError(completed.startFailure.message, completed.startFailure.code);
+      }
+      return completed.startResult;
+    }
     const record3 = this.record(id);
     if (record3.startResult !== void 0) return record3.startResult;
     if (record3.start !== void 0) return await record3.start;
@@ -56281,6 +56297,7 @@ var RemoteProcessOwner = class {
       record3.startResult = await record3.start;
       return record3.startResult;
     } catch (error112) {
+      record3.startError = error112;
       const failed = Promise.reject(error112);
       void failed.catch(() => {
       });
@@ -56570,6 +56587,7 @@ var RemoteProcessOwner = class {
     this.completed.set(id, {
       done: result,
       startResult: record3.startResult ?? {},
+      ...record3.startResult === void 0 ? { startFailure: startFailure(record3) } : {},
       opId: record3.opId
     });
     await Promise.all(Object.values(record3.endpoints).map((endpoint) => endpoint.close()));

@@ -50,6 +50,14 @@ export interface RemoteWorkspaceConfig {
   readonly reconnectBaseMs?: number
   /** Reconnect backoff ceiling in milliseconds. */
   readonly reconnectMaxMs?: number
+  /**
+   * Extra attempts after the administrative deadline fires on a replayable
+   * operation (a read, or a mutation carrying an opId). A caller abort is
+   * never retried, and unclassified calls fail on the first deadline.
+   */
+  readonly requestTimeoutRetries?: number
+  /** First delay before a deadline retry, doubling per attempt (10s, 20s, 40s, ...). */
+  readonly requestTimeoutRetryBaseMs?: number
   /** Local control directory; a temp directory when absent. */
   readonly controlDir?: string
   /**
@@ -92,6 +100,11 @@ const OPID_METHODS = new Set(['fs.write', 'fs.edit', 'process.prepare', 'process
 
 /** Replay-bearing channels: those whose sockets precede data with a `{sync}` frame. */
 const REPLAY_CHANNELS = new Set(['stdout', 'stderr', 'terminal'])
+
+/** Whether an error is a per-request deadline firing (the caller's signal is checked separately). */
+function isDeadlineAbort(error: unknown): boolean {
+  return error instanceof Error && error.name === 'TimeoutError'
+}
 
 /** Quote one token for a POSIX remote shell. */
 export function shellQuote(value: string): string {
@@ -448,25 +461,42 @@ export class RemoteWorkspaceTransport {
    * @param wait - allow the observation to outlast the administrative deadline.
    */
   async request<T>(method: string, params: unknown, result: z.ZodType<T>, signal?: AbortSignal, wait = false): Promise<T> {
-    const bounded = wait ? signal : signal === undefined
-      ? AbortSignal.timeout(this.config.requestTimeoutMs ?? 30_000)
-      : AbortSignal.any([signal, AbortSignal.timeout(this.config.requestTimeoutMs ?? 30_000)])
     const opId = OPID_METHODS.has(method) ? randomUUID().replaceAll('-', '') : undefined
     const body = opId === undefined ? params : { ...(params as Record<string, unknown>), opId }
+    const replayable = REISSUABLE.has(method) || opId !== undefined
+    const retries = Math.max(0, this.config.requestTimeoutRetries ?? 5)
+    let deadlineHits = 0
     for (;;) {
+      const bounded = wait ? signal : signal === undefined
+        ? AbortSignal.timeout(this.config.requestTimeoutMs ?? 30_000)
+        : AbortSignal.any([signal, AbortSignal.timeout(this.config.requestTimeoutMs ?? 30_000)])
       bounded?.throwIfAborted()
       const session = await this.ensureSession()
       try {
         return await session.peer.request(method, body, result, bounded ?? undefined)
       } catch (error) {
-        bounded?.throwIfAborted()
+        signal?.throwIfAborted()
         if (this.stopped) throw error
+        // The administrative deadline is a transport-level stall, not a
+        // remote outcome: re-issue it exactly where the link-loss path
+        // already re-issues — a read, or a mutation the daemon's opId gate
+        // makes idempotent. The same opId rides every attempt. A caller abort
+        // is a decision, and anything unclassified fails unchanged; silently
+        // replaying those would hide real failures.
+        if (replayable && deadlineHits < retries && isDeadlineAbort(error)) {
+          deadlineHits += 1
+          const base = this.config.requestTimeoutRetryBaseMs ?? 10_000
+          await new Promise<void>(resolve => {
+            setTimeout(resolve, Math.min(2_147_483_647, base * 2 ** (deadlineHits - 1))).unref()
+          })
+          continue
+        }
         // Only a genuine transport loss is retryable. A remote operation
         // error, a response-schema error, or a caller abort must surface
         // unchanged: silently re-issuing those would hide real failures
         // (and, worse, churn SSH connections in a loop).
         if (!this.isTransportLoss(error)) throw error
-        if (!(REISSUABLE.has(method) || opId !== undefined)) throw error
+        if (!replayable) throw error
         // Transport loss: reconnect and re-issue. The daemon's opId gate (for
         // mutations) or read-only nature (for observations) makes this safe.
         await this.reconnect()

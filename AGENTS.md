@@ -43,7 +43,9 @@ DeepSeek Harness 远程工作区插件（monorepo，`pnpm`）。
 
 - daemon 响应给官方 provider 的 `process.prepare` 必须**恰好** `{id, streams}`（官方
   `preparedSchema` 是 `.strict()`，多一个字段就解析失败）。
-- transport 的重试判定只看 `RpcTransportError` / 已知 socket 错误码；**schema/业务错误不重试**。
+- transport 的重试判定只看 `RpcTransportError` / 已知 socket 错误码 / 管理超时（`TimeoutError`）；
+  超时重试仅限可重放操作（`REISSUABLE` 或带 opId），复用同一 opId 且有次数上限；调用方 abort、
+  schema/业务错误**不重试**。
 - 客户端 `process.prepare` 用与 daemon 相同的 `clientUuid`（由 controlDir+host+workspace 哈希派生）
   重入同一会话；daemon 换代（instanceId 不符）→ `WORKSPACE_PROGRESS_LOST`，不许假装续上。
 - 浏览器端 bundle 必须带 `export const inject`（漏了会导致 entry activate 失败，且报错只有
@@ -70,8 +72,8 @@ cd packages/ui && node build.mjs          # → packages/ui/lib/client.js（默�
 
 # 单测/端到端（需真实 sshd，默认 ssh localhost；daemon 部署在 ~/.dsh-workspace）
 node tests/api/machines.test.mjs          # ssh config 枚举 10/10
-node tests/daemon/probe-transport.mjs     # 11/11 执行/断线续取/零重复/fs
-node tests/daemon/probe-providers.mjs     # 13/13 官方 provider 家族
+node tests/daemon/probe-transport.mjs     # 17/17 执行/断线续取/零重复/fs/deadline 重试/失败 start 重放
+node tests/daemon/probe-providers.mjs     # 14/14 官方 provider 家族
 node tests/daemon/probe-mount.mjs         # 34/34 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射 + provider fiber 隔离回归
 node tests/daemon/probe-resilience.mjs    # 11/11 死亡场景；PROBE_OUTAGE_MS=120000 跑 2 分钟断线
 node tests/daemon/probe-upgrade.mjs       # 9/9 自动升级：空闲换新版/忙保留/空闲后补升级

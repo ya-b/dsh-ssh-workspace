@@ -7,7 +7,7 @@ import { pipeline } from 'node:stream/promises'
 import type { Context } from '@deepseek-ai/cordis'
 import type { SubprocessHandle, SubprocessTerminalHandle } from '@deepseek-ai/dsh-subprocess'
 import { OutputCollector, prepareManagedProcessBinding, type SpillFailureReporter } from '@deepseek-ai/dsh-subprocess-local/output'
-import { RpcPeer } from '@dsh-ssh-workspace/rpc'
+import { RemoteOperationError, RpcPeer } from '@dsh-ssh-workspace/rpc'
 import { z } from 'zod'
 import { createEndpoint, prepareDirectory, ReplayBuffer, type Channel, type Endpoint } from './endpoints.ts'
 import { doneSchema, outputSnapshotFrameLimit, spawnSchema, type SshStreamEndpoint } from './schemas.ts'
@@ -30,6 +30,8 @@ interface ProcessRecord {
   terminal?: SubprocessTerminalHandle
   start?: Promise<{ pid?: number }>
   startResult?: { pid?: number }
+  /** First start failure, kept so a replayed start can surface it as a typed error. */
+  startError?: unknown
   done?: Promise<Completion>
   /** Creation order for oldest-first explicit reap. */
   readonly created: number
@@ -39,6 +41,8 @@ interface ProcessRecord {
 interface CompletedRecord {
   readonly done: Promise<Completion>
   readonly startResult: { pid?: number }
+  /** Present when start never produced a result: a replayed start must fail, not look successful. */
+  readonly startFailure?: { readonly message: string; readonly code: string }
   readonly opId: string | undefined
 }
 
@@ -85,6 +89,18 @@ class SnapshotForwarder {
     } catch { this.stopped = true; this.peer?.close() }
     finally { this.running = undefined }
   }
+}
+
+/** Map a start that never produced a result to the typed error a replay must see. */
+function startFailure(record: ProcessRecord): { message: string; code: string } {
+  if (record.controller.signal.aborted) {
+    return {
+      message: 'workspace daemon process start was cancelled before the process was created',
+      code: 'PROCESS_START_CANCELLED',
+    }
+  }
+  const message = record.startError instanceof Error ? record.startError.message : String(record.startError ?? 'workspace daemon process start failed')
+  return { message, code: 'PROCESS_START_FAILED' }
 }
 
 /**
@@ -184,7 +200,12 @@ export class RemoteProcessOwner {
    */
   async start(id: ProcessId, signal?: AbortSignal): Promise<{ pid?: number }> {
     const completed = this.completed.get(id)
-    if (completed !== undefined) return completed.startResult
+    if (completed !== undefined) {
+      if (completed.startFailure !== undefined) {
+        throw new RemoteOperationError(completed.startFailure.message, completed.startFailure.code)
+      }
+      return completed.startResult
+    }
     const record = this.record(id)
     if (record.startResult !== undefined) return record.startResult
     if (record.start !== undefined) return await record.start
@@ -196,6 +217,7 @@ export class RemoteProcessOwner {
       record.startResult = await record.start
       return record.startResult
     } catch (error) {
+      record.startError = error
       const failed = Promise.reject<Completion>(error)
       void failed.catch(() => {})
       record.done = failed
@@ -456,6 +478,7 @@ export class RemoteProcessOwner {
     this.completed.set(id, {
       done: result,
       startResult: record.startResult ?? {},
+      ...(record.startResult === undefined ? { startFailure: startFailure(record) } : {}),
       opId: record.opId,
     })
     await Promise.all(Object.values(record.endpoints).map(endpoint => endpoint.close()))
