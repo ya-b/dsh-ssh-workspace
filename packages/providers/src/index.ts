@@ -12,7 +12,8 @@ import { Service, type Context } from '@deepseek-ai/cordis'
 import type { Socket } from 'node:net'
 import type { Duplex } from 'node:stream'
 import type { z } from 'zod'
-import { RemoteWorkspaceTransport, type RemoteWorkspaceConfig, type StreamEndpoint } from '@dsh-ssh-workspace/transport'
+import { RemoteOperationError as SshRemoteOperationError } from '@deepseek-ai/dsh-ssh/protocol'
+import { RemoteOperationError, RemoteWorkspaceTransport, type RemoteWorkspaceConfig, type StreamEndpoint } from '@dsh-ssh-workspace/transport'
 
 // The service is registered under the harness's own `ssh` name. Its declared
 // type stays the upstream `SshConnection`; this class is a runtime-compatible
@@ -58,7 +59,18 @@ export class DaemonSshConnection extends Service {
    * @param wait - allow an observation to outlast the administrative deadline.
    */
   async request<T>(method: string, params: unknown, result: z.ZodType<T>, signal?: AbortSignal, wait = false): Promise<T> {
-    return await this.transport.request(method, params, result, signal, wait)
+    try {
+      return await this.transport.request(method, params, result, signal, wait)
+    } catch (error) {
+      // The official providers translate typed daemon outcomes (missing
+      // executable, filesystem codes) with `instanceof RemoteOperationError`
+      // against their own `@deepseek-ai/dsh-ssh/protocol` class. Handing them
+      // the transport's structurally identical error would skip that
+      // translation, so a harmless discovery miss such as a remote host
+      // without zsh would surface as a fatal terminal error.
+      if (error instanceof RemoteOperationError) throw new SshRemoteOperationError(error.message, error.code)
+      throw error
+    }
   }
 
   /**

@@ -31,8 +31,17 @@ this machine`，且多主机后配对者全胜）。现每主机用独立 `ctx.p
 新建会话（曾报 `EACCES ... mkdir '/root/apps/example'`，`agents.createAgent` patch 后修复）；
 会话内 bash `pwd` → `/root/apps/example`、`cat /etc/hostname` → `cloud-instance-01`（远端机）；
 write/read 工具创建 `/root/apps/example/mount-probe.txt`，本机 ssh 复核内容 `mount-ok`。
-回归：`machines 10/10`、`probe-transport 11/11`、`probe-providers 13/13`、`probe-resilience 11/11`、
+回归：`machines 10/10`、`probe-transport 11/11`、`probe-providers 14/14`、`probe-resilience 11/11`、
 `check-node-preflight` 通过。
+
+**远端终端修复**：`zsh` 缺失时报「终端错误：subprocess-local: command "zsh" was not found on PATH」。
+daemon 的 `executable` 未命中以 `SUBPROCESS_EXECUTABLE_NOT_FOUND` 返回，但 transport 的
+`RemoteOperationError` 与官方 `@deepseek-ai/dsh-ssh/protocol` 是不同类，官方 provider 的 `instanceof`
+翻译不生效，终端控制器把「候选 shell 不存在」当致命错误。现于 `DaemonSshConnection.request` 出口把
+RPC 错误转成官方类再抛；`probe-providers` 增加断言（14/14）。归档同时携带 linux x64/arm64 的
+node-pty（原来只带构建机架构，aarch64 远端会报 `Failed to load native module: pty.node`）。
+实测 aarch64 远端（`10.144.144.12`）新建终端出提示符、`pwd` 回 `/root/apps/trae2api`；
+回归 `probe-upgrade 9/9`。
 
 > 下表为 alpha.2/本地树时期（realm 路线）的记录，保留作对照；其中 A4/B2/B3 与最终验收
 > 第 1/2 条的 realm 表述已被上方 rc.2 段落取代。

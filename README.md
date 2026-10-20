@@ -189,7 +189,7 @@ ssh <host> 'kill "$(cat ~/.dsh-workspace/pid)" 2>/dev/null || true; rm -rf ~/.ds
 | 弹窗里没有远端主机 | 确认是具体 `Host` 别名而非通配符；刷新页面；检查 `~/.ssh/config` 与 `Include` |
 | 预检显示 `needs-credentials` | `ssh <alias> true` 必须无需交互即可成功；配置密钥或启动 agent |
 | 报 Node 版本/路径错误 | 把 `node` 配成远端绝对路径，例如 `/usr/local/bin/node`；确认 `node -v` ≥ 20 |
-| 终端打不开，但文件和命令正常 | 远端平台/架构与归档中的 node-pty 不匹配；文件与命令不受影响 |
+| 终端打不开，但文件和命令正常 | 归档只带 Linux x64/arm64 的 node-pty；远端是其他平台/架构时不匹配，文件与命令不受影响 |
 | 安装后没有出现菜单 | `dsh --profile web --dump-config` 检查三行 patch；重启 dsh 实例 |
 | 升级后行为仍旧 | 重启 dsh 实例；远端 daemon 也要重启才会加载新归档 |
 

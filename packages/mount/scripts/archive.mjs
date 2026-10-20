@@ -15,7 +15,7 @@ const archive = await buildDaemonArchive({
   bundlePath,
   ...(nodePtyDir === undefined ? {} : { nodePtyDir }),
   platform: 'linux',
-  arch: process.arch,
+  archs: ['x64', 'arm64'],
 })
 const target = join(repo, 'packages/mount/dist/daemon.tar.gz')
 await mkdir(dirname(target), { recursive: true })

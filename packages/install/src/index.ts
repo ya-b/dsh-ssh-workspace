@@ -7,7 +7,7 @@
  */
 
 import { execFile } from 'node:child_process'
-import { access, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -23,6 +23,8 @@ export interface DaemonArchiveInput {
   platform?: 'linux' | 'darwin'
   /** Remote architecture. */
   arch?: string
+  /** Remote architectures to bundle together, when one archive serves mixed hosts. */
+  archs?: string[]
 }
 
 /** Remote command: extract the daemon archive into its state directory. */
@@ -47,15 +49,18 @@ export async function buildDaemonArchive(input: DaemonArchiveInput): Promise<Buf
     await writeFile(join(staging, 'package.json'), `${JSON.stringify({ name: 'workspace-daemon', version, private: true, type: 'module' }, null, 2)}\n`)
     if (input.nodePtyDir !== undefined) {
       const platform = input.platform ?? 'linux'
-      const arch = input.arch ?? process.arch
+      const wanted = new Set((input.archs ?? [input.arch ?? process.arch]).map(arch => `${platform}-${arch}`))
+      const available = new Set(await readdir(join(input.nodePtyDir, 'prebuilds')).catch(() => [] as string[]))
       const target = join(staging, 'node_modules', 'node-pty')
       await mkdir(dirname(target), { recursive: true })
       await copyTree(input.nodePtyDir, target, (name, relativePath) => {
         if (relativePath === '') return name === 'package.json' || name === 'lib' || name === 'prebuilds'
-        if (relativePath === 'prebuilds') return name === `${platform}-${arch}`
+        if (relativePath === 'prebuilds') return wanted.has(name) && available.has(name)
         return !name.startsWith('.')
       })
-      await writeFile(join(target, 'prebuilds', `${platform}-${arch}`, '.keep'), '')
+      for (const name of wanted) {
+        if (available.has(name)) await writeFile(join(target, 'prebuilds', name, '.keep'), '')
+      }
     }
     return await tarArchive(staging)
   } finally {

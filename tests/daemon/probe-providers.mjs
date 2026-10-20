@@ -90,6 +90,16 @@ check('subprocess.spawn exit code', result.exitCode === 7, `exit=${result.exitCo
 check('subprocess stdout', out.includes('out-42'), JSON.stringify(out))
 check('subprocess stderr', err.includes('err-line'), JSON.stringify(err))
 
+// A missing candidate (a remote host without one of the terminal shells) must
+// arrive as the official provider's typed miss so shell discovery skips it.
+let missingExecutable
+try {
+  await subprocess.resolveExecutable('dsh-missing-shell-xyz')
+} catch (error) {
+  missingExecutable = error
+}
+check('missing executable keeps its typed provider error', missingExecutable?.name === 'SubprocessExecutableNotFoundError', `${missingExecutable?.name}: ${missingExecutable?.message}`)
+
 // terminal: PTY through the official runtime
 const terminal = await subprocess.spawnTerminal({
   argv: ['/bin/sh'], cwd: WORKSPACE, graceMs: 3000,
