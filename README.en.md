@@ -10,6 +10,15 @@ SSH is only a data pipe. A long-running `workspace daemon` lives on the remote s
 disconnect does not interrupt remote commands; after reconnecting, output and final state are
 resumed by offset, and writes go through an opId idempotency gate so side effects are never replayed.
 
+## Model-facing tools
+
+Agents in a remote workspace also get `remote_read`, `remote_write`, `remote_edit`,
+`remote_read_image` (when attachments are available), and `remote_bash`, plus a system prompt that
+marks the project as remote. These tools reuse the official arguments, approvals, output rendering,
+and timeouts. File-tool paths and `remote_bash`'s `workdir` must stay inside the current remote
+workspace; relative paths resolve from the current remote directory. The original tools remain
+available and keep following the workspace routing; local sessions never register `remote_*` tools.
+
 ## Requirements
 
 | Location | Requirement |

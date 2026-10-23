@@ -8,6 +8,14 @@ DeepSeek Harness 的远程工作区插件：在 Web UI 里先选机器（本机�
 SSH 只是数据管道。远端常驻 `workspace daemon`，客户端断线不会中断远端命令；重连后按偏移
 续取输出与终态，写操作经 opId 幂等门，不会重放副作用。
 
+## 模型侧工具
+
+远程工作区的 agent 会额外注册 `remote_read`、`remote_write`、`remote_edit`、
+`remote_read_image`（有附件能力时）和 `remote_bash`，并注入“本项目是远程项目”的系统提示词。
+这些工具复用官方工具的参数、审批、输出渲染与超时。文件工具路径和 `remote_bash` 的
+`workdir` 只接受当前远程工作区内的路径；相对路径按远程当前目录解析。原工具仍然保留并沿用
+工作区路由，本地会话不会注册 `remote_*`。
+
 ## 环境要求
 
 | 位置 | 要求 |

@@ -1,5 +1,5 @@
 /**
- * rc.2-native remote workspace mounting. The plugin owns three pieces:
+ * rc.2-native remote workspace mounting. The plugin owns four pieces:
  *
  * - a per-host runtime pool of daemon-backed `ctx.ssh` plus the official SSH
  *   provider family (`ssh`, `fs`, `subprocess`, `sandbox` — all upstream code),
@@ -7,7 +7,9 @@
  *   dispatch each path-, cwd-, or policy-rooted call to the owning machine,
  * - workspace adoption on the official registry: a durable record whose path
  *   is the canonical *remote* directory, with a strict sidecar mapping the
- *   workspace id back to its host.
+ *   workspace id back to its host,
+ * - agent-scoped `remote_*` aliases of the official fs/bash tools plus a
+ *   remote-project prompt section, with execute-time workspace path gates.
  *
  * Nothing in the harness is modified; every seam is a runtime patch of an
  * official instance, and the daemon's public surface is exactly what the
@@ -26,6 +28,7 @@ import type {} from '@deepseek-ai/dsh-workspace'
 import { RemoteHosts } from './hosts.ts'
 import { patchFileSystem, patchSandbox, patchSessionController, patchSubprocess, patchTerminalController } from './patch.ts'
 import { adoptRemoteWorkspace, patchRegistry, type RegistryLike } from './registry.ts'
+import { installRemoteTools, type RemoteToolAgent } from './remote-tools.ts'
 import { RemoteWorkspaceState, type RemoteWorkspaceRecord } from './state.ts'
 
 declare module '@deepseek-ai/cordis' {
@@ -177,6 +180,21 @@ export class SshWorkspaceMount extends Service {
     })
     this.ctx.inject(['sessionController'], (sessionCtx) => {
       patchSessionController((sessionCtx as unknown as { sessionController: Parameters<typeof patchSessionController>[0] }).sessionController, this.hosts, this.state)
+    })
+    this.ctx.inject(['agents'], (agentCtx) => {
+      const agents = agentCtx as unknown as {
+        agents: { list(): readonly RemoteToolAgent[] }
+        on(event: 'agent/created', listener: (payload: { agent: RemoteToolAgent }) => void): unknown
+      }
+      const install = (agent: RemoteToolAgent): void => {
+        try {
+          installRemoteTools(agent, this.state, this.ctx.logger)
+        } catch (error) {
+          this.ctx.logger.warn(`ssh-workspace: failed to install remote tools: ${error instanceof Error ? error.message : String(error)}`)
+        }
+      }
+      agents.on('agent/created', payload => { install(payload.agent) })
+      for (const agent of agents.agents.list()) install(agent)
     })
     this.ctx.effect(() => () => { void this.hosts.dispose() }, 'ssh-workspace: host transports')
     const hosts = new Set(this.state.snapshot().map(record => record.host))

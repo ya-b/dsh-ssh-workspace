@@ -75,6 +75,7 @@ node tests/api/machines.test.mjs          # ssh config 枚举 10/10
 node tests/daemon/probe-transport.mjs     # 17/17 执行/断线续取/零重复/fs/deadline 重试/失败 start 重放
 node tests/daemon/probe-providers.mjs     # 14/14 官方 provider 家族
 node tests/daemon/probe-mount.mjs         # 36/36 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射 + provider fiber 隔离 + 主机恢复回归
+node tests/daemon/probe-remote-tools.mjs   # 22/22 remote_* 别名、路径门、提示词、幂等与继承遮蔽
 node tests/daemon/probe-resilience.mjs    # 11/11 死亡场景；PROBE_OUTAGE_MS=120000 跑 2 分钟断线
 node tests/daemon/probe-upgrade.mjs       # 9/9 自动升级：空闲换新版/忙保留/空闲后补升级
 node tests/daemon/check-node-preflight.mjs# 远端 Node 缺失/过旧报错文案
