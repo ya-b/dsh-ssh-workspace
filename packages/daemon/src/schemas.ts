@@ -53,9 +53,9 @@ export const spawnSchema = z.object({
 }).strict().refine(value => (value.stdio === undefined) !== (value.terminal === undefined), 'select ordinary or terminal execution')
 /** Connection handshake binds sockets and workspace to one daemon session. */
 export const helloSchema = z.object({
-  protocol: z.literal(1), platform: z.enum(['linux', 'darwin']),
+  protocol: z.literal(1), platform: z.enum(['linux', 'darwin']), arch: z.string(),
   nodeVersion: z.string(), executable: remotePath, root: remotePath, workspace: remotePath,
-  instanceId: z.string(),
+  instanceId: z.string(), rg: remotePath.nullable(),
 }).strict()
 /** A prepared process publishes its sockets before target code may execute. */
 export const streamEndpointSchema = z.object({ path: remotePath, capability: z.string().regex(/^[0-9a-f]{64}$/) }).strict()

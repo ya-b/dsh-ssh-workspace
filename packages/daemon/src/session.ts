@@ -1,4 +1,5 @@
 /** One authenticated daemon client session: private services plus its RPC dispatch. */
+import { existsSync } from 'node:fs'
 import { realpath, writeFile } from 'node:fs/promises'
 import { userInfo } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -105,10 +106,11 @@ export async function serveConnection(
         session = session ?? await registry.create(input.clientUuid, input.workspace)
       }
       session.attach()
+      const ripgrep = join(options.dir, 'bin', `rg-${process.platform}-${process.arch}`)
       return {
-        protocol: 1, platform: process.platform as 'linux' | 'darwin', nodeVersion: process.version,
+        protocol: 1, platform: process.platform as 'linux' | 'darwin', arch: process.arch, nodeVersion: process.version,
         executable: process.execPath, root: options.dir, workspace: session.workspace,
-        instanceId: options.instanceId, kind: 'daemon',
+        instanceId: options.instanceId, kind: 'daemon', rg: existsSync(ripgrep) ? ripgrep : null,
       }
     }
     if (method === 'workspace.allow') {

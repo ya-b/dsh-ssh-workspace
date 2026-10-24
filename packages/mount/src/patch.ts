@@ -27,7 +27,8 @@ import type { SandboxExecutionPolicy, SandboxPolicy } from '@deepseek-ai/dsh-san
 import type { SubprocessRuntime, SubprocessSpawnSpec, SubprocessTerminalSpawnSpec } from '@deepseek-ai/dsh-subprocess'
 import type { RemoteHosts, HostRuntime } from './hosts.ts'
 import type { RemoteWorkspaceRecord } from './state.ts'
-import { isAbsolute } from 'node:path'
+import { isLocalToolScope } from './tool-scope.ts'
+import { basename, isAbsolute } from 'node:path'
 
 /** The attribution slice every router reads. */
 export interface RootIndex {
@@ -117,58 +118,69 @@ export function patchFileSystem(ctx: Context, fs: FileSystem, hosts: RemoteHosts
   }
 
   fs.resolve = async (path, opts) => {
+    if (isLocalToolScope()) return await local.resolve(path, opts)
     const runtime = remote(attributePath(state, path, opts?.cwd))
     if (runtime !== undefined) return await runtime.fs.resolve(path, opts)
     return await probe(path, () => local.resolve(path, opts), fallback => fallback.fs.resolve(path, opts))
   }
   fs.stat = async (target, signal) => {
+    if (isLocalToolScope()) return await local.stat(target, signal)
     const runtime = remote(owner(target))
     if (runtime !== undefined) return await runtime.fs.stat(target, signal)
     return await probe(local.processPath(target), () => local.stat(target, signal), fallback => fallback.fs.stat(target, signal))
   }
   fs.lstat = async (path, opts, signal) => {
+    if (isLocalToolScope()) return await local.lstat(path, opts, signal)
     const runtime = remote(attributePath(state, path, opts?.cwd))
     if (runtime !== undefined) return await runtime.fs.lstat(path, opts, signal)
     return await probe(path, () => local.lstat(path, opts, signal), fallback => fallback.fs.lstat(path, opts, signal))
   }
   fs.readText = async (target, signal) => {
+    if (isLocalToolScope()) return await local.readText(target, signal)
     const runtime = remote(owner(target))
     if (runtime !== undefined) return await runtime.fs.readText(target, signal)
     return await probe(local.processPath(target), () => local.readText(target, signal), fallback => fallback.fs.readText(target, signal))
   }
   fs.streamText = async (target, signal) => {
+    if (isLocalToolScope()) return await local.streamText(target, signal)
     const runtime = remote(owner(target))
     if (runtime !== undefined) return await runtime.fs.streamText(target, signal)
     return await probe(local.processPath(target), () => local.streamText(target, signal), fallback => fallback.fs.streamText(target, signal))
   }
   fs.readBytes = async (target, signal, maxBytes) => {
+    if (isLocalToolScope()) return await local.readBytes(target, signal, maxBytes)
     const runtime = remote(owner(target))
     if (runtime !== undefined) return await runtime.fs.readBytes(target, signal, maxBytes)
     return await probe(local.processPath(target), () => local.readBytes(target, signal, maxBytes), fallback => fallback.fs.readBytes(target, signal, maxBytes))
   }
   fs.readByteRange = async (target, range, signal) => {
+    if (isLocalToolScope()) return await local.readByteRange(target, range, signal)
     const runtime = remote(owner(target))
     if (runtime !== undefined) return await runtime.fs.readByteRange(target, range, signal)
     return await probe(local.processPath(target), () => local.readByteRange(target, range, signal), fallback => fallback.fs.readByteRange(target, range, signal))
   }
   fs.listDir = async (target, signal) => {
+    if (isLocalToolScope()) return await local.listDir(target, signal)
     const runtime = remote(owner(target))
     if (runtime !== undefined) return await runtime.fs.listDir(target, signal)
     return await probe(local.processPath(target), () => local.listDir(target, signal), fallback => fallback.fs.listDir(target, signal))
   }
   fs.writeText = async (target, content, expected, signal, policy) => {
+    if (isLocalToolScope()) return await local.writeText(target, content, expected, signal, policy)
     const runtime = remote(owner(target, policy))
     return runtime === undefined
       ? await local.writeText(target, content, expected, signal, policy)
       : await runtime.fs.writeText(target, content, expected, signal, policy)
   }
   fs.editText = async (target, edit: FsEditRequest, expected, signal, policy) => {
+    if (isLocalToolScope()) return await local.editText(target, edit, expected, signal, policy)
     const runtime = remote(owner(target, policy))
     return runtime === undefined
       ? await local.editText(target, edit, expected, signal, policy)
       : await runtime.fs.editText(target, edit, expected, signal, policy)
   }
   fs.watch = async (target, changed, signal) => {
+    if (isLocalToolScope()) return await local.watch(target, changed, signal)
     const runtime = remote(owner(target))
     return runtime === undefined ? await local.watch(target, changed, signal) : await runtime.fs.watch(target, changed, signal)
   }
@@ -183,9 +195,33 @@ export function patchFileSystem(ctx: Context, fs: FileSystem, hosts: RemoteHosts
   }
 }
 
+/** The packaged ripgrep binary official grep/glob spawn, in any install layout. */
+const PACKAGED_RIPGREP = /[\\/]@vscode[\\/]ripgrep(?:-[^\\/]+)?[\\/]bin[\\/]rg(?:\.exe)?$/iu
+
+function packagedRipgrep(path: string): boolean {
+  const name = basename(path).toLowerCase()
+  return (name === 'rg' || name === 'rg.exe') && PACKAGED_RIPGREP.test(path)
+}
+
+/**
+ * Official grep/glob spawn the *local* packaged ripgrep path. On a remote
+ * workspace that binary does not exist, so substitute the daemon's bundled
+ * binary; every other argv (including a user's own `rg`) passes through.
+ */
+function remoteArgv(argv: readonly string[], runtime: HostRuntime): readonly string[] {
+  const executable = argv[0]
+  if (executable === undefined || !packagedRipgrep(executable)) return argv
+  const rg = runtime.transport.hello?.rg
+  if (rg === undefined || rg === null) {
+    throw new Error(`remote host '${runtime.host}' has no bundled ripgrep; use remote_bash with grep/find or reinstall the daemon`)
+  }
+  return [rg, ...argv.slice(1)]
+}
+
 /**
  * Wrap `ctx.subprocess` so spawns whose working directory is a remote
- * workspace root run on that host. `resolveExecutable` and
+ * workspace root run on that host. A packaged ripgrep argv[0] is rewritten to
+ * the daemon's bundled binary before the remote spawn. `resolveExecutable` and
  * `terminalEnvironment` stay local: they carry no directory, and the one
  * session-aware consumer (the terminal controller) is patched separately.
  * @param ctx - host plugin context (unused today; kept for symmetry and logging).
@@ -201,13 +237,16 @@ export function patchSubprocess(ctx: Context, subprocess: SubprocessRuntime, hos
   const localSpawnTerminal = subprocess.spawnTerminal.bind(subprocess)
 
   subprocess.spawn = (spec: SubprocessSpawnSpec) => {
+    if (isLocalToolScope()) return localSpawn(spec)
     const record = state.covering(spec.cwd)
     if (record === undefined) return localSpawn(spec)
     const runtime = hosts.peek(record.host)
     if (runtime === undefined) throw new Error(`remote host '${record.host}' is not connected in this process yet; retry once the workspace reconnects`)
-    return runtime.subprocess.spawn(spec)
+    const argv = remoteArgv(spec.argv, runtime)
+    return runtime.subprocess.spawn(argv === spec.argv ? spec : { ...spec, argv })
   }
   subprocess.spawnTerminal = async (spec: SubprocessTerminalSpawnSpec) => {
+    if (isLocalToolScope()) return await localSpawnTerminal(spec)
     const record = state.covering(spec.cwd)
     if (record === undefined) return await localSpawnTerminal(spec)
     const runtime = hosts.pair(record.host)
@@ -228,6 +267,7 @@ export function patchSandbox(sandbox: Pick<SandboxPolicyHost, 'confine'>, hosts:
   routed.add(sandbox)
   const local = sandbox.confine.bind(sandbox)
   sandbox.confine = async (argv, policy, signal) => {
+    if (isLocalToolScope()) return await local(argv, policy, signal)
     const record = state.covering(policy.workspaceRoot)
     if (record === undefined) return await local(argv, policy, signal)
     const runtime = hosts.pair(record.host)

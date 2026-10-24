@@ -3,28 +3,48 @@
 [English](./README.en.md) | 简体中文
 
 DeepSeek Harness 的远程工作区插件：在 Web UI 里先选机器（本机或 `~/.ssh/config` 中的主机），
-再选目录，创建出来的工作区其**文件读写、终端和命令执行全部发生在远端**。
+再选目录。工作区文件浏览、终端面板/工具与 `remote_*` 在远端执行；模型侧的普通
+`read`/`write`/`edit`/`bash`/`grep`/`glob` 始终在 harness 本机执行，默认 cwd 为 `/tmp`
+（可用 `localCwd` 修改）。远程工作区必须选择启用了 `remote_*` 的 preset，否则对话会被禁止。
 
 SSH 只是数据管道。远端常驻 `workspace daemon`，客户端断线不会中断远端命令；重连后按偏移
 续取输出与终态，写操作经 opId 幂等门，不会重放副作用。
 
-## 模型侧工具
+## 模型侧工具（按 preset 启用）
 
-远程工作区的 agent 会额外注册 `remote_read`、`remote_write`、`remote_edit`、
-`remote_read_image`（有附件能力时）和 `remote_bash`，并注入“本项目是远程项目”的系统提示词。
-这些工具复用官方工具的参数、审批、输出渲染与超时。文件工具路径和 `remote_bash` 的
-`workdir` 只接受当前远程工作区内的路径；相对路径按远程当前目录解析。原工具仍然保留并沿用
-工作区路由，本地会话不会注册 `remote_*`。
+`remote_*` 别名默认**不注册**。安装 bundle 会向 profile 注入两个 agent preset：
+
+- **SSH Workspace**（id `ssh-workspace`）：注册 `remote_read`、`remote_write`、`remote_edit`、
+  `remote_read_image`（有附件能力时）、`remote_bash`、`remote_grep`、`remote_glob`，同时保留
+  同名本地工具；本地工具在本机执行，只有 `remote_*` 在远端执行。
+- **SSH Workspace (Auto)**（id `ssh-workspace-auto`）：根据工作区类型自动选择本地工具或远程工具——
+  本地工作区使用本地工具；远程工作区隐藏本地 `read`/`write`/`edit`/`read_image`/`bash`/
+  `grep`/`glob`，只向模型暴露 `remote_*`，并注入“本项目是远程项目”的系统提示词。若当前 Host 无法安装遮蔽，会安全降级为 `both`。
+
+![在 Agent preset 选择器中选择 SSH Workspace 或 SSH Workspace (Auto)](./docs/images/preset-menu.png)
+
+preset 在创建会话或切换 preset 时生效；普通本地会话和未选择这两个 preset 的会话都不会看到
+`remote_*`。工具复用官方工具的参数、审批、输出渲染与超时。文件工具路径和 `remote_bash` 的
+`workdir` 只接受当前远程工作区内的路径；相对路径按远程当前目录解析。
+
+执行边界与 preset 无关：普通文件系统工具、`bash`、`grep`/`glob` 始终在本机执行，cwd 默认为
+`/tmp`（`localCwd` 可覆盖）；`remote_*`、终端面板与 `terminal_*`、工作区文件 UI 始终在远端执行。
+在远程工作区中，只有启用了 `remote_*` 的 preset 可以对话；Standard 等未启用的 preset 会被禁止
+输入并显示提示。若会话已经开始、preset 已锁定，请新建会话并选择 SSH Workspace preset。
+
+`remote_grep`/`remote_glob` 使用 daemon 归档内置的 ripgrep。若远端缺少对应架构的二进制，
+调用会报 `remote host '<host>' has no bundled ripgrep; use remote_bash with grep/find or reinstall the daemon`。
 
 ## 环境要求
 
 | 位置 | 要求 |
 | --- | --- |
 | 宿主 | Node ≥ 20；`dsh` 0.2.1-rc.2；可用的 OpenSSH 客户端；可读的 `~/.ssh/config` |
-| 远端 | Linux x64；Node ≥ 20；POSIX `sh`；`tar`；OpenSSH 服务端 |
+| 远端 | Linux x64/arm64；Node ≥ 20；POSIX `sh`；`tar`；OpenSSH 服务端 |
 | 认证 | 密钥或 ssh-agent 等**非交互登录**；不支持交互式密码 |
 | SSH | OpenSSH ≥ 8.2（客户端需支持 `ControlMaster` / `-O forward`） |
-| 终端 | 归档内含 linux-x64 的 node-pty；其他平台缺少 node-pty 时仅终端不可用，文件与命令正常 |
+| 终端 | 归档内含 linux-x64 的 node-pty；其他平台/架构缺少 node-pty 时仅终端不可用，文件与命令正常 |
+| 搜索 | 归档内含 linux-x64/arm64 的 ripgrep；缺失时 `remote_grep`/`remote_glob` 报错，`remote_bash` 仍可用 |
 
 ## 安装
 
@@ -39,7 +59,7 @@ dsh plugin --profile web add https://github.com/ya-b/dsh-ssh-workspace
 1. 把 `@dsh-ssh-workspace/bundle` 安装进 `web` profile；
 2. 把该 bundle 追加到 profile 的 `dsh.profile.bundles`；
 3. 按包内 `cordis.patch.yml` 装入 `ssh-workspace-mount`、`api-ssh-workspace`、
-   `ui-ssh-workspace` 三行。
+   `ui-ssh-workspace` 三行，并加载 `presets/ssh-workspace.patch.yml` 注册两个 agent preset。
 
 仓库已提交构建产物 `lib/` 与 `dist/daemon.tar.gz`，所以 Git 安装**不需要**额外构建。
 
@@ -108,6 +128,8 @@ Include ~/.ssh/config.d/*
 | `reconnectMaxMs` | `15000` | 重连退避上限 |
 | `controlDir` | 临时目录 | 本地 SSH ControlMaster socket 目录；不填则使用 `/tmp/dsh-ws-*` |
 | `statePath` | `${DSH_HOME:-~/.dsh}/storages/ssh-workspaces.json` | 本地工作区归属侧映射路径 |
+| `localCwd` | `/tmp` | 远程工作区中普通本机工具的默认 cwd，必须是绝对路径；终端面板和 `remote_*` 不受影响 |
+| `toolPresets` | `[]` | 允许启用 `remote_*` 的 agent preset 列表，元素为 `{ id, mode: 'both' \| 'auto' }`；bundle 默认注入 `ssh-workspace`（both）和 `ssh-workspace-auto`（auto）。覆盖整行 `config` 时需一并写上，否则不会启用任何 `remote_*` |
 
 `api-ssh-workspace` 的可配置项：
 
@@ -133,6 +155,12 @@ Include ~/.ssh/config.d/*
     requestTimeoutRetryBaseMs: 10000
     reconnectBaseMs: 250
     reconnectMaxMs: 15000
+    localCwd: /tmp
+    toolPresets:
+      - id: ssh-workspace
+        mode: both
+      - id: ssh-workspace-auto
+        mode: auto
 ```
 
 同一 `id` 的 `config` 会整体替换 bundle 中的配置，未写的字段使用 schema 默认值，
@@ -145,7 +173,7 @@ Include ~/.ssh/config.d/*
 `daemonDir`，并执行远端 Node 版本检查。之后：
 
 - daemon 状态在远端 `~/.dsh-workspace`：`sock`、`pid`、`lock`、`running.digest`、
-  `config.json`、`streams/`、`daemon.log`；
+  `config.json`、`streams/`、`daemon.log`，以及按架构拆分的 `bin/rg-linux-<arch>`；
 - `config.json` 的 `roots` 是允许作为工作区打开的目录白名单，由客户端在打开前写入，
   保留最近 64 条；
 - daemon 已运行时不重复启动；客户端断线、心跳或租约变化都不会回收远端进程；
@@ -160,8 +188,10 @@ Include ~/.ssh/config.d/*
 1. 打开 Web UI，侧边栏「添加工作区（＋）」→「添加工作区…」。
 2. 在弹窗顶部的**主机**下拉中选择本机或某个 SSH 主机。
 3. 选择目录（可「上级」回溯、开关隐藏文件），点「打开」。
-4. 远端工作区默认命名为 `<目录名>@<主机别名>`；会话中的 `pwd`、文件读写、终端和命令
-   均在远端执行。
+4. 远端工作区默认命名为 `<目录名>@<主机别名>`；工作区文件浏览、终端和 `remote_*` 在远端执行，
+   普通模型工具仍在本机 `localCwd` 下执行。
+5. 远程工作区需在会话的 preset 选择器中选择 **SSH Workspace** 或 **SSH Workspace (Auto)**；
+   后者会根据工作区类型自动选择本地工具或远程工具。其他 preset 会显示警告并禁止输入。
 
 ## 升级与卸载
 

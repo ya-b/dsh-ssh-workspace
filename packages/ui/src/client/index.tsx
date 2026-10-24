@@ -28,8 +28,9 @@ import type { ReactElement } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { DirectoryFlowOwnerProps } from '@deepseek-ai/dsh-client-ui-workspace/client'
-// Type-only: pulls the SlotMap declaration (the two directory-flow holes) and
-// the ctx.slots service merge these registrations read.
+// Type-only: pulls the SlotMap declarations (directory-flow holes, input dock)
+// and the ctx.slots / ctx.conversation service merges these registrations read.
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 
@@ -357,9 +358,90 @@ const ROW_STYLE = {
   background: 'rgba(127,127,127,0.08)', cursor: 'pointer', color: 'inherit', font: 'inherit', fontSize: 13,
 } as const
 const FACT_STYLE = { opacity: 0.55, fontFamily: 'monospace', fontSize: 11 } as const
+const GATE_STYLE = {
+  display: 'flex', gap: 8, alignItems: 'flex-start', padding: '8px 10px',
+  border: '1px solid rgba(176,125,24,0.45)', borderRadius: 8,
+  background: 'rgba(176,125,24,0.12)', color: '#b07d18', fontSize: 12, lineHeight: 1.5,
+} as const
+
+/** Host verdict for one session location. */
+interface GuardVerdict {
+  blocked: boolean
+  reason?: string
+}
+
+/** Session-list slice the guard reads. */
+interface SessionRowLike {
+  cwd?: string
+  projectionValues?: Readonly<Record<string, unknown>>
+}
+
+interface SessionListLike {
+  byId: Record<string, SessionRowLike>
+}
+
+interface RemoteToolsGateProps {
+  ctx: Context
+  sessionId: string
+  useSessions: <T>(selector: (state: SessionListLike) => T) => T
+}
+
+/** Guard verdicts are static per (cwd, preset) for the page session. */
+const guards = new Map<string, Promise<GuardVerdict>>()
+function guardOf(cwd: string, preset: string | undefined): Promise<GuardVerdict> {
+  const key = `${preset ?? ''}\u0000${cwd}`
+  let pending = guards.get(key)
+  if (pending === undefined) {
+    pending = call<GuardVerdict>('/guard', { cwd, ...(preset === undefined ? {} : { preset }) }).catch((error: unknown) => {
+      guards.delete(key)
+      throw error
+    })
+    guards.set(key, pending)
+  }
+  return pending
+}
+
+/**
+ * Refuse a remote workspace whose preset enables no remote tools. The host
+ * rejects the turn regardless; this makes the block visible and keeps the
+ * composer inert with the host-provided reason.
+ * @param props - session slot props plus the client context.
+ * @returns the persistent warning bar, or null while the session may converse.
+ */
+function RemoteToolsGate({ ctx, sessionId, useSessions }: RemoteToolsGateProps): ReactElement | null {
+  const cwd = useSessions(state => state.byId[sessionId]?.cwd)
+  const presetValue = useSessions(state => state.byId[sessionId]?.projectionValues?.agentPreset)
+  const preset = typeof presetValue === 'string' ? presetValue : undefined
+  const [verdict, setVerdict] = useState<GuardVerdict>({ blocked: false })
+
+  useEffect(() => {
+    let active = true
+    if (cwd === undefined) {
+      setVerdict({ blocked: false })
+      return () => { active = false }
+    }
+    guardOf(cwd, preset).then(
+      (value) => { if (active) setVerdict(value) },
+      () => { if (active) setVerdict({ blocked: false }) },
+    )
+    return () => { active = false }
+  }, [cwd, preset])
+
+  const reason = verdict.blocked ? verdict.reason : undefined
+  useEffect(() => {
+    if (reason === undefined) return
+    const blocks = ctx.conversation.blocks
+    blocks.set(sessionId, { reason })
+    return () => {
+      if (blocks.storeFor(sessionId).getSnapshot()?.reason === reason) blocks.set(sessionId, undefined)
+    }
+  }, [ctx, sessionId, reason])
+
+  return reason === undefined ? null : <div role="status" style={GATE_STYLE}>{reason}</div>
+}
 
 /** Services this plugin reads on the client root. */
-export const inject = ['slots', 'workspaces']
+export const inject = ['slots', 'workspaces', 'conversation']
 
 /**
  * Register the dialog into both directory-flow holes, shadowing the shipped
@@ -383,4 +465,11 @@ export function apply(ctx: Context): void {
       yield ctx.slots.register({ name: 'conversation.hero.workspace.directoryFlow', priority: -1 }, bound as never)
       yield ctx.slots.register({ name: 'sidebar.workspaces.directoryFlow', priority: -1 }, bound as never)
     }))
+  const gate = (owner: Omit<RemoteToolsGateProps, 'ctx'>): ReactElement =>
+    <RemoteToolsGate {...owner} ctx={ctx} />
+  ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
+    name: 'conversation.input.dock',
+    id: 'ssh-workspace:remote-tools-gate',
+    order: 5,
+  }, gate as never))
 }

@@ -7962,6 +7962,7 @@ var OutputCollector = class {
 };
 
 // src/session.ts
+import { existsSync as existsSync5 } from "node:fs";
 import { realpath as realpath3, writeFile } from "node:fs/promises";
 import { userInfo as userInfo2 } from "node:os";
 import { join as join12, resolve as resolve7 } from "node:path";
@@ -56106,11 +56107,13 @@ var spawnSchema = external_exports2.object({
 var helloSchema = external_exports2.object({
   protocol: external_exports2.literal(1),
   platform: external_exports2.enum(["linux", "darwin"]),
+  arch: external_exports2.string(),
   nodeVersion: external_exports2.string(),
   executable: remotePath,
   root: remotePath,
   workspace: remotePath,
-  instanceId: external_exports2.string()
+  instanceId: external_exports2.string(),
+  rg: remotePath.nullable()
 }).strict();
 var streamEndpointSchema = external_exports2.object({ path: remotePath, capability: external_exports2.string().regex(/^[0-9a-f]{64}$/) }).strict();
 var preparedSchema = external_exports2.object({ id: processIdSchema, streams: external_exports2.partialRecord(external_exports2.enum(["stdin", "stdout", "stderr", "control", "terminal"]), streamEndpointSchema) }).strict();
@@ -56659,15 +56662,18 @@ async function serveConnection(socket, options, registry4) {
         session = session ?? await registry4.create(input2.clientUuid, input2.workspace);
       }
       session.attach();
+      const ripgrep = join12(options.dir, "bin", `rg-${process.platform}-${process.arch}`);
       return {
         protocol: 1,
         platform: process.platform,
+        arch: process.arch,
         nodeVersion: process.version,
         executable: process.execPath,
         root: options.dir,
         workspace: session.workspace,
         instanceId: options.instanceId,
-        kind: "daemon"
+        kind: "daemon",
+        rg: existsSync5(ripgrep) ? ripgrep : null
       };
     }
     if (method === "workspace.allow") {

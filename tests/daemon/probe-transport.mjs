@@ -9,7 +9,7 @@ import { copyFile, mkdir, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { RemoteWorkspaceTransport } from '@dsh-ssh-workspace/transport'
-import { buildDaemonArchive, findNodePty, installDaemonArchive } from '@dsh-ssh-workspace/install'
+import { buildDaemonArchive, findNodePty, findRipgrep, installDaemonArchive } from '@dsh-ssh-workspace/install'
 import { z } from 'zod'
 
 const DAEMON_DIR = join(homedir(), '.dsh-workspace')
@@ -33,9 +33,11 @@ async function install() {
   const restart = spawn('bash', ['-c', `if [ -f ${DAEMON_DIR}/pid ]; then kill $(cat ${DAEMON_DIR}/pid) 2>/dev/null; fi; sleep 0.3; rm -f ${DAEMON_DIR}/lock ${DAEMON_DIR}/pid ${DAEMON_DIR}/sock`])
   await new Promise(r => restart.once('exit', r))
   const nodePty = await findNodePty(new URL('../../../deepseek-harness', import.meta.url).pathname)
+  const ripgrep = findRipgrep('linux', process.arch)
   const archive = await buildDaemonArchive({
     bundlePath: new URL('../../packages/daemon/lib/workspaced.js', import.meta.url).pathname,
     ...(nodePty === undefined ? {} : { nodePtyDir: nodePty }),
+    ...(ripgrep === undefined ? {} : { ripgrep: [{ platform: 'linux', arch: process.arch, path: ripgrep }] }),
     platform: 'linux', arch: process.arch,
   })
   await installDaemonArchive(config, archive)
@@ -61,7 +63,9 @@ async function main() {
   const transport = new RemoteWorkspaceTransport(config)
   await transport.open()
   const hello = transport.hello
-  check('hello handshake', hello?.kind === 'daemon', `${hello?.instanceId?.slice(0, 8)} node ${hello?.nodeVersion}`)
+  check('hello handshake', hello?.kind === 'daemon' && hello.arch === process.arch
+    && typeof hello.rg === 'string' && hello.rg.endsWith(`/bin/rg-linux-${process.arch}`),
+  `${hello?.instanceId?.slice(0, 8)} node ${hello?.nodeVersion} ${hello?.arch} rg=${hello?.rg}`)
 
   // 1. A long-running command: survives an SSH outage and is never re-executed.
   const marker = join(WORKSPACE, 'marker.txt')

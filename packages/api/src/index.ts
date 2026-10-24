@@ -146,6 +146,12 @@ async function handle(
     case '/browse':
       writeJson(response, 200, await browse(ctx, url.searchParams.get('host'), url.searchParams.get('path') ?? ''))
       return
+    case '/guard':
+      writeJson(response, 200, ctx.sshWorkspace.guard(
+        url.searchParams.get('cwd') ?? undefined,
+        url.searchParams.get('preset') ?? undefined,
+      ))
+      return
     default:
       writeJson(response, 404, { error: `unknown route ${JSON.stringify(route)}` })
   }

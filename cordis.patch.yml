@@ -5,6 +5,11 @@
         daemonDir: '~/.dsh-workspace'
         node: node
         install: true
+        toolPresets:
+          - id: ssh-workspace
+            mode: both
+          - id: ssh-workspace-auto
+            mode: auto
     - id: api-ssh-workspace
       name: '@dsh-ssh-workspace/bundle/api'
     - id: ui-ssh-workspace

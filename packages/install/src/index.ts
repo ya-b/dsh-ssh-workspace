@@ -1,19 +1,28 @@
 /**
- * Daemon deployment: package the single-file daemon plus its only native
- * dependency (node-pty, for PTY terminals) into one archive and install it on
- * a remote host over an SSH channel. Everything else the daemon needs is
- * inlined in the bundle.
+ * Daemon deployment: package the single-file daemon plus its native payload
+ * (node-pty for PTY terminals, ripgrep for remote searches) into one archive
+ * and install it on a remote host over an SSH channel. Everything else the
+ * daemon needs is inlined in the bundle.
  * @module @dsh-ssh-workspace/install
  */
 
 import { execFile } from 'node:child_process'
-import { access, copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { access, chmod, copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { daemonDirExpr, type RemoteWorkspaceConfig } from '@dsh-ssh-workspace/transport'
 
-/** Files the daemon bundle needs beside it: its own version manifest and node-pty. */
+/** One bundled ripgrep binary and the remote coordinates it serves. */
+export interface DaemonRipgrep {
+  readonly platform: 'linux' | 'darwin'
+  readonly arch: string
+  /** Absolute local path of the platform package binary. */
+  readonly path: string
+}
+
+/** Files the daemon bundle needs beside it: its version manifest, node-pty, and ripgrep. */
 export interface DaemonArchiveInput {
   /** Absolute path of the built `workspaced.js`. */
   bundlePath: string
@@ -25,6 +34,8 @@ export interface DaemonArchiveInput {
   arch?: string
   /** Remote architectures to bundle together, when one archive serves mixed hosts. */
   archs?: string[]
+  /** Ripgrep binaries staged as `bin/rg-<platform>-<arch>`. */
+  ripgrep?: readonly DaemonRipgrep[]
 }
 
 /** Remote command: extract the daemon archive into its state directory. */
@@ -60,6 +71,15 @@ export async function buildDaemonArchive(input: DaemonArchiveInput): Promise<Buf
       })
       for (const name of wanted) {
         if (available.has(name)) await writeFile(join(target, 'prebuilds', name, '.keep'), '')
+      }
+    }
+    if (input.ripgrep !== undefined && input.ripgrep.length > 0) {
+      const bin = join(staging, 'bin')
+      await mkdir(bin, { recursive: true })
+      for (const binary of input.ripgrep) {
+        const target = join(bin, `rg-${binary.platform}-${binary.arch}`)
+        await copyFile(binary.path, target)
+        await chmod(target, 0o755)
       }
     }
     return await tarArchive(staging)
@@ -109,6 +129,16 @@ export async function installDaemonArchive(
     child.stdin?.on('error', () => undefined).end(archive)
     child.stderr?.resume()
   })
+}
+
+/** Resolve one platform's packaged ripgrep binary, when its optional package is installed. */
+export function findRipgrep(platform: 'linux' | 'darwin', arch: string): string | undefined {
+  const require = createRequire(import.meta.url)
+  try {
+    return require.resolve(`@vscode/ripgrep-${platform}-${arch}/bin/rg`)
+  } catch {
+    return undefined
+  }
 }
 
 /** Resolve the local node-pty package directory from a harness checkout, when present. */

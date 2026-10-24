@@ -79,8 +79,9 @@ const allowResultSchema = z.object({ roots: z.array(z.string()) }).strict()
 const presentResultSchema = z.object({ present: z.boolean() }).strict()
 
 const helloSchema = z.object({
-  protocol: z.literal(1), platform: z.enum(['linux', 'darwin']), nodeVersion: z.string(),
+  protocol: z.literal(1), platform: z.enum(['linux', 'darwin']), arch: z.string(), nodeVersion: z.string(),
   executable: z.string(), root: z.string(), workspace: z.string(), instanceId: z.string(), kind: z.string(),
+  rg: z.string().nullable(),
 }).strict()
 
 /** Remote daemon handshake facts. */

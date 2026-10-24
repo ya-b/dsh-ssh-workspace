@@ -4,6 +4,15 @@ packages:
 nodeLinker: hoisted
 autoInstallPeers: false
 
+supportedArchitectures:
+  os:
+    - current
+    - linux
+  cpu:
+    - current
+    - x64
+    - arm64
+
 allowBuilds:
   '@deepseek-ai/dsh-subprocess-local': true
   esbuild: true

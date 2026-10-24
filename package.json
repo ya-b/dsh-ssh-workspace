@@ -1,6 +1,6 @@
 {
   "name": "@dsh-ssh-workspace/bundle",
-  "description": "Remote workspaces for DeepSeek Harness: pick a machine, pick a directory, run fs/terminal/commands on the remote host",
+  "description": "Remote workspaces for DeepSeek Harness: pick a machine and directory; the workspace UI, terminal, and remote_* tools run on the host while ordinary tools stay local",
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
@@ -15,11 +15,15 @@
   "files": [
     "lib",
     "dist",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "presets"
   ],
   "dsh": {
     "bundle": {
-      "patch": "./cordis.patch.yml"
+      "patch": [
+        "./cordis.patch.yml",
+        "./presets/ssh-workspace.patch.yml"
+      ]
     },
     "client": {
       "inject": [],
@@ -53,6 +57,9 @@
     "esbuild": "^0.27.0",
     "typescript": "~5.9.0",
     "@types/node": "^26.0.0",
+    "@vscode/ripgrep": "1.18.0",
+    "@vscode/ripgrep-linux-x64": "1.18.0",
+    "@vscode/ripgrep-linux-arm64": "1.18.0",
     "zod": "^4.4.3",
     "vitest": "^3.2.0",
     "@dsh-ssh-workspace/rpc": "workspace:*",

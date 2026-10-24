@@ -8,6 +8,7 @@
 import { Context } from '@deepseek-ai/cordis'
 import { execFile } from 'node:child_process'
 import { chmod, mkdir, mkdtemp } from 'node:fs/promises'
+import { rgPath } from '@vscode/ripgrep'
 import { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection'
 import { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy'
 import { SandboxedFileSystem } from '@deepseek-ai/dsh-fs-sandbox'
@@ -16,6 +17,7 @@ import { LocalSandboxProvider } from '@deepseek-ai/dsh-sandbox-local'
 import { RemoteWorkspaceState } from '../../packages/mount/src/state.ts'
 import { patchEntityPrototype } from '../../packages/mount/src/registry.ts'
 import { patchTerminalController } from '../../packages/mount/src/patch.ts'
+import { isLocalToolScope } from '../../packages/mount/src/tool-scope.ts'
 import SshWorkspaceMount from '../../packages/mount/src/index.ts'
 import { homedir, tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -26,6 +28,10 @@ const passed = []
 function check(name, ok, detail = '') {
   passed.push(ok)
   console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail === '' ? '' : ` — ${detail}`}`)
+}
+
+function sectionText(section) {
+  return typeof section?.text === 'function' ? section.text({}) : section?.text ?? ''
 }
 
 const LOCAL_ROOT = await mkdtemp(join(tmpdir(), 'dsh-mount-local-'))
@@ -75,8 +81,63 @@ const registry = {
   },
 }
 
+function makeAgentFixture(cwd) {
+  const agentCtx = new Context()
+  const registered = new Map()
+  const sections = []
+  const definitions = new Map([
+    ['read', fakeTool('read', 'file_path')],
+    ['write', fakeTool('write', 'file_path')],
+    ['edit', fakeTool('edit', 'file_path')],
+    ['bash', fakeTool('bash', 'workdir')],
+    ['grep', fakeTool('grep', 'path')],
+    ['glob', fakeTool('glob', 'path')],
+  ])
+  const tools = {
+    get(name) { return registered.get(name) ?? definitions.get(name) },
+    schemas() {
+      return [...new Map([...definitions, ...registered]).values()]
+        .map(definition => ({ name: definition.name, description: definition.description, parameters: definition.parameters }))
+    },
+    register(definition) {
+      if (registered.has(definition.name)) throw new Error(`duplicate ${definition.name}`)
+      registered.set(definition.name, definition)
+      return () => registered.delete(definition.name)
+    },
+  }
+  const prompt = {
+    section(input) {
+      sections.push(input)
+      return () => {
+        const index = sections.indexOf(input)
+        if (index !== -1) sections.splice(index, 1)
+      }
+    },
+    getSectionOrder(name) { return { DEPLOYMENT_PERSONA_PREFIX: 100 }[name] ?? 0 },
+  }
+  agentCtx.provide('tools', tools)
+  agentCtx.provide('systemPrompt', prompt)
+  agentCtx.provide('workingDirectory', { ensure: async () => cwd })
+  return { agent: { ctx: agentCtx, session: { header: { cwd } } }, tools, registered, sections }
+}
+
+function fakeTool(name, field) {
+  return {
+    name, description: `${name} tool`, parameters: { type: 'object' }, output: { schema: { type: 'string' } },
+    async execute(args) { return `${name}:${args?.[field] ?? '<default>'}` },
+  }
+}
+
 const ctx = new Context()
 const fibers = []
+const agentMap = new Map()
+const agentRoster = {
+  list: () => [...agentMap.values()],
+  get: id => agentMap.get(id),
+}
+let composedPreset = 'ssh-workspace-auto'
+ctx.provide('agents', agentRoster)
+ctx.provide('agentPresets', { composedPreset: () => composedPreset })
 // A sessionController stub: rc.2 funnels creation through the agent roster,
 // which is exactly the object the plugin must patch.
 const sessionCreates = []
@@ -97,6 +158,7 @@ ctx.provide('workspaceRegistry', registry)
 fibers.push(await ctx.plugin(SshWorkspaceMount, {
   install: true, node: process.execPath,
   daemonDir: '~/.dsh-workspace', statePath: stateFile,
+  toolPresets: [{ id: 'ssh-workspace', mode: 'both' }, { id: 'ssh-workspace-auto', mode: 'auto' }],
 }))
 
 const plugin = ctx.get('sshWorkspace')
@@ -115,6 +177,9 @@ const runtime = hosts.pair('localhost')
 await runtime.ready
 check('host runtime is daemon-backed', runtime.connection?.constructor?.name === 'DaemonSshConnection', runtime.connection?.constructor?.name)
 check('remote provider family mounted', runtime.fs !== undefined && runtime.subprocess !== undefined && runtime.sandbox !== undefined)
+const remoteHello = runtime.connection?.remote
+check('daemon advertises its bundled ripgrep', typeof remoteHello?.rg === 'string'
+  && remoteHello.rg.endsWith(`/bin/rg-${remoteHello.platform}-${remoteHello.arch}`), `${remoteHello?.platform}/${remoteHello?.arch} rg=${remoteHello?.rg}`)
 check('the host family resolves the daemon filesystem', runtime.fs.constructor.name === 'SshFileSystem' && runtime.fs !== mountFs, runtime.fs.constructor.name)
 check('the mount context keeps resolving the root filesystem', plugin.ctx.fs.constructor.name !== 'SshFileSystem', plugin.ctx.fs.constructor.name)
 const localHome = await plugin.browse(null, homedir())
@@ -141,6 +206,94 @@ check('adopt minted one record', createCalls === 1 && adopted.path === REMOTE_RO
 const again = await plugin.adopt({ host: 'localhost', path: REMOTE_ROOT })
 check('adopt is idempotent', createCalls === 1 && again.workspaceId === adopted.workspaceId)
 check('attribution sidecar holds the host', state.byWorkspace(adopted.workspaceId)?.host === 'localhost')
+
+// ── agent preset policy ─────────────────────────────────────────────────────
+const fixture = makeAgentFixture(REMOTE_ROOT)
+agentMap.set('session-preset', fixture.agent)
+ctx.emit('agent/created', { agent: fixture.agent })
+check('the auto preset installs remote aliases on a created agent', fixture.registered.has('remote_read'))
+check('the auto preset hides local counterparts', fixture.tools.get('read', fixture.agent) === undefined && fixture.tools.get('grep', fixture.agent) === undefined)
+check('the auto preset installs its prompt', fixture.sections.some(section => sectionText(section).includes('disabled')))
+composedPreset = 'ssh-workspace'
+ctx.emit('agent-preset/selected', 'session-preset', composedPreset)
+check('switching to the both preset restores local tools', fixture.tools.get('read', fixture.agent) !== undefined)
+check('switching presets keeps the remote aliases', fixture.registered.has('remote_read'))
+composedPreset = 'ssh-workspace-auto'
+ctx.emit('agent-preset/selected', 'session-preset', composedPreset)
+check('switching back to auto hides local tools again', fixture.tools.get('read', fixture.agent) === undefined)
+ctx.emit('agent/disposed', { agent: fixture.agent })
+check('disposing the agent removes the aliases', fixture.registered.size === 0)
+check('disposing the agent restores local tools', fixture.tools.get('read', fixture.agent) !== undefined)
+
+// ── remote-tool guard and turn gate ────────────────────────────────────────
+const blocked = plugin.guard(REMOTE_ROOT, 'standard')
+check('the guard blocks an unconfigured preset in a remote workspace', blocked.blocked && blocked.reason?.includes('SSH Workspace'), JSON.stringify(blocked))
+check('the guard allows a remote-tool preset', !plugin.guard(REMOTE_ROOT, 'ssh-workspace').blocked)
+check('the guard leaves local workspaces alone', !plugin.guard(LOCAL_ROOT, 'standard').blocked)
+check('the guard treats a missing preset as blocked', plugin.guard(REMOTE_ROOT, undefined).blocked)
+
+const standardFixture = makeAgentFixture(REMOTE_ROOT)
+agentMap.set('session-standard', standardFixture.agent)
+composedPreset = 'standard'
+ctx.emit('agent/created', { agent: standardFixture.agent })
+check('standard installs no remote aliases', standardFixture.registered.size === 0)
+let standardNext = 0
+let standardError
+try {
+  await ctx.waterfall('agent/pre-step', { agent: standardFixture.agent, messages: [{}] }, async () => {
+    standardNext += 1
+    return { kind: 'enter', messages: [] }
+  })
+} catch (error) {
+  standardError = error
+}
+check('the turn gate refuses an unconfigured preset', standardNext === 0 && standardError?.message.includes('SSH Workspace'), String(standardError))
+ctx.emit('agent/disposed', { agent: standardFixture.agent })
+
+const bothFixture = makeAgentFixture(REMOTE_ROOT)
+agentMap.set('session-both', bothFixture.agent)
+composedPreset = 'ssh-workspace'
+ctx.emit('agent/created', { agent: bothFixture.agent })
+let bothNext = 0
+let bothDecision
+let bothError
+try {
+  bothDecision = await ctx.waterfall('agent/pre-step', { agent: bothFixture.agent, messages: [{}] }, async () => {
+    bothNext += 1
+    return { kind: 'enter', messages: [] }
+  })
+} catch (error) {
+  bothError = error
+}
+check('the turn gate allows a remote-tool preset', bothNext === 1 && bothDecision?.kind === 'enter', String(bothError ?? bothDecision))
+ctx.emit('agent/disposed', { agent: bothFixture.agent })
+
+const localFixture = makeAgentFixture(LOCAL_ROOT)
+agentMap.set('session-local', localFixture.agent)
+composedPreset = 'standard'
+ctx.emit('agent/created', { agent: localFixture.agent })
+let localNext = 0
+await ctx.waterfall('agent/pre-step', { agent: localFixture.agent, messages: [{}] }, async () => {
+  localNext += 1
+  return { kind: 'enter', messages: [] }
+})
+check('the turn gate leaves local workspaces alone', localNext === 1)
+ctx.emit('agent/disposed', { agent: localFixture.agent })
+
+// ── tools/execute scope ─────────────────────────────────────────────────────
+const scopeHits = []
+const runScope = async name => {
+  await ctx.waterfall('tools/execute', { name, agent: { session: { header: { cwd: REMOTE_ROOT } } } }, async () => {
+    scopeHits.push([name, isLocalToolScope()])
+    return { ok: true }
+  })
+}
+await runScope('read')
+await runScope('remote_read')
+await runScope('terminal_open')
+check('ordinary tools get the local scope', scopeHits.find(([name]) => name === 'read')?.[1] === true)
+check('remote aliases get the remote scope', scopeHits.find(([name]) => name === 'remote_read')?.[1] === false)
+check('terminal tools get the remote scope', scopeHits.find(([name]) => name === 'terminal_open')?.[1] === false)
 
 // ── fs routing ──────────────────────────────────────────────────────────────
 const remoteReads = []
@@ -183,6 +336,16 @@ let out = ''
 handle.stdout?.on('data', chunk => { out += chunk.toString() })
 await handle.done
 check('a spawn under a remote cwd uses the remote provider', handle.constructor.name === 'RemoteProcess' && out.includes('mount-42'), `${handle.constructor.name} out=${JSON.stringify(out)}`)
+
+const rgHandle = ctx.subprocess.spawn({
+  argv: [rgPath, '--version'], cwd: REMOTE_ROOT, graceMs: 5000,
+  stdio: { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' },
+})
+let rgOut = ''
+rgHandle.stdout?.on('data', chunk => { rgOut += chunk.toString() })
+await rgHandle.done
+check('the packaged ripgrep runs through the daemon binary', rgHandle.constructor.name === 'RemoteProcess'
+  && /ripgrep/u.test(rgOut) && remoteHello?.rg !== null, `${rgHandle.constructor.name} out=${JSON.stringify(rgOut.trim())}`)
 
 const localHandle = ctx.subprocess.spawn({
   argv: ['/bin/echo', 'local-42'], cwd: LOCAL_ROOT, graceMs: 3000,

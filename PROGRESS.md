@@ -3,6 +3,73 @@
 > 更新于 A0–A4、B1–B3、C1–C2 全部完成并实测通过之后。
 > 实测环境：`ssh localhost`（真实 sshd；daemon 部署在 `~/.dsh-workspace`）。
 
+## 2026-10-24 · 远程工作区强制要求 remote-tool preset
+
+远程工作区若所选 agent preset 没有 remote 工具，禁止对话并给出提示：
+
+- `packages/mount/src/tool-presets.ts` 新增 `remoteToolsRequired` 与统一提示文案
+  `REMOTE_TOOLS_REQUIRED_MESSAGE`；`SshWorkspaceMount.guard(cwd, preset)` 返回
+  `{ blocked, reason }`。
+- 根级 `agent/pre-step` 在 `next()` 前检查：远程工作区 + 未配置 remote-tool preset（或
+  remote 别名安装失败）时抛错，Host 侧硬性拒绝该轮；错误以 turn-error 持久显示。
+- 删除 Standard preset 的 `ssh-workspace:local-execution` 提示：该路径不再允许对话。
+- `packages/api` 新增 `GET /ssh-workspace/guard?cwd=&preset=`；浏览器半在
+  `conversation.input.dock` 注册警告条，并用 `ctx.conversation.blocks` 禁用 composer。
+  切换 preset 后自动解除；旧会话 preset 已锁定时提示新建会话。
+- 浏览器实测（3081 + mock LLM）：Standard 远程会话显示警告条、composer 禁用；切到
+  SSH Workspace 后警告消失、恢复正常发送且 `remote_bash pwd` 返回 `/home/yb/dsh-ws-probe`；
+  已锁定的旧 Standard 会话同样被禁用；Auto 会话不受影响。3080 已重启加载新构建。
+- 回归：`probe-mount 57/57`、`probe-remote-tools 41/41`、`probe-tool-presets 23/23`；
+  其余 probes 与 typecheck 通过。
+
+## 2026-10-23 · 普通工具本机执行，remote_* 远端执行
+
+执行语义从「远程工作区的所有工具都走远端」改为**按工具分流**：
+
+- 新增 `packages/mount/src/tool-scope.ts`：`AsyncLocalStorage` 保存 `local` / `remote` 作用域。
+- `packages/mount/src/index.ts` 在根 `ctx` 监听 `tools/execute`：`remote_*`/`terminal_*`/`pty_*`
+  进入 `remote` 作用域，其余工具（含无 agent 的调用）进入 `local`；UI、终端面板和系统提示不受
+  作用域影响，继续按原有远端路由。
+- `packages/mount/src/patch.ts` 的 fs/subprocess/sandbox 路由在 `local` 作用域直接调用本地 provider，
+  跳过远端 `probe()` 回退；无作用域或 `remote` 作用域行为不变。
+- 新增 `packages/mount/src/local-execution.ts`：patch `workingDirectory.get/ensure/set` 与
+  `sandboxPolicy.resolve`，仅在 `local` 作用域且 session 属于远程工作区时使用本地 cwd；默认
+  `/tmp`，由 `localCwd` 配置覆盖；本地 `cd` 只改内存映射，不写远端 session 的
+  `working-directory/change`。
+- 提示词：`both`/`auto` 明确普通工具在本机、`remote_*` 在远端；新增 Standard 的
+  `ssh-workspace:local-execution` 段，动态显示本地 cwd，并说明终端面板仍在远端。
+- 新增 `probe-local-execution.mjs`（36/36），扩展 `probe-mount`（58/58）、`probe-remote-tools`
+  （47/47）、`probe-tool-presets`（20/20）；`packages/mount` 与 daemon typecheck 通过。
+- 浏览器实测（3081，`DSH_HOME=/tmp/opencode/dsh-home-tools`，mock LLM）：Standard 的工具表无
+  `remote_*`，`bash pwd` 返回 `/tmp`，系统提示说明本地 cwd 与远端终端；SSH Workspace 同时暴露
+  本地工具与 `remote_*`，`remote_bash pwd` 返回 `/home/yb/dsh-ws-probe`；Auto 隐藏本地
+  `read`/`write`/`edit`/`read_image`/`bash`/`grep`/`glob`，`remote_bash pwd` 同样返回远端目录。
+  3080 与新 `lib/` 已重启生效。
+
+## 2026-10-23 · preset 门控 remote_* + 内置 ripgrep
+
+`remote_*` 从「远程工作区自动注册」改为 **agent preset 显式启用**，默认不出现：
+
+- 新增 `presets/ssh-workspace.patch.yml`：`SSH Workspace`（`ssh-workspace`，`both`，保留本地工具）与
+  `SSH Workspace (Auto)`（`ssh-workspace-auto`，`auto`，隐藏本地 `read`/`write`/`edit`/`read_image`/
+  `bash`/`grep`/`glob`）。preset 插件表按**已安装** rc.2 standard 复制（不含 `toolFilter`，含
+  `tool-plugin-market`），两个 preset 在 UI 中均可见可用。
+- `packages/mount/src/index.ts` 在根 `ctx` 监听 `agent/created`/`agent/disposed`/`agent-preset/selected`，
+  按 `agentPresets.composedPreset(agent.ctx)` 返回的 **preset id 字符串** 绑定生效；切换 preset 会重绑，
+  agent 释放时按序恢复本地工具。
+- `packages/mount/src/remote-tools.ts` 新增 `remote_grep`/`remote_glob` 与 `hideLocalTools`；
+  auto 模式若无法安装视图过滤则降级为 `both`，提示词同步说明。
+- daemon `hello` 增加 `arch` 和 `rg`；归档新增 `bin/rg-linux-{x64,arm64}`（`@vscode/ripgrep` 1.18.0，
+  实测 ripgrep 15.0.0）。`packages/mount/src/patch.ts` 只把官方 grep/glob 的打包 rg `argv[0]`
+  重写到 daemon 路径，用户自带 `rg` 不动。
+- 浏览器实测（临时实例 3081，`DSH_HOME=/tmp/opencode/dsh-home-tools`，mock LLM）：auto 会话的模型
+  工具表无本地 `read`/`grep`/`glob`/`bash`，`remote_bash pwd` 返回 `/home/yb/dsh-ws-probe`，
+  `remote_grep hello` 命中 2 行，`remote_glob **/*.txt` 命中 5 个文件；both 会话同时暴露本地与
+  remote 工具；真实 `agentPresets/select` 切到 both 后模型工具表立即恢复本地工具。
+- 回归：`probe-mount 46/46`、`probe-remote-tools 39/39`、`probe-tool-presets 19/19`、
+  `probe-transport 17/17`、`probe-providers 14/14`、`probe-upgrade 9/9`、`probe-resilience 11/11`、
+  `machines 10/10`、`check-node-preflight` 通过。根 `lib/` 与 `dist/daemon.tar.gz` 已重建。
+
 ## 2025-10-19 · rc.2 适配（Option B 根平面路由）——当前实现
 
 目标 harness 换成 npm 发布的 `dsh@0.2.1-rc.2`；rc.2 无 `mountRealmProviders` 扩缝、realm 也不给
