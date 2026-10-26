@@ -1,5 +1,5 @@
 /**
- * Root-plane routers. rc.2 resolves `ctx.fs` / `ctx.subprocess` / `ctx.sandbox`
+ * Root-plane routers. 0.2.1 resolves `ctx.fs` / `ctx.subprocess` / `ctx.sandbox`
  * once per process, while this plugin serves many machines at once: each
  * router keeps the official local provider as the fallback and dispatches an
  * operation to the daemon-backed provider of the host that owns the path, cwd,

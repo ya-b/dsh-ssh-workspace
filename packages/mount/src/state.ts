@@ -1,5 +1,5 @@
 /**
- * Durable host attribution for remote workspaces. The rc.2 workspace record
+ * Durable host attribution for remote workspaces. The 0.2.1 workspace record
  * shape is strict and carries no transport fields, so the plugin keeps its own
  * small sidecar: which Workspace id lives on which SSH host at which canonical
  * remote path. Every router decision (fs path, subprocess cwd, sandbox policy

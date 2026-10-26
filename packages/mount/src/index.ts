@@ -1,5 +1,5 @@
 /**
- * rc.2-native remote workspace mounting. The plugin owns four pieces:
+ * 0.2.1-native remote workspace mounting. The plugin owns four pieces:
  *
  * - a per-host runtime pool of daemon-backed `ctx.ssh` plus the official SSH
  *   provider family (`ssh`, `fs`, `subprocess`, `sandbox` — all upstream code),

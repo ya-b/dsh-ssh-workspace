@@ -1,5 +1,5 @@
 /**
- * Workspace adoption on the official registry. rc.2's `WorkspaceRegistry.create`
+ * Workspace adoption on the official registry. 0.2.1's `WorkspaceRegistry.create`
  * canonicalizes through the *local* realpath and `attachSession` re-checks the
  * session cwd the same way, so a remote directory can never become a record
  * through the public surface. This module keeps the registry authoritative and

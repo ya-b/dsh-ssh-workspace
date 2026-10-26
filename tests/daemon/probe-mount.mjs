@@ -138,7 +138,7 @@ const agentRoster = {
 let composedPreset = 'ssh-workspace-auto'
 ctx.provide('agents', agentRoster)
 ctx.provide('agentPresets', { composedPreset: () => composedPreset })
-// A sessionController stub: rc.2 funnels creation through the agent roster,
+// A sessionController stub: 0.2.1 funnels creation through the agent roster,
 // which is exactly the object the plugin must patch.
 const sessionCreates = []
 const originalCreates = []

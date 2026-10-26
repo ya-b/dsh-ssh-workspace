@@ -3,6 +3,22 @@
 > 更新于 A0–A4、B1–B3、C1–C2 全部完成并实测通过之后。
 > 实测环境：`ssh localhost`（真实 sshd；daemon 部署在 `~/.dsh-workspace`）。
 
+## 2026-10-26 · 升级 dsh 0.2.1-rc.3
+
+- 全局 CLI 升级到 `@deepseek-ai/dsh@0.2.1-rc.3`；仓库内全部 `@deepseek-ai/*` 依赖从
+  `0.2.1-rc.2` 同步到 `0.2.1-rc.3`，`pnpm-lock.yaml` 随之更新。
+- rc.3 的宿主侧 SSH/fs/subprocess/sandbox/workspace 包与 rc.2 字节一致；差异集中在浏览器
+  端（preset 空会话复用、View/面板 pin、LLM 目录）与新增 `ui-entry-customization`。插件
+  依赖的目录流槽位、`ctx.conversation.blocks`、`remote_*` 与根平面路由均未变化，无需改码。
+- 重新构建根 `lib/` 与 daemon 归档：源码与依赖产物一致，归档内容与旧版逐文件相同。
+- 回归：`probe-transport 17/17`、`probe-providers 14/14`、`probe-mount 57/57`、
+  `probe-remote-tools 41/41`、`probe-tool-presets 23/23`、`probe-local-execution 36/36`、
+  `probe-resilience 11/11`、`probe-upgrade 9/9`、`machines 10/10`、Node preflight 3/3；
+  全部包 `tsc --noEmit` 通过。
+- 浏览器实测（临时 `DSH_HOME` + rc.3，端口 3081）：插件无加载告警；目录流弹窗显示主机
+  选择、列目录正常；`POST /ssh-workspace/adopt` 成功登记远端工作区；无客户端 console 错误。
+  `3080` 已发布实例未改动。
+
 ## 2026-10-24 · 远程工作区强制要求 remote-tool preset
 
 远程工作区若所选 agent preset 没有 remote 工具，禁止对话并给出提示：
