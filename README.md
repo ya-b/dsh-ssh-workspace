@@ -39,7 +39,7 @@ preset 在创建会话或切换 preset 时生效；普通本地会话和未选�
 
 | 位置 | 要求 |
 | --- | --- |
-| 宿主 | Node ≥ 20；`dsh` 0.2.1-rc.3；可用的 OpenSSH 客户端；可读的 `~/.ssh/config` |
+| 宿主 | Node ≥ 20；`dsh` 0.2.1-rc.4；可用的 OpenSSH 客户端；可读的 `~/.ssh/config` |
 | 远端 | Linux x64/arm64；Node ≥ 20；POSIX `sh`；`tar`；OpenSSH 服务端 |
 | 认证 | 密钥或 ssh-agent 等**非交互登录**；不支持交互式密码 |
 | SSH | OpenSSH ≥ 8.2（客户端需支持 `ControlMaster` / `-O forward`） |

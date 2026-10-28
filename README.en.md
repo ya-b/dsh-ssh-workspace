@@ -50,7 +50,7 @@ a binary for its architecture, the call fails with
 
 | Location | Requirement |
 | --- | --- |
-| Host | Node ≥ 20; `dsh` 0.2.1-rc.3; a working OpenSSH client; a readable `~/.ssh/config` |
+| Host | Node ≥ 20; `dsh` 0.2.1-rc.4; a working OpenSSH client; a readable `~/.ssh/config` |
 | Remote | Linux x64/arm64; Node ≥ 20; POSIX `sh`; `tar`; an OpenSSH server |
 | Authentication | **Non-interactive** login via key or ssh-agent; interactive password auth is not supported |
 | SSH | OpenSSH ≥ 8.2 (the client must support `ControlMaster` / `-O forward`) |
