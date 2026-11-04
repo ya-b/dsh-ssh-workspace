@@ -7,12 +7,13 @@
  */
 
 import { execFile } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { access, chmod, copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { daemonDirExpr, type RemoteWorkspaceConfig } from '@dsh-ssh-workspace/transport'
+import { daemonDirExpr, shellQuote, type RemoteWorkspaceConfig } from '@dsh-ssh-workspace/transport'
 
 /** One bundled ripgrep binary and the remote coordinates it serves. */
 export interface DaemonRipgrep {
@@ -39,13 +40,32 @@ export interface DaemonArchiveInput {
 }
 
 /** Remote command: extract the daemon archive into its state directory. */
-export function installCommand(config: RemoteWorkspaceConfig): string {
+export function installCommand(config: RemoteWorkspaceConfig, digest?: string): string {
   const dir = daemonDirExpr(config.daemonDir)
+  const marker = digest === undefined ? '' : ` && { printf '%s' ${shellQuote(digest)} > "$D/archive.digest" || true; }`
   return [
     `D=${dir}`,
     'mkdir -p "$D"',
-    'tar -xzf - -C "$D"',
+    `tar -xzf - -C "$D"${marker}`,
   ].join('; ')
+}
+
+/** Whether the state directory already holds the archive with this digest. */
+export function installedCommand(config: RemoteWorkspaceConfig, digest: string): string {
+  return `[ "$(cat ${daemonDirExpr(config.daemonDir)}/archive.digest 2>/dev/null)" = ${shellQuote(digest)} ]`
+}
+
+/** One SSH round-trip: does the remote state directory carry this archive digest? */
+export async function hasDaemonArchive(
+  config: RemoteWorkspaceConfig, digest: string, deadlineMs = 20_000,
+): Promise<boolean> {
+  return await new Promise<boolean>((resolve) => {
+    const child = execFile('ssh', ['-T', config.host, installedCommand(config, digest)], { timeout: deadlineMs }, (error) => {
+      resolve(error === null)
+    })
+    child.stderr?.on('error', () => {})
+    child.stderr?.resume()
+  })
 }
 
 /**
@@ -116,11 +136,12 @@ async function tarArchive(directory: string): Promise<Buffer> {
 
 /** Install the daemon archive on one remote host through a dedicated SSH channel. */
 export async function installDaemonArchive(
-  config: RemoteWorkspaceConfig, archive: Buffer, deadlineMs = 120_000,
+  config: RemoteWorkspaceConfig, archive: Buffer, deadlineMs = 180_000,
 ): Promise<void> {
+  const digest = createHash('sha256').update(archive).digest('hex')
   await new Promise<void>((resolve, reject) => {
     const child = execFile('ssh', [
-      '-T', config.host, installCommand(config),
+      '-T', config.host, installCommand(config, digest),
     ], { maxBuffer: 1024 * 1024, timeout: deadlineMs }, (error) => { if (error === null) resolve(); else reject(error) })
     // An unreachable or refusing host kills ssh before the archive is written;
     // without this handler that EPIPE arrives as an uncaught 'error' event and

@@ -79,9 +79,13 @@ const allowResultSchema = z.object({ roots: z.array(z.string()) }).strict()
 const presentResultSchema = z.object({ present: z.boolean() }).strict()
 
 const helloSchema = z.object({
-  protocol: z.literal(1), platform: z.enum(['linux', 'darwin']), arch: z.string(), nodeVersion: z.string(),
+  protocol: z.literal(1), platform: z.enum(['linux', 'darwin']), nodeVersion: z.string(),
   executable: z.string(), root: z.string(), workspace: z.string(), instanceId: z.string(), kind: z.string(),
-  rg: z.string().nullable(),
+  // Older daemons predate these fields. A picker must still connect to a busy
+  // old daemon that auto-upgrade deliberately leaves running; features that
+  // need them (bundled ripgrep) fail explicitly when they are absent.
+  arch: z.string().optional(),
+  rg: z.string().nullable().optional(),
 }).strict()
 
 /** Remote daemon handshake facts. */

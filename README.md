@@ -118,7 +118,7 @@ Include ~/.ssh/config.d/*
 | --- | --- | --- |
 | `daemonDir` | `~/.dsh-workspace` | **远端** daemon 状态目录；`~` 由远端 shell 展开 |
 | `node` | `node` | **远端** Node 可执行文件；非交互 SSH 的 PATH 常找不到 nvm 的 Node，建议写绝对路径，如 `/usr/local/bin/node` |
-| `install` | `true` | 首次使用某主机时投递内置 daemon 归档；按 (host, daemonDir, 归档摘要) 去重 |
+| `install` | `true` | 首次使用某主机时投递内置 daemon 归档；按 (host, daemonDir, 归档摘要) 去重，远端成功后写 `archive.digest`，后续连接跳过重复上传（慢速链路的首次投递可能需要数分钟） |
 | `autoUpgrade` | `true` | 连接时若运行中的 daemon 加载的 bundle 与已安装的 `workspaced.js` 摘要不一致，且无子进程在跑，就自动重启它；忙则保留旧版，下次连接再试 |
 | `daemonArchive` | 内置归档 | 覆盖 daemon 归档路径，主要用于开发调试 |
 | `requestTimeoutMs` | `30000` | 安装、准入、打开等管理请求的超时 |
@@ -135,7 +135,7 @@ Include ~/.ssh/config.d/*
 
 | 项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `probeTimeoutMs` | `8000` | 主机连通性预检的单次超时 |
+| `probeTimeoutMs` | `20000` | 主机连通性预检的单次超时 |
 | `hiddenHosts` | `[]` | 不显示在机器列表中的 SSH 别名 |
 | `prefix` | `/ssh-workspace` | HTTP 路由前缀；浏览器半固定使用 `/ssh-workspace`，**不要修改** |
 

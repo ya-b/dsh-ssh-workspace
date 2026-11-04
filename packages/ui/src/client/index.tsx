@@ -79,8 +79,14 @@ function defaultTitleOf(path: string): string {
   return cut === -1 ? trimmed : trimmed.slice(cut + 1) || '/'
 }
 
-/** How long one host route may take before the dialog reports the failure. */
+/** Default budget for one host route before the dialog reports the failure. */
 const CALL_TIMEOUT_MS = 15_000
+/** A precheck runs one full SSH login; loaded hosts can take double-digit seconds. */
+const PRECHECK_TIMEOUT_MS = 30_000
+/** Browse pairs the host daemon (and deploys it on first use); keep this above the host's own 330s deadline. */
+const BROWSE_TIMEOUT_MS = 360_000
+/** Adopt reuses the paired runtime but may still wait for a deployment. */
+const ADOPT_TIMEOUT_MS = 120_000
 
 /**
  * The harness Modal card is `min(380px, 100%)`; this dialog carries a host
@@ -93,14 +99,27 @@ const DIALOG_CLASS = 'dsh-ssh-workspace-dialog'
 const DIALOG_CSS = `.${DIALOG_CLASS}.${DIALOG_CLASS}{width:min(720px,100%)}`
 
 /** Call one host route and unwrap its JSON body or its error message. */
-async function call<T>(route: string, query: Record<string, string> = {}, body?: unknown): Promise<T> {
+async function call<T>(
+  route: string,
+  query: Record<string, string> = {},
+  body?: unknown,
+  timeoutMs = CALL_TIMEOUT_MS,
+): Promise<T> {
   const url = new URL(`${API}${route}`, window.location.origin)
   for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value)
-  const response = await fetch(url, {
-    headers: { accept: 'application/json', ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
-    ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
-    signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      headers: { accept: 'application/json', ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
+      ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'TimeoutError') {
+      throw new Error(`请求超时（${String(Math.round(timeoutMs / 1000))} 秒）`)
+    }
+    throw error
+  }
   const responseBody = await response.json().catch(() => undefined) as (T & { error?: string }) | undefined
   if (!response.ok) throw new Error(responseBody?.error ?? `${String(response.status)} ${response.statusText}`)
   return responseBody as T
@@ -116,12 +135,15 @@ function loadMachines(): Promise<Machine[]> {
   return machinesOnce
 }
 
-/** Prechecks are cached per alias: a machine's verdict does not move by the second. */
+/** Prechecks are cached per alias; only a usable verdict is worth reusing. */
 const prechecks = new Map<string, Promise<Precheck>>()
 function precheckOf(alias: string): Promise<Precheck> {
   let pending = prechecks.get(alias)
   if (pending === undefined) {
-    pending = call<Precheck>('/precheck', { host: alias }).catch((error: unknown) => {
+    pending = call<Precheck>('/precheck', { host: alias }, undefined, PRECHECK_TIMEOUT_MS).then((result) => {
+      if (result.status !== 'usable') prechecks.delete(alias)
+      return result
+    }).catch((error: unknown) => {
       prechecks.delete(alias)
       throw error
     })
@@ -136,7 +158,7 @@ function listingOf(host: string | undefined, path: string): Promise<Listing> {
   const key = `${host ?? 'local'}\u0000${path}`
   let pending = listings.get(key)
   if (pending === undefined) {
-    pending = call<Listing>('/browse', { path, ...(host === undefined ? {} : { host }) }).catch((error: unknown) => {
+    pending = call<Listing>('/browse', { path, ...(host === undefined ? {} : { host }) }, undefined, BROWSE_TIMEOUT_MS).catch((error: unknown) => {
       listings.delete(key)
       throw error
     })
@@ -234,7 +256,7 @@ export function RemoteDirectoryBrowser(props: RemoteDirectoryBrowserProps): Reac
     setError(undefined)
     try {
       const alias = host.alias as string
-      const created = await call<{ workspaceId: string, title: string }>('/adopt', {}, { host: alias, path: listing.path })
+      const created = await call<{ workspaceId: string, title: string }>('/adopt', {}, { host: alias, path: listing.path }, ADOPT_TIMEOUT_MS)
       if (created.title === defaultTitleOf(listing.path)) {
         const workspaces = props.ctx.get('workspaces') as unknown as WorkspaceRenamer
         await workspaces.rename(created.workspaceId, `${defaultTitleOf(listing.path)}@${alias}`)
@@ -313,7 +335,7 @@ export function RemoteDirectoryBrowser(props: RemoteDirectoryBrowserProps): Reac
         {/* 目录列表 */}
         <div style={TREE_STYLE}>
           {busy && listing === undefined
-            ? <div style={HINT_STYLE}>加载中…</div>
+            ? <div style={HINT_STYLE}>{host !== undefined && !host.local ? '加载中… 首次连接远端主机需要部署 daemon，耗时取决于网络' : '加载中…'}</div>
             : visible.length === 0
               ? <div style={HINT_STYLE}>（没有子目录）</div>
               : visible.map(entry => (

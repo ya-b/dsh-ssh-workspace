@@ -131,7 +131,7 @@ Options for `ssh-workspace-mount`:
 | --- | --- | --- |
 | `daemonDir` | `~/.dsh-workspace` | **Remote** daemon state directory; `~` is expanded by the remote shell |
 | `node` | `node` | **Remote** Node executable; the PATH of a non-interactive SSH session often cannot find nvm's Node, so an absolute path such as `/usr/local/bin/node` is recommended |
-| `install` | `true` | Deliver the built-in daemon archive the first time a host is used; deduplicated by (host, daemonDir, archive digest) |
+| `install` | `true` | Deliver the built-in daemon archive the first time a host is used; deduplicated by (host, daemonDir, archive digest). A successful install writes `archive.digest` on the host so later connections skip the upload (the first delivery can take minutes on a slow link) |
 | `autoUpgrade` | `true` | On connect, if the running daemon's loaded bundle differs from the installed `workspaced.js` digest and it has no child processes, restart it; a busy daemon is kept and retried on the next connection |
 | `daemonArchive` | built-in archive | Override the daemon archive path, mainly for development and debugging |
 | `requestTimeoutMs` | `30000` | Timeout for management requests such as install, admit, and open |
@@ -146,7 +146,7 @@ Options for `api-ssh-workspace`:
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `probeTimeoutMs` | `8000` | Per-attempt timeout for the host connectivity precheck |
+| `probeTimeoutMs` | `20000` | Per-attempt timeout for the host connectivity precheck |
 | `hiddenHosts` | `[]` | SSH aliases not shown in the machine list |
 | `prefix` | `/ssh-workspace` | HTTP route prefix; the browser half hardcodes `/ssh-workspace`, **do not change** |
 

@@ -45,12 +45,14 @@ export class DaemonSshConnection extends Service {
   /** Verified remote coordinates when the handshake has completed. */
   get remote(): {
     root: string; workspace: string; instanceId: string; nodeVersion: string
-    platform: 'linux' | 'darwin'; arch: string; rg: string | null
+    platform: 'linux' | 'darwin'; arch?: string; rg?: string | null
   } | undefined {
     const hello = this.transport.hello
     return hello === undefined ? undefined : {
       root: hello.root, workspace: hello.workspace, instanceId: hello.instanceId, nodeVersion: hello.nodeVersion,
-      platform: hello.platform, arch: hello.arch, rg: hello.rg,
+      platform: hello.platform,
+      ...(hello.arch === undefined ? {} : { arch: hello.arch }),
+      ...(hello.rg === undefined ? {} : { rg: hello.rg }),
     }
   }
 

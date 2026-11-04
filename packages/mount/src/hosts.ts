@@ -12,7 +12,7 @@ import { SshFileSystem } from '@deepseek-ai/dsh-fs-ssh'
 import { SshSandboxProvider } from '@deepseek-ai/dsh-sandbox-ssh'
 import { SshSubprocessRuntime } from '@deepseek-ai/dsh-subprocess-ssh'
 import { DaemonSshConnection } from '@dsh-ssh-workspace/providers'
-import { installDaemonArchive } from '@dsh-ssh-workspace/install'
+import { installDaemonArchive, hasDaemonArchive } from '@dsh-ssh-workspace/install'
 import { RemoteWorkspaceTransport, type RemoteWorkspaceConfig } from '@dsh-ssh-workspace/transport'
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
@@ -70,9 +70,15 @@ function shippedArchive(): Promise<{ path: string, sha256: string } | undefined>
   archiveDigest ??= (async () => {
     const path = fileURLToPath(new URL('../dist/daemon.tar.gz', import.meta.url))
     if (!existsSync(path)) return undefined
-    return { path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') }
+    return await archiveFacts(path)
   })()
   return archiveDigest
+}
+
+/** Path and content digest of one archive, reusing the cached bytes. */
+async function archiveFacts(path: string): Promise<{ path: string, sha256: string }> {
+  const buffer = await readArchive(path)
+  return { path, sha256: createHash('sha256').update(buffer).digest('hex') }
 }
 
 /** Read the archive bytes once; the same digest is reused for every host. */
@@ -253,9 +259,8 @@ export class RemoteHosts {
   /** Ship the daemon to one host once per archive digest, then reuse it. */
   private async deploy(host: string, config: RemoteWorkspaceConfig): Promise<void> {
     const override = this.config.daemonArchive
-    const archive = override === undefined ? undefined : { path: override, sha256: 'override' }
-    if (!this.config.install && archive === undefined) return
-    const shipped = archive ?? await shippedArchive()
+    if (!this.config.install && override === undefined) return
+    const shipped = override === undefined ? await shippedArchive() : await archiveFacts(override)
     if (shipped === undefined) {
       throw new Error(
         "remote workspace daemon archive is missing; build it with 'pnpm run archive' in packages/mount "
@@ -265,7 +270,10 @@ export class RemoteHosts {
     const key = `${host}\u0000${config.daemonDir}\u0000${shipped.sha256}`
     let pending = installs.get(key)
     if (pending === undefined) {
-      pending = readArchive(shipped.path).then(buffer => installDaemonArchive(config, buffer)).catch((error: unknown) => {
+      pending = readArchive(shipped.path).then(async (buffer) => {
+        if (await hasDaemonArchive(config, shipped.sha256)) return
+        await installDaemonArchive(config, buffer)
+      }).catch((error: unknown) => {
         installs.delete(key)
         throw error
       })

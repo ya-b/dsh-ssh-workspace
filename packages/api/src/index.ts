@@ -29,6 +29,19 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 /** Default route prefix owned by this plugin. */
 const DEFAULT_PREFIX = '/ssh-workspace'
 
+/** Budget for one non-interactive SSH probe; authentication can be slow on loaded hosts. */
+const DEFAULT_PROBE_TIMEOUT_MS = 20_000
+
+/** Budget for the one-time remote `$HOME` lookup. */
+const HOME_TIMEOUT_MS = 20_000
+
+/**
+ * Budget for one picker listing, including the home lookup, pairing the host
+ * daemon, and a first deployment over a slow link. The browser half must allow
+ * more than this.
+ */
+const BROWSE_DEADLINE_MS = 330_000
+
 /** Options of the machine list and directory routes. */
 export interface Config {
   /** Route prefix; must not collide with another plugin's routes. */
@@ -94,7 +107,7 @@ const HOST_PATTERN = /^\s*Host\s+(.+)$/iu
  */
 export function apply(ctx: Context, config: Config = {}): void {
   const prefix = normalizePrefix(config.prefix ?? DEFAULT_PREFIX)
-  const probeTimeoutMs = config.probeTimeoutMs ?? 8000
+  const probeTimeoutMs = config.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS
   const hidden = new Set(config.hiddenHosts ?? [])
   ctx.effect(() => ctx.webServer.register({
     kind: 'prefix',
@@ -293,7 +306,7 @@ async function sshConfigFacts(alias: string): Promise<{ hostname?: string, user?
  * @param timeoutMs - per-command budget.
  * @returns the verdict the picker renders as a badge.
  */
-export async function precheck(alias: string, timeoutMs = 8000): Promise<PrecheckResult> {
+export async function precheck(alias: string, timeoutMs = DEFAULT_PROBE_TIMEOUT_MS): Promise<PrecheckResult> {
   const config = await run('ssh', ['-G', alias], Math.min(timeoutMs, 5000)).catch(() => undefined)
   if (config === undefined) {
     return { alias, status: 'unknown', detail: `OpenSSH does not know the host alias ${JSON.stringify(alias)}` }
@@ -328,16 +341,12 @@ function firstLine(text: string): string {
 export async function browse(ctx: Context, host: string | null, path: string): Promise<BrowseListing> {
   const remote = host !== null && host !== ''
   const machine = host ?? 'this machine'
-  const requested = path === '' ? (remote ? await remoteHome(ctx, host) : homedir()) : path
-  return await withDeadline(
-    ctx.sshWorkspace.browse(remote ? host : null, requested),
-    BROWSE_DEADLINE_MS,
-    `listing ${requested} on ${machine}`,
-  )
+  const target = path === '' ? 'the home directory' : path
+  return await withDeadline((async () => {
+    const requested = path === '' ? (remote ? await remoteHome(ctx, host) : homedir()) : path
+    return await ctx.sshWorkspace.browse(remote ? host : null, requested)
+  })(), BROWSE_DEADLINE_MS, `listing ${target} on ${machine}`)
 }
-
-/** Budget for one picker listing, including pairing the host daemon. */
-const BROWSE_DEADLINE_MS = 30_000
 
 /**
  * Bound one user-initiated step. The durable transport deliberately retries a
@@ -377,7 +386,13 @@ async function remoteHome(_ctx: Context, host: string): Promise<string> {
   if (pending === undefined) {
     pending = run('ssh', [
       '-T', '-o', 'ConnectTimeout=4', host, 'printf %s "$HOME"',
-    ], 8000).then(result => result.stdout.trim() || '/')
+    ], HOME_TIMEOUT_MS).then(
+      result => result.stdout.trim() || '/',
+      (error: unknown) => {
+        homes.delete(host)
+        throw error
+      },
+    )
     homes.set(host, pending)
   }
   return await pending
@@ -393,7 +408,10 @@ function run(command: string, args: string[], timeoutMs: number): Promise<{ code
       }
       const failure = error as Error & { code?: number | null, killed?: boolean, stderr?: string }
       const merged = { stderr: stderr === '' ? (failure.stderr ?? '') : stderr }
-      reject(Object.assign(new Error(firstLine(merged.stderr) || failure.message), {
+      const detail = merged.stderr.trim() !== ''
+        ? firstLine(merged.stderr)
+        : failure.killed === true ? `timed out after ${String(timeoutMs)}ms` : failure.message
+      reject(Object.assign(new Error(detail), {
         code: typeof failure.code === 'number' ? failure.code : null,
         killed: failure.killed === true,
         stderr: merged.stderr,
