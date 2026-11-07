@@ -111,6 +111,11 @@ function isDeadlineAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'TimeoutError'
 }
 
+/** A remote bootstrap failure that retrying cannot fix. */
+class BootstrapFailure extends Error {
+  override name = 'BootstrapFailure'
+}
+
 /** Quote one token for a POSIX remote shell. */
 export function shellQuote(value: string): string {
   return `'${value.replaceAll("'", `'\\''`)}'`
@@ -628,6 +633,7 @@ export class RemoteWorkspaceTransport {
   }
 
   private isTransportLoss(error: unknown): boolean {
+    if (error instanceof BootstrapFailure) return false
     if (error instanceof RemoteOperationError) return false
     if (error instanceof RpcTransportError) return true
     if (this.master === undefined) return true
@@ -709,8 +715,18 @@ export class RemoteWorkspaceTransport {
     const closed = Promise.withResolvers<void>()
     child.once('close', () => { closed.resolve() })
     child.once('error', () => { closed.resolve() })
+    // The bootstrap prints its real failure (missing Node, unwritable state
+    // dir) to stderr; keep a bounded tail so a lost channel can name it.
+    const stderrChunks: Buffer[] = []
+    let stderrBytes = 0
+    child.stderr.on('data', (chunk: Buffer) => {
+      if (stderrBytes >= 8192) return
+      const kept = chunk.subarray(0, 8192 - stderrBytes)
+      stderrChunks.push(kept)
+      stderrBytes += kept.length
+    })
     child.stderr.on('error', () => {})
-    child.stderr.resume()
+    const stderrTail = (): string => Buffer.concat(stderrChunks).toString('utf8').trim()
     const peer = new RpcPeer(child.stdout, child.stdin, this.config.maxFrameBytes ?? 64 * 1024 * 1024, this.config.maxPending ?? 128)
     const deadline = this.config.requestTimeoutMs ?? 30_000
     // Declare the workspace before asking to join it: an older daemon answers
@@ -722,12 +738,20 @@ export class RemoteWorkspaceTransport {
     }
     const hello = await peer.request('hello', {
       protocol: 1, workspace: this.config.workspace, clientUuid: this.clientUuid(directory),
-    }, helloSchema, AbortSignal.timeout(deadline)).catch((error: unknown) => {
+    }, helloSchema, AbortSignal.timeout(deadline)).catch(async (error: unknown) => {
       // The session is unusable: release the SSH channel instead of leaving a
       // master and its bridge behind for every failed attempt.
       child.kill('SIGKILL')
       peer.close(error instanceof Error ? error : new Error(String(error)))
-      throw error
+      // stderr is a separate pipe: give its last frame a moment to land before
+      // deciding the channel died without an explanation.
+      await new Promise<void>(resolve => { setTimeout(resolve, 20).unref() })
+      const detail = stderrTail()
+      if (detail === '' || !this.isTransportLoss(error)) throw error
+      const message = `remote workspace bootstrap failed: ${detail}`
+      throw detail.includes('remote workspace daemon preflight failed')
+        ? new BootstrapFailure(message, { cause: error })
+        : new Error(message, { cause: error })
     })
     peer.once('closed', () => {
       // Transport loss only marks the session stale; the daemon keeps running.

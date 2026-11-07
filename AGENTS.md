@@ -88,9 +88,9 @@ cd packages/ui && node build.mjs          # → packages/ui/lib/client.js（默�
 
 # 单测/端到端（需真实 sshd，默认 ssh localhost；daemon 部署在 ~/.dsh-workspace）
 node tests/api/machines.test.mjs          # ssh config 枚举 10/10
-node tests/daemon/probe-transport.mjs     # 23/23 执行/断线续取/零重复/fs（含 patch/delete/move）/deadline 重试/失败 start 重放
+node tests/daemon/probe-transport.mjs     # 24/24 执行/断线续取/零重复/fs（含 patch/delete/move）/deadline 重试/失败 start 重放/bootstrap 错误透传
 node tests/daemon/probe-providers.mjs     # 17/17 官方 provider 家族（fs 含 patch/move/delete）
-node tests/daemon/probe-mount.mjs         # 61/61 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射 + provider fiber 隔离 + 主机恢复 + preset 生命周期 + tools/execute 作用域 + guard/pre-step + 内置 rg
+node tests/daemon/probe-mount.mjs         # 62/62 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射 + provider fiber 隔离 + 主机恢复 + preset 生命周期 + tools/execute 作用域 + guard/pre-step + 内置 rg
 node tests/daemon/probe-remote-tools.mjs   # 41/41 remote_* 别名、路径门、提示词、幂等与继承遮蔽
 node tests/daemon/probe-tool-presets.mjs   # 23/23 preset 策略/both/auto/降级/释放/guard 条件
 node tests/daemon/probe-local-execution.mjs# 36/36 local/remote 作用域的 fs/subprocess/sandbox/cwd/policy 旁路

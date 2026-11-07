@@ -388,6 +388,9 @@ try {
   ctx.subprocess.spawn({ argv: ['true'], cwd: '/nowhere/at/all', graceMs: 3000, stdio: { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' } })
 } catch (error) { threw = /not connected/u.test(String(error)) }
 check('a sync spawn on an unpaired host fails loudly', threw)
+let fsThrew = false
+try { await ctx.fs.readText({ targetKey: '/nowhere/at/all/file.txt', displayPath: '/nowhere/at/all/file.txt' }) } catch (error) { fsThrew = /not connected/u.test(String(error)) }
+check('an attributed fs read on an unpaired host fails loudly', fsThrew)
 
 // ── sandbox routing ─────────────────────────────────────────────────────────
 const confinements = []

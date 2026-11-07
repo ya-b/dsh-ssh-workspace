@@ -5,8 +5,8 @@
  * Usage: node probe-transport.mjs [--keep]
  */
 import { execFile, spawn } from 'node:child_process'
-import { copyFile, mkdir, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { RemoteWorkspaceTransport } from '@dsh-ssh-workspace/transport'
 import { buildDaemonArchive, findNodePty, findRipgrep, installDaemonArchive } from '@dsh-ssh-workspace/install'
@@ -246,6 +246,27 @@ async function main() {
       .then(value => value, error => error)
     check('replayed cancelled start carries PROCESS_START_CANCELLED',
       replay?.code === 'PROCESS_START_CANCELLED', `${replay?.code ?? replay?.name}: ${replay?.message}`)
+  }
+
+  // 7. A failed bootstrap must name the remote reason, not a lost RPC peer.
+  {
+    const fakeBin = await mkdtemp(join(tmpdir(), 'dsh-fake-ssh-'))
+    await writeFile(join(fakeBin, 'ssh'), '#!/bin/sh\necho "remote workspace daemon preflight failed: node is not a usable Node >= 20" >&2\nexit 1\n', { mode: 0o755 })
+    const savedPath = process.env.PATH
+    process.env.PATH = `${fakeBin}:${savedPath}`
+    const fake = new RemoteWorkspaceTransport({
+      ...config, requestTimeoutMs: 2000, reconnectBaseMs: 10, reconnectMaxMs: 20,
+    })
+    let failure
+    const started = Date.now()
+    try { await fake.open() } catch (error) { failure = error }
+    const elapsed = Date.now() - started
+    process.env.PATH = savedPath
+    await fake.dispose()
+    await rm(fakeBin, { recursive: true, force: true })
+    check('bootstrap failure names the remote preflight reason',
+      failure?.name === 'BootstrapFailure' && failure.message.includes('preflight failed') && elapsed < 1000,
+      `${failure?.name} ${elapsed}ms ${failure?.message?.slice(0, 80)}`)
   }
 
   await transport.dispose()

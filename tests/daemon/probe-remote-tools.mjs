@@ -61,6 +61,13 @@ function makeAgent(cwd = ROOT) {
       registered.set(definition.name, definition)
       return () => registered.delete(definition.name)
     },
+    async resolve(context) {
+      const all = new Map([...inherited, ...definitions, ...registered])
+      return {
+        dispose() {},
+        view(scope) { return scope === context.agent ? all : new Map() },
+      }
+    },
   }
   const workingDirectory = {
     async ensure() {
@@ -193,9 +200,9 @@ check('hidden local tools disappear from get', remote.tools.get('read', remote.a
 check('remote aliases remain visible', remote.tools.get('remote_read', remote.agent) !== undefined)
 const hiddenSchemas = remote.tools.schemas(remote.agent).map(schema => schema.name)
 check('hidden local tools disappear from schemas', !hiddenSchemas.includes('read') && !hiddenSchemas.includes('grep') && hiddenSchemas.includes('remote_read'))
-const assembly = { sections: [], contexts: [], tools: [{ name: 'read' }, { name: 'grep' }, { name: 'remote_read' }], variables: {} }
-const filteredAssembly = await remote.agent.ctx.waterfall('system-prompt/assemble', assembly, {}, async () => assembly)
-check('the prompt waterfall filters hidden tools', filteredAssembly.tools.map(tool => tool.name).join(',') === 'remote_read')
+const resolved = await remote.tools.resolve({ agent: remote.agent })
+const visible = [...resolved.view(remote.agent).keys()]
+check('the step tool set excludes hidden tools', visible.includes('remote_read') && !visible.includes('read') && !visible.includes('grep'), visible.join(','))
 restore()
 check('restoring brings local tools back', remote.tools.get('read', remote.agent) !== undefined && remote.tools.schemas(remote.agent).some(schema => schema.name === 'read'))
 

@@ -86,11 +86,17 @@ export function patchFileSystem(ctx: Context, fs: FileSystem, hosts: RemoteHosts
     watch: fs.watch.bind(fs),
     processPath: fs.processPath.bind(fs),
   }
+  /**
+   * The runtime for one attributed record. An attributed remote path never
+   * falls back to the local plane: a disconnected host must fail loudly, or a
+   * local path that happens to share the spelling would answer for the remote
+   * machine.
+   */
   const remote = (record: RemoteWorkspaceRecord | undefined) => {
     if (record === undefined) return undefined
     const runtime = hosts.peek(record.host)
     if (runtime === undefined) {
-      ctx.logger.warn(`ssh-workspace: host '${record.host}' is not connected yet; remote path '${record.path}' fell back to the local filesystem`)
+      throw new Error(`remote host '${record.host}' is not connected in this process yet; retry once the workspace reconnects`)
     }
     return runtime
   }

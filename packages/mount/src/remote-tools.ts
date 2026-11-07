@@ -57,9 +57,18 @@ interface ToolSchemaLike {
   readonly [key: string]: unknown
 }
 
+/** One step's admitted tool registrations. */
+interface ResolvedToolSetLike {
+  dispose(): void
+  view(scope: unknown): ReadonlyMap<string, RemoteToolDefinition>
+}
+
 interface ToolRegistryLike {
-  get(name: string, scope?: unknown): RemoteToolDefinition | undefined
-  schemas(scope?: unknown): readonly ToolSchemaLike[]
+  get(name: string, scope?: unknown, toolSet?: unknown): RemoteToolDefinition | undefined
+  executable?(name: string, scope?: unknown, toolSet?: unknown): RemoteToolDefinition | undefined
+  schemas(scope?: unknown, toolSet?: unknown): readonly ToolSchemaLike[]
+  definitions?(scope?: unknown, toolSet?: unknown): readonly { readonly name: string }[]
+  resolve?(context: { readonly agent: object }): Promise<ResolvedToolSetLike>
   register(definition: RemoteToolDefinition): () => void
 }
 
@@ -75,12 +84,6 @@ interface SystemPromptLike {
 
 interface WorkingDirectoryLike {
   ensure(agent: unknown, signal?: AbortSignal): Promise<string>
-}
-
-/** The tool schema list one prompt assembly carries. */
-interface PromptAssemblyLike {
-  readonly tools: readonly { readonly name: string }[]
-  readonly [key: string]: unknown
 }
 
 type SourceTool = 'read' | 'write' | 'edit' | 'read_image' | 'bash' | 'grep' | 'glob'
@@ -327,9 +330,9 @@ export function installRemoteProjectPrompt(
 /**
  * Hide the local counterparts of installed aliases from one agent's model
  * catalog and execution. Preset tools register in the agent scope, which
- * `tools.restrict()` deliberately does not mask, so the shared registry's
- * public `get`/`schemas` views and the system-prompt assembly are filtered for
- * this agent instead. Local tools are restored when the returned disposer runs.
+ * `tools.restrict()` does not mask, so the shared registry's step resolution
+ * and public views are filtered for this agent instead. Local tools are
+ * restored when the returned disposer runs.
  * @param agent - agent whose local tools should disappear.
  * @param remoteNames - installed remote_* names.
  * @param logger - optional warning sink.
@@ -354,38 +357,11 @@ export function hideLocalTools(
   }
   const previous = hiddenTools.get(agent)
   hiddenTools.set(agent, new Set(localNames))
-  let disposeWaterfall: (() => void) | undefined
-  try {
-    const ctx = agent.ctx as unknown as {
-      on(
-        event: 'system-prompt/assemble',
-        listener: (
-          assembly: PromptAssemblyLike,
-          context: unknown,
-          next: () => Promise<PromptAssemblyLike>,
-        ) => Promise<PromptAssemblyLike>,
-      ): () => void
-    }
-    disposeWaterfall = ctx.on('system-prompt/assemble', async (_assembly, _context, next) => {
-      const resolved = await next()
-      const hidden = hiddenTools.get(agent)
-      if (hidden === undefined || hidden.size === 0) return resolved
-      const filtered = resolved.tools.filter(tool => !hidden.has(tool.name))
-      return filtered.length === resolved.tools.length ? resolved : { ...resolved, tools: filtered }
-    })
-  } catch (error) {
-    restoreHidden(agent, previous)
-    logger?.warn(`ssh-workspace: failed to filter the system prompt: ${error instanceof Error ? error.message : String(error)}`)
-    return undefined
-  }
   notifyToolsChanged(agent, logger)
   let active = true
   return () => {
     if (!active) return
     active = false
-    try { disposeWaterfall?.() } catch (error) {
-      logger?.warn(`ssh-workspace: failed to dispose the tool filter: ${error instanceof Error ? error.message : String(error)}`)
-    }
     restoreHidden(agent, previous)
     notifyToolsChanged(agent, logger)
   }
@@ -399,15 +375,38 @@ function restoreHidden(agent: RemoteToolAgent, previous: ReadonlySet<string> | u
 function patchToolViews(tools: ToolRegistryLike): void {
   if (patchedViews.has(tools)) return
   const get = tools.get.bind(tools)
+  const executable = tools.executable?.bind(tools)
+  const definitions = tools.definitions?.bind(tools)
   const schemas = tools.schemas.bind(tools)
-  tools.get = (name, scope) => {
-    const hidden = hiddenFor(scope)
-    return hidden !== undefined && hidden.has(name) ? undefined : get(name, scope)
+  const resolve = tools.resolve?.bind(tools)
+  tools.get = (name, scope, toolSet) =>
+    hiddenFor(scope)?.has(name) === true ? undefined : get(name, scope, toolSet)
+  if (executable !== undefined) {
+    tools.executable = (name, scope, toolSet) =>
+      hiddenFor(scope)?.has(name) === true ? undefined : executable(name, scope, toolSet)
   }
-  tools.schemas = scope => {
-    const all = schemas(scope)
+  if (definitions !== undefined) {
+    tools.definitions = (scope, toolSet) => {
+      const all = definitions(scope, toolSet)
+      const hidden = hiddenFor(scope)
+      return hidden === undefined ? all : all.filter(definition => !hidden.has(definition.name))
+    }
+  }
+  tools.schemas = (scope, toolSet) => {
+    const all = schemas(scope, toolSet)
     const hidden = hiddenFor(scope)
     return hidden === undefined ? all : all.filter(schema => !hidden.has(schema.name))
+  }
+  if (resolve !== undefined) {
+    tools.resolve = async context => {
+      const resolved = await resolve(context)
+      const hidden = hiddenFor(context.agent)
+      if (hidden === undefined || hidden.size === 0) return resolved
+      return {
+        dispose: () => resolved.dispose(),
+        view: scope => new Map([...resolved.view(scope)].filter(([name]) => !hidden.has(name))),
+      }
+    }
   }
   patchedViews.add(tools)
 }
