@@ -22,6 +22,22 @@ export const entriesSchema = z.array(z.object({ name: z.string(), type: z.enum([
 export const intentSchema = z.discriminatedUnion('kind', [z.object({ kind: z.literal('createIfAbsent') }).strict(), z.object({ kind: z.literal('replaceIfVersion'), version: z.string() }).strict()])
 /** Literal text edit. */
 export const editSchema = z.object({ oldString: z.string(), newString: z.string(), replaceAll: z.boolean() }).strict()
+/** One parsed patch hunk admitted at the remote JSON boundary. */
+export const hunkSchema = z.object({
+  lineNumber: z.number(),
+  context: z.string().optional(),
+  oldLines: z.array(z.string()),
+  newLines: z.array(z.string()),
+  isEndOfFile: z.boolean(),
+}).strict()
+/** Source version guard shared by patch, delete, and move. */
+export const versionGuardSchema = z.object({ version: z.string() }).strict()
+/** Optional move patch and independent source/destination guards. */
+export const moveOptionsSchema = z.object({
+  hunks: z.array(hunkSchema).optional(),
+  expectedSource: versionGuardSchema.optional(),
+  expectedDestination: intentSchema.optional(),
+}).strict()
 /** Atomic write observation. */
 export const writeResultSchema = z.object({ operation: z.enum(['create', 'update']), version: z.string(), before: z.string().nullable(), after: z.string() }).strict()
 /** Atomic edit observation. */

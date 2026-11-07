@@ -24,7 +24,7 @@ preset 没有启用 `remote_*`，对话会被禁止并提示切换 preset 或新
    目录、socket、状态文件不强制权限；TLS-PSK 流端点使用公开静态 capability（不轮换）。
    恢复任一安全面都必须有用户明确指示。
 5. **不盲重发**：断线后唯一合法写路径 = 重连成功后按 opId 查询/提交；重放只能走 opId 幂等门
-   （`fs.write`/`fs.edit`/`process.prepare`/`process.start`/`terminal.write`）。
+   （`fs.write`/`fs.edit`/`fs.patch`/`fs.delete`/`fs.move`/`process.prepare`/`process.start`/`terminal.write`）。
 6. **reap 只由三类显式事件触发**：① daemon 关闭 ② 显式 terminate/abandon
    ③ 句柄上限回收（先已完成、后最老运行）；**断线/心跳/租约永不回收**。
 
@@ -88,9 +88,9 @@ cd packages/ui && node build.mjs          # → packages/ui/lib/client.js（默�
 
 # 单测/端到端（需真实 sshd，默认 ssh localhost；daemon 部署在 ~/.dsh-workspace）
 node tests/api/machines.test.mjs          # ssh config 枚举 10/10
-node tests/daemon/probe-transport.mjs     # 17/17 执行/断线续取/零重复/fs/deadline 重试/失败 start 重放
-node tests/daemon/probe-providers.mjs     # 14/14 官方 provider 家族
-node tests/daemon/probe-mount.mjs         # 57/57 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射 + provider fiber 隔离 + 主机恢复 + preset 生命周期 + tools/execute 作用域 + guard/pre-step + 内置 rg
+node tests/daemon/probe-transport.mjs     # 23/23 执行/断线续取/零重复/fs（含 patch/delete/move）/deadline 重试/失败 start 重放
+node tests/daemon/probe-providers.mjs     # 17/17 官方 provider 家族（fs 含 patch/move/delete）
+node tests/daemon/probe-mount.mjs         # 61/61 根平面路由（fs/subprocess/sandbox/终端/会话）+ adopt + 侧映射 + provider fiber 隔离 + 主机恢复 + preset 生命周期 + tools/execute 作用域 + guard/pre-step + 内置 rg
 node tests/daemon/probe-remote-tools.mjs   # 41/41 remote_* 别名、路径门、提示词、幂等与继承遮蔽
 node tests/daemon/probe-tool-presets.mjs   # 23/23 preset 策略/both/auto/降级/释放/guard 条件
 node tests/daemon/probe-local-execution.mjs# 36/36 local/remote 作用域的 fs/subprocess/sandbox/cwd/policy 旁路
@@ -121,7 +121,6 @@ DSH_HOME=/tmp/opencode/dsh-home systemd-run --user --unit dsh-test --collect /ho
   `localCwd`（默认 `/tmp`），`remote_bash pwd` 应回远端目录；auto 的模型工具表不应出现本地
   `read`/`grep`/`glob`/`bash`。Standard 等未启用 remote_* 的 preset 在远程工作区应显示警告条、
   composer 被禁用；切到 SSH Workspace 后恢复输入并正常对话。
-- 不要动 3080（systemd 用户单元启动的已发布版本）；临时 ssh 别名测试后必须还原
   `~/.ssh/config` 并清理 store 测试条目（`~/.dsh/storages/workspace.json`）。
 
 ## 代码风格

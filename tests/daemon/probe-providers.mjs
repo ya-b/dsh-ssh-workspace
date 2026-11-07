@@ -75,6 +75,26 @@ const streamed = []
 for await (const chunk of await fs.streamText(fileTarget)) streamed.push(chunk)
 check('fs.streamText iterates', streamed.join('') === 'beta\n', JSON.stringify(streamed))
 
+// fs.patch → fs.move → fs.delete through the same provider.
+const patched = await fs.patchText(
+  fileTarget,
+  [{ lineNumber: 1, oldLines: ['beta'], newLines: ['gamma'], isEndOfFile: false }],
+  { version: edited.version },
+)
+check('fs.patchText atomic version guard', (await fs.readText(fileTarget)) === 'gamma\n', patched.version.slice(0, 7))
+const movedTarget = await fs.resolve(join(WORKSPACE, 'provider-moved.txt'))
+await import('node:fs/promises').then(fsModule => fsModule.rm(movedTarget.targetKey, { force: true }))
+const moved = await fs.moveFile(fileTarget, movedTarget, { expectedSource: { version: patched.version } })
+check(
+  'fs.moveFile publishes the destination and removes the source',
+  moved.sourceDeleted === true
+    && (await fs.readText(movedTarget)) === 'gamma\n'
+    && (await fs.stat(fileTarget)) === undefined,
+  moved.sourceDeleted ? 'sourceDeleted' : moved.sourceFailure?.code,
+)
+const deleted = await fs.deleteFile(movedTarget)
+check('fs.deleteFile returns the bounded basis', deleted.before === 'gamma\n' && (await fs.stat(movedTarget)) === undefined, JSON.stringify(deleted.before))
+
 // subprocess: spawn, capture, exit code
 const handle = subprocess.spawn({
   argv: ['/bin/sh', '-c', 'echo out-$((3*14)); echo err-line >&2; exit 7'],

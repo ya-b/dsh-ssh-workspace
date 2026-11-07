@@ -56,6 +56,9 @@ const localFs = {
   async listDir(target) { localCalls.push(['listDir', target]); return [] },
   async writeText(target) { localCalls.push(['writeText', target]); return `local-write:${target}` },
   async editText(target) { localCalls.push(['editText', target]); return `local-edit:${target}` },
+  async patchText(target) { localCalls.push(['patchText', target]); return `local-patch:${target}` },
+  async deleteFile(target) { localCalls.push(['deleteFile', target]); return `local-delete:${target}` },
+  async moveFile(source) { localCalls.push(['moveFile', source]); return `local-move:${source}` },
   async watch(target) { localCalls.push(['watch', target]); return async () => {} },
   processPath(target) { return target },
 }
@@ -71,6 +74,9 @@ const remoteFs = {
   async listDir(target) { remoteCalls.push(['listDir', target]); return [] },
   async writeText(target) { remoteCalls.push(['writeText', target]); return `remote-write:${target}` },
   async editText(target) { remoteCalls.push(['editText', target]); return `remote-edit:${target}` },
+  async patchText(target) { remoteCalls.push(['patchText', target]); return `remote-patch:${target}` },
+  async deleteFile(target) { remoteCalls.push(['deleteFile', target]); return `remote-delete:${target}` },
+  async moveFile(source) { remoteCalls.push(['moveFile', source]); return `remote-move:${source}` },
   async watch(target) { remoteCalls.push(['watch', target]); return async () => {} },
   processPath(target) { return target },
 }

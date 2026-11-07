@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import type { Duplex } from 'node:stream'
 import { Context } from '@deepseek-ai/cordis'
 import type { Readable, Writable } from 'node:stream'
-import type { FsTarget, FsVersion, FsWriteIntent } from '@deepseek-ai/dsh-fs'
+import type { FileSystem, FsTarget, FsVersion, FsWriteIntent } from '@deepseek-ai/dsh-fs'
 import type { SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
 import { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy'
 import { SandboxedFileSystem } from '@deepseek-ai/dsh-fs-sandbox'
@@ -19,8 +19,8 @@ import { z } from 'zod'
 import { RemoteProcessOwner } from './processes.ts'
 import { parsePrepare } from './wire.ts'
 import {
-  editSchema, environmentSchema, intentSchema, MAX_TEXT_STREAMS, policySchema,
-  remotePath, targetSchema, textStreamIdSchema,
+  editSchema, environmentSchema, hunkSchema, intentSchema, MAX_TEXT_STREAMS, moveOptionsSchema,
+  policySchema, remotePath, targetSchema, textStreamIdSchema, versionGuardSchema,
 } from './schemas.ts'
 
 const MAX_FRAME_BYTES = 64 * 1024 * 1024
@@ -314,6 +314,75 @@ async function dispatch(method: string, raw: unknown, signal: AbortSignal, sessi
       const outcome = method === 'fs.write'
         ? await ctx.fs.writeText(target, input.content ?? '', expected as FsWriteIntent | undefined, signal, resolved as never)
         : await ctx.fs.editText(target, editSchema.parse(input.edit), expected as { version: FsVersion } | undefined, signal, resolved as never)
+      if (input.opId !== undefined) {
+        writeMemo.set(`${method}:${input.opId}`, JSON.parse(JSON.stringify(outcome)))
+        session.pruneMemo()
+      }
+      return outcome
+    }
+    case 'fs.patch': {
+      const input = z.object({
+        target: targetSchema, hunks: z.array(hunkSchema).min(1),
+        expected: versionGuardSchema.optional(),
+        policy: policySchema, opId: z.string().optional(),
+      }).strict().parse(raw)
+      if (input.opId !== undefined) {
+        const memo = writeMemo.get(`${method}:${input.opId}`)
+        if (memo !== undefined) return memo
+      }
+      const resolved = await canonicalPolicy(input.policy, ctx, signal)
+      const outcome = await ctx.fs.patchText(
+        asTarget(input.target),
+        input.hunks as Parameters<FileSystem['patchText']>[1],
+        input.expected as { version: FsVersion } | undefined,
+        signal,
+        resolved as never,
+      )
+      if (input.opId !== undefined) {
+        writeMemo.set(`${method}:${input.opId}`, JSON.parse(JSON.stringify(outcome)))
+        session.pruneMemo()
+      }
+      return outcome
+    }
+    case 'fs.delete': {
+      const input = z.object({
+        target: targetSchema, expected: versionGuardSchema.optional(),
+        policy: policySchema, opId: z.string().optional(),
+      }).strict().parse(raw)
+      if (input.opId !== undefined) {
+        const memo = writeMemo.get(`${method}:${input.opId}`)
+        if (memo !== undefined) return memo
+      }
+      const resolved = await canonicalPolicy(input.policy, ctx, signal)
+      const outcome = await ctx.fs.deleteFile(
+        asTarget(input.target),
+        input.expected as { version: FsVersion } | undefined,
+        signal,
+        resolved as never,
+      )
+      if (input.opId !== undefined) {
+        writeMemo.set(`${method}:${input.opId}`, JSON.parse(JSON.stringify(outcome)))
+        session.pruneMemo()
+      }
+      return outcome
+    }
+    case 'fs.move': {
+      const input = z.object({
+        source: targetSchema, destination: targetSchema, options: moveOptionsSchema,
+        policy: policySchema, opId: z.string().optional(),
+      }).strict().parse(raw)
+      if (input.opId !== undefined) {
+        const memo = writeMemo.get(`${method}:${input.opId}`)
+        if (memo !== undefined) return memo
+      }
+      const resolved = await canonicalPolicy(input.policy, ctx, signal)
+      const outcome = await ctx.fs.moveFile(
+        asTarget(input.source),
+        asTarget(input.destination),
+        input.options as Parameters<FileSystem['moveFile']>[2],
+        signal,
+        resolved as never,
+      )
       if (input.opId !== undefined) {
         writeMemo.set(`${method}:${input.opId}`, JSON.parse(JSON.stringify(outcome)))
         session.pruneMemo()

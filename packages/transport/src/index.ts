@@ -101,7 +101,7 @@ const REISSUABLE = new Set([
 ])
 
 /** Operations that carry a transport-injected opId so a retry stays idempotent. */
-const OPID_METHODS = new Set(['fs.write', 'fs.edit', 'process.prepare', 'process.start', 'terminal.write'])
+const OPID_METHODS = new Set(['fs.write', 'fs.edit', 'fs.patch', 'fs.delete', 'fs.move', 'process.prepare', 'process.start', 'terminal.write'])
 
 /** Replay-bearing channels: those whose sockets precede data with a `{sync}` frame. */
 const REPLAY_CHANNELS = new Set(['stdout', 'stderr', 'terminal'])

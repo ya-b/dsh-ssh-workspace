@@ -309,6 +309,34 @@ const localTarget = await ctx.fs.resolve(join(LOCAL_ROOT, 'local-note.txt'))
 await ctx.fs.writeText(localTarget, 'local\n', { kind: 'createIfAbsent' }, undefined, { mode: 'workspace-write', workspaceRoot: LOCAL_ROOT })
 check('ctx.fs keeps local writes local', (await ctx.fs.readText(localTarget)) === 'local\n' && remoteReads.length === 1)
 
+const remoteMutations = []
+for (const method of ['patchText', 'deleteFile', 'moveFile']) {
+  const original = runtime.fs[method].bind(runtime.fs)
+  runtime.fs[method] = async (...args) => { remoteMutations.push(method); return await original(...args) }
+}
+const patchedRemote = await ctx.fs.patchText(
+  remoteTarget,
+  [{ lineNumber: 1, oldLines: ['mounted'], newLines: ['patched-mount'], isEndOfFile: false }],
+  undefined, undefined, policy,
+)
+check('ctx.fs.patchText routes to the host that owns the target', (await ctx.fs.readText(remoteTarget)) === 'patched-mount\n' && remoteMutations.includes('patchText'), patchedRemote.version.slice(0, 7))
+const remoteMoved = await runtime.fs.resolve(join(REMOTE_ROOT, 'mount-moved.txt'))
+const movedOutcome = await ctx.fs.moveFile(remoteTarget, remoteMoved, {}, undefined, policy)
+check(
+  'ctx.fs.moveFile routes a same-host pair',
+  movedOutcome.sourceDeleted === true && (await ctx.fs.readText(remoteMoved)) === 'patched-mount\n' && remoteMutations.includes('moveFile'),
+  movedOutcome.sourceDeleted ? 'sourceDeleted' : movedOutcome.sourceFailure?.code,
+)
+const deletedOutcome = await ctx.fs.deleteFile(remoteMoved, undefined, undefined, policy)
+check(
+  'ctx.fs.deleteFile routes to the host',
+  deletedOutcome.before === 'patched-mount\n' && (await runtime.fs.stat(remoteMoved)) === undefined && remoteMutations.includes('deleteFile'),
+  JSON.stringify(deletedOutcome.before),
+)
+const remoteMutationCount = remoteMutations.length
+await ctx.fs.patchText(localTarget, [{ lineNumber: 1, oldLines: ['local'], newLines: ['local-patched'], isEndOfFile: false }], undefined, undefined, { mode: 'workspace-write', workspaceRoot: LOCAL_ROOT })
+check('ctx.fs keeps local patches local', (await ctx.fs.readText(localTarget)) === 'local-patched\n' && remoteMutations.length === remoteMutationCount, `remote=${remoteMutations.length}`)
+
 const resolves = []
 const originalResolve = runtime.fs.resolve.bind(runtime.fs)
 runtime.fs.resolve = async (...args) => { resolves.push(args); return await originalResolve(...args) }

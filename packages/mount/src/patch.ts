@@ -80,6 +80,9 @@ export function patchFileSystem(ctx: Context, fs: FileSystem, hosts: RemoteHosts
     listDir: fs.listDir.bind(fs),
     writeText: fs.writeText.bind(fs),
     editText: fs.editText.bind(fs),
+    patchText: fs.patchText.bind(fs),
+    deleteFile: fs.deleteFile.bind(fs),
+    moveFile: fs.moveFile.bind(fs),
     watch: fs.watch.bind(fs),
     processPath: fs.processPath.bind(fs),
   }
@@ -178,6 +181,40 @@ export function patchFileSystem(ctx: Context, fs: FileSystem, hosts: RemoteHosts
     return runtime === undefined
       ? await local.editText(target, edit, expected, signal, policy)
       : await runtime.fs.editText(target, edit, expected, signal, policy)
+  }
+  fs.patchText = async (target, hunks, expected, signal, policy) => {
+    if (isLocalToolScope()) return await local.patchText(target, hunks, expected, signal, policy)
+    const record = owner(target, policy)
+    if (record === undefined) return await local.patchText(target, hunks, expected, signal, policy)
+    const runtime = hosts.peek(record.host)
+    if (runtime === undefined) throw new Error(`remote host '${record.host}' is not connected in this process yet; retry once the workspace reconnects`)
+    return await runtime.fs.patchText(target, hunks, expected, signal, policy)
+  }
+  fs.deleteFile = async (target, expected, signal, policy) => {
+    if (isLocalToolScope()) return await local.deleteFile(target, expected, signal, policy)
+    const record = owner(target, policy)
+    if (record === undefined) return await local.deleteFile(target, expected, signal, policy)
+    const runtime = hosts.peek(record.host)
+    if (runtime === undefined) throw new Error(`remote host '${record.host}' is not connected in this process yet; retry once the workspace reconnects`)
+    return await runtime.fs.deleteFile(target, expected, signal, policy)
+  }
+  fs.moveFile = async (source, destination, options, signal, policy) => {
+    if (isLocalToolScope()) return await local.moveFile(source, destination, options, signal, policy)
+    const from = owner(source, policy)
+    const to = owner(destination, policy)
+    if (from !== undefined && to !== undefined && from.host !== to.host) {
+      throw new Error(`cannot move a file between ${JSON.stringify(from.host)} and ${JSON.stringify(to.host)}; both paths must be on the same machine`)
+    }
+    if (from === undefined && to !== undefined) {
+      throw new Error(`cannot move a local file to remote path ${JSON.stringify(local.processPath(destination))}; both paths must be on the same machine`)
+    }
+    if (from !== undefined && to === undefined) {
+      throw new Error(`cannot move remote path ${JSON.stringify(local.processPath(source))} to a local path; both paths must be on the same machine`)
+    }
+    if (from === undefined) return await local.moveFile(source, destination, options, signal, policy)
+    const runtime = hosts.peek(from.host)
+    if (runtime === undefined) throw new Error(`remote host '${from.host}' is not connected in this process yet; retry once the workspace reconnects`)
+    return await runtime.fs.moveFile(source, destination, options, signal, policy)
   }
   fs.watch = async (target, changed, signal) => {
     if (isLocalToolScope()) return await local.watch(target, changed, signal)

@@ -23,11 +23,11 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from2, except, desc) => {
-  if (from2 && typeof from2 === "object" || typeof from2 === "function") {
-    for (let key of __getOwnPropNames(from2))
+var __copyProps = (to, from6, except, desc) => {
+  if (from6 && typeof from6 === "object" || typeof from6 === "function") {
+    for (let key of __getOwnPropNames(from6))
       if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from2[key], enumerable: !(desc = __getOwnPropDesc(from2, key)) || desc.enumerable });
+        __defProp(to, key, { get: () => from6[key], enumerable: !(desc = __getOwnPropDesc(from6, key)) || desc.enumerable });
   }
   return to;
 };
@@ -2096,7 +2096,7 @@ var require_merge = __commonJS({
     var identity = require_identity();
     var Scalar = require_Scalar();
     var MERGE_KEY = "<<";
-    var merge4 = {
+    var merge8 = {
       identify: (value) => value === MERGE_KEY || typeof value === "symbol" && value.description === MERGE_KEY,
       default: "key",
       tag: "tag:yaml.org,2002:merge",
@@ -2106,7 +2106,7 @@ var require_merge = __commonJS({
       }),
       stringify: () => MERGE_KEY
     };
-    var isMergeKey = (ctx, key) => (merge4.identify(key) || identity.isScalar(key) && (!key.type || key.type === Scalar.Scalar.PLAIN) && merge4.identify(key.value)) && ctx?.doc.schema.tags.some((tag) => tag.tag === merge4.tag && tag.default);
+    var isMergeKey = (ctx, key) => (merge8.identify(key) || identity.isScalar(key) && (!key.type || key.type === Scalar.Scalar.PLAIN) && merge8.identify(key.value)) && ctx?.doc.schema.tags.some((tag) => tag.tag === merge8.tag && tag.default);
     function addMergeToJSMap(ctx, map3, value) {
       const source = resolveAliasValue(ctx, value);
       if (identity.isSeq(source))
@@ -2145,7 +2145,7 @@ var require_merge = __commonJS({
     }
     exports.addMergeToJSMap = addMergeToJSMap;
     exports.isMergeKey = isMergeKey;
-    exports.merge = merge4;
+    exports.merge = merge8;
   }
 });
 
@@ -2154,15 +2154,15 @@ var require_addPairToJSMap = __commonJS({
   "../../node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
     "use strict";
     var log = require_log();
-    var merge4 = require_merge();
+    var merge8 = require_merge();
     var stringify = require_stringify();
     var identity = require_identity();
     var toJS = require_toJS();
     function addPairToJSMap(ctx, map3, { key, value }) {
       if (identity.isNode(key) && key.addToJSMap)
         key.addToJSMap(ctx, map3, value);
-      else if (merge4.isMergeKey(ctx, key))
-        merge4.addMergeToJSMap(ctx, map3, value);
+      else if (merge8.isMergeKey(ctx, key))
+        merge8.addMergeToJSMap(ctx, map3, value);
       else {
         const jsKey = toJS.toJS(key, "", ctx);
         if (map3 instanceof Map) {
@@ -3419,18 +3419,18 @@ var require_set = __commonJS({
       }
       static from(schema, iterable, ctx) {
         const { replacer } = ctx;
-        const set5 = new this(schema);
+        const set9 = new this(schema);
         if (iterable && Symbol.iterator in Object(iterable))
           for (let value of iterable) {
             if (typeof replacer === "function")
               value = replacer.call(iterable, value, value);
-            set5.items.push(Pair.createPair(value, null, ctx));
+            set9.items.push(Pair.createPair(value, null, ctx));
           }
-        return set5;
+        return set9;
       }
     };
     YAMLSet.tag = "tag:yaml.org,2002:set";
-    var set4 = {
+    var set8 = {
       collection: "map",
       identify: (value) => value instanceof Set,
       nodeClass: YAMLSet,
@@ -3449,7 +3449,7 @@ var require_set = __commonJS({
       }
     };
     exports.YAMLSet = YAMLSet;
-    exports.set = set4;
+    exports.set = set8;
   }
 });
 
@@ -3523,15 +3523,15 @@ var require_timestamp = __commonJS({
           throw new Error("!!timestamp expects a date, starting with yyyy-mm-dd");
         const [, year, month, day, hour, minute, second] = match.map(Number);
         const millisec = match[7] ? Number((match[7] + "00").substr(1, 3)) : 0;
-        let date10 = Date.UTC(year, month - 1, day, hour || 0, minute || 0, second || 0, millisec);
+        let date14 = Date.UTC(year, month - 1, day, hour || 0, minute || 0, second || 0, millisec);
         const tz = match[8];
         if (tz && tz !== "Z") {
           let d = parseSexagesimal(tz, false);
           if (Math.abs(d) < 30)
             d *= 60;
-          date10 -= 6e4 * d;
+          date14 -= 6e4 * d;
         }
-        return new Date(date10);
+        return new Date(date14);
       },
       stringify: ({ value }) => value?.toISOString().replace(/(T00:00:00)?\.000Z$/, "") ?? ""
     };
@@ -3553,10 +3553,10 @@ var require_schema3 = __commonJS({
     var bool = require_bool2();
     var float = require_float2();
     var int3 = require_int2();
-    var merge4 = require_merge();
+    var merge8 = require_merge();
     var omap = require_omap();
     var pairs = require_pairs();
-    var set4 = require_set();
+    var set8 = require_set();
     var timestamp = require_timestamp();
     var schema = [
       map3.map,
@@ -3573,10 +3573,10 @@ var require_schema3 = __commonJS({
       float.floatExp,
       float.float,
       binary.binary,
-      merge4.merge,
+      merge8.merge,
       omap.omap,
       pairs.pairs,
-      set4.set,
+      set8.set,
       timestamp.intTime,
       timestamp.floatTime,
       timestamp.timestamp
@@ -3599,11 +3599,11 @@ var require_tags = __commonJS({
     var schema = require_schema();
     var schema$1 = require_schema2();
     var binary = require_binary();
-    var merge4 = require_merge();
+    var merge8 = require_merge();
     var omap = require_omap();
     var pairs = require_pairs();
     var schema$2 = require_schema3();
-    var set4 = require_set();
+    var set8 = require_set();
     var timestamp = require_timestamp();
     var schemas = /* @__PURE__ */ new Map([
       ["core", schema.schema],
@@ -3624,26 +3624,26 @@ var require_tags = __commonJS({
       intOct: int3.intOct,
       intTime: timestamp.intTime,
       map: map3.map,
-      merge: merge4.merge,
+      merge: merge8.merge,
       null: _null7.nullTag,
       omap: omap.omap,
       pairs: pairs.pairs,
       seq: seq.seq,
-      set: set4.set,
+      set: set8.set,
       timestamp: timestamp.timestamp
     };
     var coreKnownTags = {
       "tag:yaml.org,2002:binary": binary.binary,
-      "tag:yaml.org,2002:merge": merge4.merge,
+      "tag:yaml.org,2002:merge": merge8.merge,
       "tag:yaml.org,2002:omap": omap.omap,
       "tag:yaml.org,2002:pairs": pairs.pairs,
-      "tag:yaml.org,2002:set": set4.set,
+      "tag:yaml.org,2002:set": set8.set,
       "tag:yaml.org,2002:timestamp": timestamp.timestamp
     };
     function getTags(customTags, schemaName, addMergeTag) {
       const schemaTags = schemas.get(schemaName);
       if (schemaTags && !customTags) {
-        return addMergeTag && !schemaTags.includes(merge4.merge) ? schemaTags.concat(merge4.merge) : schemaTags.slice();
+        return addMergeTag && !schemaTags.includes(merge8.merge) ? schemaTags.concat(merge8.merge) : schemaTags.slice();
       }
       let tags = schemaTags;
       if (!tags) {
@@ -3661,7 +3661,7 @@ var require_tags = __commonJS({
         tags = customTags(tags.slice());
       }
       if (addMergeTag)
-        tags = tags.concat(merge4.merge);
+        tags = tags.concat(merge8.merge);
       return tags.reduce((tags2, tag) => {
         const tagObj = typeof tag === "string" ? tagsByName[tag] : tag;
         if (!tagObj) {
@@ -3689,12 +3689,12 @@ var require_Schema = __commonJS({
     var string7 = require_string();
     var tags = require_tags();
     var sortMapEntriesByKey = (a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
-    var Schema2 = class _Schema {
-      constructor({ compat, customTags, merge: merge4, resolveKnownTags, schema, sortMapEntries, toStringDefaults }) {
+    var Schema6 = class _Schema {
+      constructor({ compat, customTags, merge: merge8, resolveKnownTags, schema, sortMapEntries, toStringDefaults }) {
         this.compat = Array.isArray(compat) ? tags.getTags(compat, "compat") : compat ? tags.getTags(null, compat) : null;
         this.name = typeof schema === "string" && schema || "core";
         this.knownTags = resolveKnownTags ? tags.coreKnownTags : {};
-        this.tags = tags.getTags(customTags, this.name, merge4);
+        this.tags = tags.getTags(customTags, this.name, merge8);
         this.toStringOptions = toStringDefaults ?? null;
         Object.defineProperty(this, identity.MAP, { value: map3.map });
         Object.defineProperty(this, identity.SCALAR, { value: string7.string });
@@ -3707,7 +3707,7 @@ var require_Schema = __commonJS({
         return copy;
       }
     };
-    exports.Schema = Schema2;
+    exports.Schema = Schema6;
   }
 });
 
@@ -3800,7 +3800,7 @@ var require_Document = __commonJS({
     var identity = require_identity();
     var Pair = require_Pair();
     var toJS = require_toJS();
-    var Schema2 = require_Schema();
+    var Schema6 = require_Schema();
     var stringifyDocument = require_stringifyDocument();
     var anchors = require_anchors();
     var applyReviver = require_applyReviver();
@@ -4051,7 +4051,7 @@ var require_Document = __commonJS({
         if (options.schema instanceof Object)
           this.schema = options.schema;
         else if (opt)
-          this.schema = new Schema2.Schema(Object.assign(opt, options));
+          this.schema = new Schema6.Schema(Object.assign(opt, options));
         else
           throw new Error(`With a null YAML version, the { schema: Schema } option is required`);
       }
@@ -7715,7 +7715,7 @@ var require_dist = __commonJS({
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
-    var Schema2 = require_Schema();
+    var Schema6 = require_Schema();
     var errors = require_errors();
     var Alias = require_Alias();
     var identity = require_identity();
@@ -7731,7 +7731,7 @@ var require_dist = __commonJS({
     var visit2 = require_visit();
     exports.Composer = composer.Composer;
     exports.Document = Document.Document;
-    exports.Schema = Schema2.Schema;
+    exports.Schema = Schema6.Schema;
     exports.YAMLError = errors.YAMLError;
     exports.YAMLParseError = errors.YAMLParseError;
     exports.YAMLWarning = errors.YAMLWarning;
@@ -7766,8 +7766,8 @@ import { createHash as createHash2, randomUUID as randomUUID6 } from "node:crypt
 import { open as open4, rm as rm4 } from "node:fs/promises";
 import { createServer as createServer2 } from "node:net";
 import { mkdir as mkdir3, readFile as readFile3, writeFile as writeFile2 } from "node:fs/promises";
-import { join as join13, resolve as resolve8 } from "node:path";
-import { homedir } from "node:os";
+import { join as join13, resolve as resolve13 } from "node:path";
+import { homedir as homedir2 } from "node:os";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // ../../node_modules/@deepseek-ai/dsh-subprocess-local/lib/output.js
@@ -7965,27 +7965,12 @@ var OutputCollector = class {
 import { existsSync as existsSync5 } from "node:fs";
 import { realpath as realpath3, writeFile } from "node:fs/promises";
 import { userInfo as userInfo2 } from "node:os";
-import { join as join12, resolve as resolve7 } from "node:path";
+import { join as join12, resolve as resolve12 } from "node:path";
 import { randomUUID as randomUUID5 } from "node:crypto";
 
 // ../../node_modules/@deepseek-ai/cosmokit/lib/index.js
 function isNullable(value) {
   return value === null || value === void 0;
-}
-function isPlainObject(data) {
-  return data && typeof data === "object" && !Array.isArray(data);
-}
-function filterKeys(object4, filter) {
-  return Object.fromEntries(Object.entries(object4).filter(([key, value]) => filter(key, value)));
-}
-function mapValues(object4, transform3) {
-  return Object.fromEntries(Object.entries(object4).map(([key, value]) => [key, transform3(value, key)]));
-}
-function pick(source, keys, forced) {
-  if (!keys) return { ...source };
-  const result = {};
-  for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
-  return result;
 }
 function defineProperty(object4, key, value) {
   return Object.defineProperty(object4, key, {
@@ -7993,32 +7978,6 @@ function defineProperty(object4, key, value) {
     value,
     enumerable: false
   });
-}
-var write = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
-function snapshot(value, ancestors = /* @__PURE__ */ new Set()) {
-  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
-  if (value === null || typeof value !== "object") return value;
-  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
-  ancestors.add(value);
-  try {
-    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot(item, ancestors)));
-    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new TypeError("volatile config objects must be plain objects or arrays");
-    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot(item, ancestors)])));
-  } finally {
-    ancestors.delete(value);
-  }
-}
-function createVolatile(value) {
-  let current = snapshot(value);
-  return Object.freeze({
-    get: () => current,
-    [write]: (value2) => {
-      current = value2;
-    }
-  });
-}
-function isVolatile(value) {
-  return typeof value === "object" && value !== null && write in value;
 }
 function is(type, value) {
   if (arguments.length === 1) return (value2) => is(type, value2);
@@ -8031,14 +7990,14 @@ function isArrayBufferSource(value) {
   return isArrayBufferLike(value) || ArrayBuffer.isView(value);
 }
 var Binary;
-(function(Binary2) {
-  Binary2.is = isArrayBufferLike;
-  Binary2.isSource = isArrayBufferSource;
+(function(Binary7) {
+  Binary7.is = isArrayBufferLike;
+  Binary7.isSource = isArrayBufferSource;
   function fromSource(source) {
     if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
     else return source;
   }
-  Binary2.fromSource = fromSource;
+  Binary7.fromSource = fromSource;
   function toBase64(source) {
     source = fromSource(source);
     if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
@@ -8047,18 +8006,18 @@ var Binary;
     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
     return btoa(binary);
   }
-  Binary2.toBase64 = toBase64;
+  Binary7.toBase64 = toBase64;
   function fromBase64(source) {
     if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
     return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
   }
-  Binary2.fromBase64 = fromBase64;
+  Binary7.fromBase64 = fromBase64;
   function toHex(source) {
     source = fromSource(source);
     if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
     return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
   }
-  Binary2.toHex = toHex;
+  Binary7.toHex = toHex;
   function fromHex(source) {
     if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
     const hex5 = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
@@ -8066,70 +8025,12 @@ var Binary;
     for (let i = 0; i < hex5.length; i += 2) buffer.push(parseInt(`${hex5[i]}${hex5[i + 1]}`, 16));
     return Uint8Array.from(buffer).buffer;
   }
-  Binary2.fromHex = fromHex;
+  Binary7.fromHex = fromHex;
 })(Binary || (Binary = {}));
 var base64ToArrayBuffer = Binary.fromBase64;
 var arrayBufferToBase64 = Binary.toBase64;
 var hexToArrayBuffer = Binary.fromHex;
 var arrayBufferToHex = Binary.toHex;
-function clone(source, refs = /* @__PURE__ */ new Map()) {
-  if (!source || typeof source !== "object") return source;
-  if (is("Date", source)) return new Date(source.valueOf());
-  if (is("RegExp", source)) return new RegExp(source.source, source.flags);
-  if (isArrayBufferLike(source)) return source.slice(0);
-  if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
-  const cached5 = refs.get(source);
-  if (cached5) return cached5;
-  if (Array.isArray(source)) {
-    const result2 = [];
-    refs.set(source, result2);
-    source.forEach((value, index) => {
-      result2[index] = Reflect.apply(clone, null, [value, refs]);
-    });
-    return result2;
-  }
-  const result = Object.create(Object.getPrototypeOf(source));
-  refs.set(source, result);
-  for (const key of Reflect.ownKeys(source)) {
-    const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
-    if ("value" in descriptor) descriptor.value = Reflect.apply(clone, null, [descriptor.value, refs]);
-    Reflect.defineProperty(result, key, descriptor);
-  }
-  return result;
-}
-function deepEqual(a, b, strict) {
-  const ancestors = /* @__PURE__ */ new Set();
-  function compare(a2, b2) {
-    if (a2 === b2) return true;
-    if (isVolatile(a2) || isVolatile(b2)) return isVolatile(a2) && isVolatile(b2);
-    if (!strict && isNullable(a2) && isNullable(b2)) return true;
-    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
-    if (ancestors.has(a2)) return false;
-    function check3(test, then) {
-      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
-    }
-    ancestors.add(a2);
-    try {
-      return check3(Array.isArray, (a3, b3) => {
-        if (a3.length !== b3.length) return false;
-        for (let index = 0; index < a3.length; index++) if (!compare(a3[index], b3[index])) return false;
-        return true;
-      }) ?? check3(is("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike, (a3, b3) => {
-        if (a3.byteLength !== b3.byteLength) return false;
-        const viewA = new Uint8Array(a3);
-        const viewB = new Uint8Array(b3);
-        for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
-        return true;
-      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({
-        ...a2,
-        ...b2
-      }).every((key) => compare(a2[key], b2[key])));
-    } finally {
-      ancestors.delete(a2);
-    }
-  }
-  return compare(a, b);
-}
 function tokenize(source, delimiters, delimiter2) {
   const output2 = [];
   let state = 0;
@@ -8160,34 +8061,34 @@ function paramCase(source) {
 }
 var hyphenate = paramCase;
 var Time;
-(function(Time2) {
-  Time2.millisecond = 1;
-  Time2.second = 1e3;
-  Time2.minute = Time2.second * 60;
-  Time2.hour = Time2.minute * 60;
-  Time2.day = Time2.hour * 24;
-  Time2.week = Time2.day * 7;
+(function(Time7) {
+  Time7.millisecond = 1;
+  Time7.second = 1e3;
+  Time7.minute = Time7.second * 60;
+  Time7.hour = Time7.minute * 60;
+  Time7.day = Time7.hour * 24;
+  Time7.week = Time7.day * 7;
   let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
   function setTimezoneOffset(offset) {
     timezoneOffset = offset;
   }
-  Time2.setTimezoneOffset = setTimezoneOffset;
+  Time7.setTimezoneOffset = setTimezoneOffset;
   function getTimezoneOffset() {
     return timezoneOffset;
   }
-  Time2.getTimezoneOffset = getTimezoneOffset;
-  function getDateNumber(date10 = /* @__PURE__ */ new Date(), offset) {
-    if (typeof date10 === "number") date10 = new Date(date10);
+  Time7.getTimezoneOffset = getTimezoneOffset;
+  function getDateNumber(date14 = /* @__PURE__ */ new Date(), offset) {
+    if (typeof date14 === "number") date14 = new Date(date14);
     if (offset === void 0) offset = timezoneOffset;
-    return Math.floor((date10.valueOf() / Time2.minute - offset) / 1440);
+    return Math.floor((date14.valueOf() / Time7.minute - offset) / 1440);
   }
-  Time2.getDateNumber = getDateNumber;
+  Time7.getDateNumber = getDateNumber;
   function fromDateNumber(value, offset) {
-    const date10 = new Date(value * Time2.day);
+    const date14 = new Date(value * Time7.day);
     if (offset === void 0) offset = timezoneOffset;
-    return new Date(+date10 + offset * Time2.minute);
+    return new Date(+date14 + offset * Time7.minute);
   }
-  Time2.fromDateNumber = fromDateNumber;
+  Time7.fromDateNumber = fromDateNumber;
   const numeric = /\d+(?:\.\d+)?/.source;
   const timeRegExp = new RegExp(`^${[
     "w(?:eek(?:s)?)?",
@@ -8199,34 +8100,34 @@ var Time;
   function parseTime(source) {
     const capture = timeRegExp.exec(source);
     if (!capture) return 0;
-    return (parseFloat(capture[1]) * Time2.week || 0) + (parseFloat(capture[2]) * Time2.day || 0) + (parseFloat(capture[3]) * Time2.hour || 0) + (parseFloat(capture[4]) * Time2.minute || 0) + (parseFloat(capture[5]) * Time2.second || 0);
+    return (parseFloat(capture[1]) * Time7.week || 0) + (parseFloat(capture[2]) * Time7.day || 0) + (parseFloat(capture[3]) * Time7.hour || 0) + (parseFloat(capture[4]) * Time7.minute || 0) + (parseFloat(capture[5]) * Time7.second || 0);
   }
-  Time2.parseTime = parseTime;
-  function parseDate(date10) {
-    const parsed = parseTime(date10);
-    if (parsed) date10 = Date.now() + parsed;
-    else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date10)) date10 = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date10}`;
-    else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date10)) date10 = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date10}`;
-    return date10 ? new Date(date10) : /* @__PURE__ */ new Date();
+  Time7.parseTime = parseTime;
+  function parseDate(date14) {
+    const parsed = parseTime(date14);
+    if (parsed) date14 = Date.now() + parsed;
+    else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date14}`;
+    else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date14}`;
+    return date14 ? new Date(date14) : /* @__PURE__ */ new Date();
   }
-  Time2.parseDate = parseDate;
+  Time7.parseDate = parseDate;
   function format(ms) {
     const abs = Math.abs(ms);
-    if (abs >= Time2.day - Time2.hour / 2) return Math.round(ms / Time2.day) + "d";
-    else if (abs >= Time2.hour - Time2.minute / 2) return Math.round(ms / Time2.hour) + "h";
-    else if (abs >= Time2.minute - Time2.second / 2) return Math.round(ms / Time2.minute) + "m";
-    else if (abs >= Time2.second) return Math.round(ms / Time2.second) + "s";
+    if (abs >= Time7.day - Time7.hour / 2) return Math.round(ms / Time7.day) + "d";
+    else if (abs >= Time7.hour - Time7.minute / 2) return Math.round(ms / Time7.hour) + "h";
+    else if (abs >= Time7.minute - Time7.second / 2) return Math.round(ms / Time7.minute) + "m";
+    else if (abs >= Time7.second) return Math.round(ms / Time7.second) + "s";
     return ms + "ms";
   }
-  Time2.format = format;
+  Time7.format = format;
   function toDigits(source, length = 2) {
     return source.toString().padStart(length, "0");
   }
-  Time2.toDigits = toDigits;
+  Time7.toDigits = toDigits;
   function template(template2, time5 = /* @__PURE__ */ new Date()) {
     return template2.replace("yyyy", time5.getFullYear().toString()).replace("yy", time5.getFullYear().toString().slice(2)).replace("MM", toDigits(time5.getMonth() + 1)).replace("dd", toDigits(time5.getDate())).replace("hh", toDigits(time5.getHours())).replace("mm", toDigits(time5.getMinutes())).replace("ss", toDigits(time5.getSeconds())).replace("SSS", toDigits(time5.getMilliseconds(), 3));
   }
-  Time2.template = template;
+  Time7.template = template;
 })(Time || (Time = {}));
 
 // ../../node_modules/@deepseek-ai/cordis/lib/index.js
@@ -8332,11 +8233,11 @@ function withProp(target, prop, value) {
     writable: false
   }));
 }
-function createShadow(ctx, target, property2, receiver) {
-  if (!property2) return receiver;
-  const origin = Reflect.getOwnPropertyDescriptor(target, property2)?.value;
+function createShadow(ctx, target, property6, receiver) {
+  if (!property6) return receiver;
+  const origin = Reflect.getOwnPropertyDescriptor(target, property6)?.value;
   if (!origin) return receiver;
-  return withProp(receiver, property2, ctx.extend({ [symbols.shadow]: origin }));
+  return withProp(receiver, property6, ctx.extend({ [symbols.shadow]: origin }));
 }
 function createShadowMethod(ctx, value, outer, shadow) {
   return new Proxy(value, { apply: (target, thisArg, args) => {
@@ -9376,8 +9277,8 @@ var Fiber = class {
     let inFlight;
     let removeWrapper = () => false;
     const waitForSetup = () => {
-      setupBarrier ??= new Promise((resolve9, reject) => {
-        resolveSetup = resolve9;
+      setupBarrier ??= new Promise((resolve14, reject) => {
+        resolveSetup = resolve14;
         rejectSetup = reject;
       });
       return setupBarrier;
@@ -9626,10 +9527,10 @@ function Inject(name, config3) {
       const inject = (value[symbols.metadata] ??= {}).inject ??= /* @__PURE__ */ Object.create(null);
       inject[name] = config3;
       decorator.addInitializer(function() {
-        const property2 = this[symbols.tracker]?.property;
+        const property6 = this[symbols.tracker]?.property;
         (this[symbols.initHooks] ??= []).push(() => {
           this.ctx.inject(inject, (ctx) => {
-            return value.call(property2 ? withProps(this, { [property2]: ctx }) : this);
+            return value.call(property6 ? withProps(this, { [property6]: ctx }) : this);
           });
         });
       });
@@ -9637,16 +9538,16 @@ function Inject(name, config3) {
   };
 }
 (function(Inject2) {
-  function resolve9(inject, result = /* @__PURE__ */ Object.create(null)) {
+  function resolve14(inject, result = /* @__PURE__ */ Object.create(null)) {
     if (!inject) return result;
     if (Array.isArray(inject)) for (const name of inject) result[name] = null;
     else if (Reflect.has(inject, symbols.checkProto)) {
-      Object.assign(result, resolve9(Object.getPrototypeOf(inject)));
+      Object.assign(result, resolve14(Object.getPrototypeOf(inject)));
       for (const name of Object.keys(inject)) result[name] = inject[name] ?? null;
     } else for (const name of Object.keys(inject)) result[name] = inject[name] ?? null;
     return result;
   }
-  Inject2.resolve = resolve9;
+  Inject2.resolve = resolve14;
 })(Inject || (Inject = {}));
 var RegistryService = class {
   ctx;
@@ -10054,7 +9955,7 @@ __export(external_exports, {
   check: () => check,
   cidrv4: () => cidrv42,
   cidrv6: () => cidrv62,
-  clone: () => clone2,
+  clone: () => clone,
   codec: () => codec,
   coerce: () => coerce_exports,
   config: () => config,
@@ -10438,7 +10339,7 @@ __export(core_exports2, {
   _void: () => _void,
   _xid: () => _xid,
   _xor: () => _xor,
-  clone: () => clone2,
+  clone: () => clone,
   config: () => config,
   createStandardJSONSchemaMethod: () => createStandardJSONSchemaMethod,
   createToJSONSchemaMethod: () => createToJSONSchemaMethod,
@@ -10575,7 +10476,7 @@ __export(util_exports, {
   captureStackTrace: () => captureStackTrace,
   cleanEnum: () => cleanEnum,
   cleanRegex: () => cleanRegex,
-  clone: () => clone2,
+  clone: () => clone,
   cloneDef: () => cloneDef,
   createTransparentProxy: () => createTransparentProxy,
   defineLazy: () => defineLazy,
@@ -10592,7 +10493,7 @@ __export(util_exports, {
   getSizableOrigin: () => getSizableOrigin,
   hexToUint8Array: () => hexToUint8Array,
   isObject: () => isObject2,
-  isPlainObject: () => isPlainObject2,
+  isPlainObject: () => isPlainObject,
   issue: () => issue,
   joinValues: () => joinValues,
   jsonStringifyReplacer: () => jsonStringifyReplacer,
@@ -10606,7 +10507,7 @@ __export(util_exports, {
   optionalKeys: () => optionalKeys,
   parsedType: () => parsedType,
   partial: () => partial,
-  pick: () => pick2,
+  pick: () => pick,
   prefixIssues: () => prefixIssues,
   primitiveTypes: () => primitiveTypes,
   promiseAllObject: () => promiseAllObject,
@@ -10649,10 +10550,10 @@ function jsonStringifyReplacer(_, value) {
   return value;
 }
 function cached(getter) {
-  const set4 = false;
+  const set8 = false;
   return {
     get value() {
-      if (!set4) {
+      if (!set8) {
         const value = getter();
         Object.defineProperty(this, "value", { value });
         return value;
@@ -10772,7 +10673,7 @@ var allowsEval = /* @__PURE__ */ cached(() => {
     return false;
   }
 });
-function isPlainObject2(o) {
+function isPlainObject(o) {
   if (isObject2(o) === false)
     return false;
   const ctor = o.constructor;
@@ -10789,7 +10690,7 @@ function isPlainObject2(o) {
   return true;
 }
 function shallowClone(o) {
-  if (isPlainObject2(o))
+  if (isPlainObject(o))
     return { ...o };
   if (Array.isArray(o))
     return [...o];
@@ -10864,7 +10765,7 @@ var primitiveTypes = /* @__PURE__ */ new Set([
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-function clone2(inst, def, params) {
+function clone(inst, def, params) {
   const cl = new inst._zod.constr(def ?? inst._zod.def);
   if (!def || params?.parent)
     cl._zod.parent = inst;
@@ -10942,7 +10843,7 @@ var BIGINT_FORMAT_RANGES = {
   int64: [/* @__PURE__ */ BigInt("-9223372036854775808"), /* @__PURE__ */ BigInt("9223372036854775807")],
   uint64: [/* @__PURE__ */ BigInt(0), /* @__PURE__ */ BigInt("18446744073709551615")]
 };
-function pick2(schema, mask) {
+function pick(schema, mask) {
   const currDef = schema._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
@@ -10965,7 +10866,7 @@ function pick2(schema, mask) {
     },
     checks: []
   });
-  return clone2(schema, def);
+  return clone(schema, def);
 }
 function omit(schema, mask) {
   const currDef = schema._zod.def;
@@ -10990,10 +10891,10 @@ function omit(schema, mask) {
     },
     checks: []
   });
-  return clone2(schema, def);
+  return clone(schema, def);
 }
 function extend(schema, shape) {
-  if (!isPlainObject2(shape)) {
+  if (!isPlainObject(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
   const checks = schema._zod.def.checks;
@@ -11013,10 +10914,10 @@ function extend(schema, shape) {
       return _shape;
     }
   });
-  return clone2(schema, def);
+  return clone(schema, def);
 }
 function safeExtend(schema, shape) {
-  if (!isPlainObject2(shape)) {
+  if (!isPlainObject(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
   const def = mergeDefs(schema._zod.def, {
@@ -11026,7 +10927,7 @@ function safeExtend(schema, shape) {
       return _shape;
     }
   });
-  return clone2(schema, def);
+  return clone(schema, def);
 }
 function merge(a, b) {
   if (a._zod.def.checks?.length) {
@@ -11043,7 +10944,7 @@ function merge(a, b) {
     },
     checks: b._zod.def.checks ?? []
   });
-  return clone2(a, def);
+  return clone(a, def);
 }
 function partial(Class3, schema, mask) {
   const currDef = schema._zod.def;
@@ -11081,7 +10982,7 @@ function partial(Class3, schema, mask) {
     },
     checks: []
   });
-  return clone2(schema, def);
+  return clone(schema, def);
 }
 function required(Class3, schema, mask) {
   const def = mergeDefs(schema._zod.def, {
@@ -11112,7 +11013,7 @@ function required(Class3, schema, mask) {
       return shape;
     }
   });
-  return clone2(schema, def);
+  return clone(schema, def);
 }
 function aborted(x, startIndex = 0) {
   if (x.aborted === true)
@@ -12074,12 +11975,12 @@ var $ZodCheckUpperCase = /* @__PURE__ */ $constructor("$ZodCheckUpperCase", (ins
 var $ZodCheckIncludes = /* @__PURE__ */ $constructor("$ZodCheckIncludes", (inst, def) => {
   $ZodCheck.init(inst, def);
   const escapedRegex = escapeRegex(def.includes);
-  const pattern2 = new RegExp(typeof def.position === "number" ? `^.{${def.position}}${escapedRegex}` : escapedRegex);
-  def.pattern = pattern2;
+  const pattern6 = new RegExp(typeof def.position === "number" ? `^.{${def.position}}${escapedRegex}` : escapedRegex);
+  def.pattern = pattern6;
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
     bag.patterns ?? (bag.patterns = /* @__PURE__ */ new Set());
-    bag.patterns.add(pattern2);
+    bag.patterns.add(pattern6);
   });
   inst._zod.check = (payload) => {
     if (payload.value.includes(def.includes, def.position))
@@ -12097,12 +11998,12 @@ var $ZodCheckIncludes = /* @__PURE__ */ $constructor("$ZodCheckIncludes", (inst,
 });
 var $ZodCheckStartsWith = /* @__PURE__ */ $constructor("$ZodCheckStartsWith", (inst, def) => {
   $ZodCheck.init(inst, def);
-  const pattern2 = new RegExp(`^${escapeRegex(def.prefix)}.*`);
-  def.pattern ?? (def.pattern = pattern2);
+  const pattern6 = new RegExp(`^${escapeRegex(def.prefix)}.*`);
+  def.pattern ?? (def.pattern = pattern6);
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
     bag.patterns ?? (bag.patterns = /* @__PURE__ */ new Set());
-    bag.patterns.add(pattern2);
+    bag.patterns.add(pattern6);
   });
   inst._zod.check = (payload) => {
     if (payload.value.startsWith(def.prefix))
@@ -12120,12 +12021,12 @@ var $ZodCheckStartsWith = /* @__PURE__ */ $constructor("$ZodCheckStartsWith", (i
 });
 var $ZodCheckEndsWith = /* @__PURE__ */ $constructor("$ZodCheckEndsWith", (inst, def) => {
   $ZodCheck.init(inst, def);
-  const pattern2 = new RegExp(`.*${escapeRegex(def.suffix)}$`);
-  def.pattern ?? (def.pattern = pattern2);
+  const pattern6 = new RegExp(`.*${escapeRegex(def.suffix)}$`);
+  def.pattern ?? (def.pattern = pattern6);
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
     bag.patterns ?? (bag.patterns = /* @__PURE__ */ new Set());
-    bag.patterns.add(pattern2);
+    bag.patterns.add(pattern6);
   });
   inst._zod.check = (payload) => {
     if (payload.value.endsWith(def.suffix))
@@ -12141,9 +12042,9 @@ var $ZodCheckEndsWith = /* @__PURE__ */ $constructor("$ZodCheckEndsWith", (inst,
     });
   };
 });
-function handleCheckPropertyResult(result, payload, property2) {
+function handleCheckPropertyResult(result, payload, property6) {
   if (result.issues.length) {
-    payload.issues.push(...prefixIssues(property2, result.issues));
+    payload.issues.push(...prefixIssues(property6, result.issues));
   }
 }
 var $ZodCheckProperty = /* @__PURE__ */ $constructor("$ZodCheckProperty", (inst, def) => {
@@ -13363,7 +13264,7 @@ function mergeValues(a, b) {
   if (a instanceof Date && b instanceof Date && +a === +b) {
     return { valid: true, data: a };
   }
-  if (isPlainObject2(a) && isPlainObject2(b)) {
+  if (isPlainObject(a) && isPlainObject(b)) {
     const bKeys = Object.keys(b);
     const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
     const newObj = { ...a, ...b };
@@ -13549,7 +13450,7 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
   $ZodType.init(inst, def);
   inst._zod.parse = (payload, ctx) => {
     const input2 = payload.value;
-    if (!isPlainObject2(input2)) {
+    if (!isPlainObject(input2)) {
       payload.issues.push({
         expected: "record",
         code: "invalid_type",
@@ -13860,8 +13761,8 @@ var $ZodOptional = /* @__PURE__ */ $constructor("$ZodOptional", (inst, def) => {
     return def.innerType._zod.values ? /* @__PURE__ */ new Set([...def.innerType._zod.values, void 0]) : void 0;
   });
   defineLazy(inst._zod, "pattern", () => {
-    const pattern2 = def.innerType._zod.pattern;
-    return pattern2 ? new RegExp(`^(${cleanRegex(pattern2.source)})?$`) : void 0;
+    const pattern6 = def.innerType._zod.pattern;
+    return pattern6 ? new RegExp(`^(${cleanRegex(pattern6.source)})?$`) : void 0;
   });
   inst._zod.parse = (payload, ctx) => {
     if (def.innerType._zod.optin === "optional") {
@@ -13890,8 +13791,8 @@ var $ZodNullable = /* @__PURE__ */ $constructor("$ZodNullable", (inst, def) => {
   defineLazy(inst._zod, "optin", () => def.innerType._zod.optin);
   defineLazy(inst._zod, "optout", () => def.innerType._zod.optout);
   defineLazy(inst._zod, "pattern", () => {
-    const pattern2 = def.innerType._zod.pattern;
-    return pattern2 ? new RegExp(`^(${cleanRegex(pattern2.source)}|null)$`) : void 0;
+    const pattern6 = def.innerType._zod.pattern;
+    return pattern6 ? new RegExp(`^(${cleanRegex(pattern6.source)}|null)$`) : void 0;
   });
   defineLazy(inst._zod, "values", () => {
     return def.innerType._zod.values ? /* @__PURE__ */ new Set([...def.innerType._zod.values, null]) : void 0;
@@ -20918,12 +20819,12 @@ function _length(length, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _regex(pattern2, params) {
+function _regex(pattern6, params) {
   return new $ZodCheckRegex({
     check: "string_format",
     format: "regex",
     ...normalizeParams(params),
-    pattern: pattern2
+    pattern: pattern6
   });
 }
 // @__NO_SIDE_EFFECTS__
@@ -20970,10 +20871,10 @@ function _endsWith(suffix, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _property(property2, schema, params) {
+function _property(property6, schema, params) {
   return new $ZodCheckProperty({
     check: "property",
-    property: property2,
+    property: property6,
     schema,
     ...normalizeParams(params)
   });
@@ -21898,11 +21799,11 @@ var nanProcessor = (_schema, ctx, _json, _params) => {
 };
 var templateLiteralProcessor = (schema, _ctx, json3, _params) => {
   const _json = json3;
-  const pattern2 = schema._zod.pattern;
-  if (!pattern2)
+  const pattern6 = schema._zod.pattern;
+  if (!pattern6)
     throw new Error("Pattern not found in template literal");
   _json.type = "string";
-  _json.pattern = pattern2.source;
+  _json.pattern = pattern6.source;
 };
 var fileProcessor = (schema, _ctx, json3, _params) => {
   const _json = json3;
@@ -22091,8 +21992,8 @@ var recordProcessor = (schema, ctx, _json, params) => {
       path: [...params.path, "patternProperties", "*"]
     });
     json3.patternProperties = {};
-    for (const pattern2 of patterns) {
-      json3.patternProperties[pattern2.source] = valueSchema;
+    for (const pattern6 of patterns) {
+      json3.patternProperties[pattern6.source] = valueSchema;
     }
   } else {
     if (ctx.target === "draft-07" || ctx.target === "draft-2020-12") {
@@ -22723,7 +22624,7 @@ var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
       return this.check(...chks);
     },
     clone(def2, params) {
-      return clone2(this, def2, params);
+      return clone(this, def2, params);
     },
     brand() {
       return this;
@@ -23474,7 +23375,7 @@ function record(keyType, valueType, params) {
   });
 }
 function partialRecord(keyType, valueType, params) {
-  const k = clone2(keyType);
+  const k = clone(keyType);
   k._zod.values = void 0;
   return new ZodRecord({
     type: "record",
@@ -24272,9 +24173,9 @@ function convertBaseSchema(schema, ctx) {
         const patternProps = schema.patternProperties;
         const patternKeys = Object.keys(patternProps);
         const looseRecords = [];
-        for (const pattern2 of patternKeys) {
-          const patternValue = convertSchema(patternProps[pattern2], ctx);
-          const keySchema = z.string().regex(new RegExp(pattern2));
+        for (const pattern6 of patternKeys) {
+          const patternValue = convertSchema(patternProps[pattern6], ctx);
+          const keySchema = z.string().regex(new RegExp(pattern6));
           looseRecords.push(z.looseRecord(keySchema, patternValue));
         }
         const schemasToIntersect = [];
@@ -24470,7 +24371,232 @@ function date4(params) {
 // ../../node_modules/@deepseek-ai/dsh-sandbox-policy/node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// ../../node_modules/@deepseek-ai/schemastery/lib/index.mjs
+// ../../node_modules/@deepseek-ai/dsh-sandbox-policy/node_modules/@deepseek-ai/cosmokit/lib/index.js
+function isNullable2(value) {
+  return value === null || value === void 0;
+}
+function isPlainObject2(data) {
+  return data && typeof data === "object" && !Array.isArray(data);
+}
+function filterKeys(object4, filter) {
+  return Object.fromEntries(Object.entries(object4).filter(([key, value]) => filter(key, value)));
+}
+function mapValues(object4, transform3) {
+  return Object.fromEntries(Object.entries(object4).map(([key, value]) => [key, transform3(value, key)]));
+}
+function pick2(source, keys, forced) {
+  if (!keys) return { ...source };
+  const result = {};
+  for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
+  return result;
+}
+var write = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
+function snapshot(value, ancestors = /* @__PURE__ */ new Set()) {
+  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
+  if (value === null || typeof value !== "object") return value;
+  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot(item, ancestors)));
+    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new TypeError("volatile config objects must be plain objects or arrays");
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot(item, ancestors)])));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+function createVolatile(value) {
+  let current = snapshot(value);
+  return Object.freeze({
+    get: () => current,
+    [write]: (value2) => {
+      current = value2;
+    }
+  });
+}
+function isVolatile(value) {
+  return typeof value === "object" && value !== null && write in value;
+}
+function is2(type, value) {
+  if (arguments.length === 1) return (value2) => is2(type, value2);
+  return type in globalThis && value instanceof globalThis[type] || Object.prototype.toString.call(value).slice(8, -1) === type;
+}
+function isArrayBufferLike2(value) {
+  return is2("ArrayBuffer", value) || is2("SharedArrayBuffer", value);
+}
+function isArrayBufferSource2(value) {
+  return isArrayBufferLike2(value) || ArrayBuffer.isView(value);
+}
+var Binary2;
+(function(Binary7) {
+  Binary7.is = isArrayBufferLike2;
+  Binary7.isSource = isArrayBufferSource2;
+  function fromSource(source) {
+    if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+    else return source;
+  }
+  Binary7.fromSource = fromSource;
+  function toBase64(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
+    let binary = "";
+    const bytes = new Uint8Array(source);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+  Binary7.toBase64 = toBase64;
+  function fromBase64(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
+    return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
+  }
+  Binary7.fromBase64 = fromBase64;
+  function toHex(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
+    return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  Binary7.toHex = toHex;
+  function fromHex(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
+    const hex5 = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
+    const buffer = [];
+    for (let i = 0; i < hex5.length; i += 2) buffer.push(parseInt(`${hex5[i]}${hex5[i + 1]}`, 16));
+    return Uint8Array.from(buffer).buffer;
+  }
+  Binary7.fromHex = fromHex;
+})(Binary2 || (Binary2 = {}));
+var base64ToArrayBuffer2 = Binary2.fromBase64;
+var arrayBufferToBase642 = Binary2.toBase64;
+var hexToArrayBuffer2 = Binary2.fromHex;
+var arrayBufferToHex2 = Binary2.toHex;
+function clone2(source, refs = /* @__PURE__ */ new Map()) {
+  if (!source || typeof source !== "object") return source;
+  if (is2("Date", source)) return new Date(source.valueOf());
+  if (is2("RegExp", source)) return new RegExp(source.source, source.flags);
+  if (isArrayBufferLike2(source)) return source.slice(0);
+  if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+  const cached5 = refs.get(source);
+  if (cached5) return cached5;
+  if (Array.isArray(source)) {
+    const result2 = [];
+    refs.set(source, result2);
+    source.forEach((value, index) => {
+      result2[index] = Reflect.apply(clone2, null, [value, refs]);
+    });
+    return result2;
+  }
+  const result = Object.create(Object.getPrototypeOf(source));
+  refs.set(source, result);
+  for (const key of Reflect.ownKeys(source)) {
+    const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
+    if ("value" in descriptor) descriptor.value = Reflect.apply(clone2, null, [descriptor.value, refs]);
+    Reflect.defineProperty(result, key, descriptor);
+  }
+  return result;
+}
+function deepEqual(a, b, strict) {
+  const ancestors = /* @__PURE__ */ new Set();
+  function compare(a2, b2) {
+    if (a2 === b2) return true;
+    if (isVolatile(a2) || isVolatile(b2)) return isVolatile(a2) && isVolatile(b2);
+    if (!strict && isNullable2(a2) && isNullable2(b2)) return true;
+    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
+    if (ancestors.has(a2)) return false;
+    function check3(test, then) {
+      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
+    }
+    ancestors.add(a2);
+    try {
+      return check3(Array.isArray, (a3, b3) => {
+        if (a3.length !== b3.length) return false;
+        for (let index = 0; index < a3.length; index++) if (!compare(a3[index], b3[index])) return false;
+        return true;
+      }) ?? check3(is2("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is2("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is2("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike2, (a3, b3) => {
+        if (a3.byteLength !== b3.byteLength) return false;
+        const viewA = new Uint8Array(a3);
+        const viewB = new Uint8Array(b3);
+        for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
+        return true;
+      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({
+        ...a2,
+        ...b2
+      }).every((key) => compare(a2[key], b2[key])));
+    } finally {
+      ancestors.delete(a2);
+    }
+  }
+  return compare(a, b);
+}
+var Time2;
+(function(Time7) {
+  Time7.millisecond = 1;
+  Time7.second = 1e3;
+  Time7.minute = Time7.second * 60;
+  Time7.hour = Time7.minute * 60;
+  Time7.day = Time7.hour * 24;
+  Time7.week = Time7.day * 7;
+  let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
+  function setTimezoneOffset(offset) {
+    timezoneOffset = offset;
+  }
+  Time7.setTimezoneOffset = setTimezoneOffset;
+  function getTimezoneOffset() {
+    return timezoneOffset;
+  }
+  Time7.getTimezoneOffset = getTimezoneOffset;
+  function getDateNumber(date14 = /* @__PURE__ */ new Date(), offset) {
+    if (typeof date14 === "number") date14 = new Date(date14);
+    if (offset === void 0) offset = timezoneOffset;
+    return Math.floor((date14.valueOf() / Time7.minute - offset) / 1440);
+  }
+  Time7.getDateNumber = getDateNumber;
+  function fromDateNumber(value, offset) {
+    const date14 = new Date(value * Time7.day);
+    if (offset === void 0) offset = timezoneOffset;
+    return new Date(+date14 + offset * Time7.minute);
+  }
+  Time7.fromDateNumber = fromDateNumber;
+  const numeric = /\d+(?:\.\d+)?/.source;
+  const timeRegExp = new RegExp(`^${[
+    "w(?:eek(?:s)?)?",
+    "d(?:ay(?:s)?)?",
+    "h(?:our(?:s)?)?",
+    "m(?:in(?:ute)?(?:s)?)?",
+    "s(?:ec(?:ond)?(?:s)?)?"
+  ].map((unit) => `(${numeric}${unit})?`).join("")}$`);
+  function parseTime(source) {
+    const capture = timeRegExp.exec(source);
+    if (!capture) return 0;
+    return (parseFloat(capture[1]) * Time7.week || 0) + (parseFloat(capture[2]) * Time7.day || 0) + (parseFloat(capture[3]) * Time7.hour || 0) + (parseFloat(capture[4]) * Time7.minute || 0) + (parseFloat(capture[5]) * Time7.second || 0);
+  }
+  Time7.parseTime = parseTime;
+  function parseDate(date14) {
+    const parsed = parseTime(date14);
+    if (parsed) date14 = Date.now() + parsed;
+    else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date14}`;
+    else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date14}`;
+    return date14 ? new Date(date14) : /* @__PURE__ */ new Date();
+  }
+  Time7.parseDate = parseDate;
+  function format(ms) {
+    const abs = Math.abs(ms);
+    if (abs >= Time7.day - Time7.hour / 2) return Math.round(ms / Time7.day) + "d";
+    else if (abs >= Time7.hour - Time7.minute / 2) return Math.round(ms / Time7.hour) + "h";
+    else if (abs >= Time7.minute - Time7.second / 2) return Math.round(ms / Time7.minute) + "m";
+    else if (abs >= Time7.second) return Math.round(ms / Time7.second) + "s";
+    return ms + "ms";
+  }
+  Time7.format = format;
+  function toDigits(source, length = 2) {
+    return source.toString().padStart(length, "0");
+  }
+  Time7.toDigits = toDigits;
+  function template(template2, time5 = /* @__PURE__ */ new Date()) {
+    return template2.replace("yyyy", time5.getFullYear().toString()).replace("yy", time5.getFullYear().toString().slice(2)).replace("MM", toDigits(time5.getMonth() + 1)).replace("dd", toDigits(time5.getDate())).replace("hh", toDigits(time5.getHours())).replace("mm", toDigits(time5.getMinutes())).replace("ss", toDigits(time5.getSeconds())).replace("SSS", toDigits(time5.getMilliseconds(), 3));
+  }
+  Time7.template = template;
+})(Time2 || (Time2 = {}));
+
+// ../../node_modules/@deepseek-ai/dsh-sandbox-policy/node_modules/@deepseek-ai/schemastery/lib/index.mjs
 var kSchema = /* @__PURE__ */ Symbol.for("schemastery");
 var kValidationError2 = /* @__PURE__ */ Symbol.for("ValidationError");
 globalThis.__schemastery_index__ ??= 0;
@@ -24639,22 +24765,22 @@ Schema.prototype.experimental = function experimental() {
 };
 Schema.prototype.pattern = function pattern(regexp) {
   const schema = Schema(this);
-  const pattern2 = pick(regexp, ["source", "flags"]);
+  const pattern6 = pick2(regexp, ["source", "flags"]);
   schema.meta = {
     ...schema.meta,
-    pattern: pattern2
+    pattern: pattern6
   };
   return schema;
 };
 Schema.prototype.simplify = function simplify(value) {
   if (isVolatile(value)) value = value.get();
   if (deepEqual(value, this.meta.default, this.type === "dict")) return null;
-  if (isNullable(value)) return value;
+  if (isNullable2(value)) return value;
   if (this.type === "object" || this.type === "dict") {
     const result = {};
     for (const key in value) {
       const item = (this.type === "object" ? this.dict[key] : this.inner)?.simplify(value[key]);
-      if (this.type === "dict" || !isNullable(item)) result[key] = item;
+      if (this.type === "dict" || !isNullable2(item)) result[key] = item;
     }
     if (deepEqual(result, this.meta.default, this.type === "dict")) return null;
     return result;
@@ -24680,12 +24806,12 @@ Schema.prototype.simplify = function simplify(value) {
 Schema.prototype.toString = function toString(inline) {
   return formatters[this.type]?.(this, inline) ?? `Schema<${this.type}>`;
 };
-Schema.prototype.role = function role(role, extra2) {
+Schema.prototype.role = function role(role, extra6) {
   const schema = Schema(this);
   schema.meta = {
     ...schema.meta,
     role,
-    extra: extra2
+    extra: extra6
   };
   return schema;
 };
@@ -24723,8 +24849,8 @@ function validateVolatileSchema(schema, path = [], blocked = false, seen = /* @_
   if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema])) validateVolatileSchema(schema.inner, [...path, "*"], true, seen);
   if (schema.list) for (let index = 0; index < schema.list.length; index++) validateVolatileSchema(schema.list[index], [...path, String(index)], true, seen);
 }
-Schema.extend = function extend2(type, resolve9) {
-  resolvers[type] = resolve9;
+Schema.extend = function extend2(type, resolve14) {
+  resolvers[type] = resolve14;
 };
 Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
   if (!schema) return [data];
@@ -24749,16 +24875,16 @@ Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
     }
   }
   if (options.ignore?.(data, schema)) return [data];
-  if (isNullable(data) && schema.type !== "lazy") {
+  if (isNullable2(data) && schema.type !== "lazy") {
     if (schema.meta.required) throw new ValidationError2(`missing required value`, options);
     let current = schema;
     let fallback = schema.meta.default;
-    while (current?.type === "intersect" && isNullable(fallback)) {
+    while (current?.type === "intersect" && isNullable2(fallback)) {
       current = current.list[0];
       fallback = current?.meta.default;
     }
-    if (isNullable(fallback)) return [data];
-    data = clone(fallback);
+    if (isNullable2(fallback)) return [data];
+    data = clone2(fallback);
   }
   const callback = resolvers[schema.type];
   if (!callback) throw new ValidationError2(`unsupported type "${schema.type}"`, options);
@@ -24770,7 +24896,7 @@ Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
   }
 };
 Schema.from = function from(source) {
-  if (isNullable(source)) return Schema.any();
+  if (isNullable2(source)) return Schema.any();
   else if ([
     "string",
     "number",
@@ -24792,7 +24918,7 @@ Schema.from = function from(source) {
   else throw new TypeError(`cannot infer schema from ${source}`);
 };
 Schema.lazy = function lazy2(builder) {
-  const toJSON2 = () => {
+  const toJSON6 = () => {
     if (!schema.inner[kSchema]) {
       schema.inner = schema.builder();
       schema.inner.meta = {
@@ -24805,7 +24931,7 @@ Schema.lazy = function lazy2(builder) {
   const schema = new Schema({
     type: "lazy",
     builder,
-    inner: { toJSON: toJSON2 }
+    inner: { toJSON: toJSON6 }
   });
   return schema;
 };
@@ -24817,9 +24943,9 @@ Schema.percent = function percent() {
 };
 Schema.date = function date5() {
   return Schema.union([Schema.is(Date), Schema.transform(Schema.string().role("datetime"), (value, options) => {
-    const date10 = new Date(value);
-    if (isNaN(+date10)) throw new ValidationError2(`invalid date "${value}"`, options);
-    return date10;
+    const date14 = new Date(value);
+    if (isNaN(+date14)) throw new ValidationError2(`invalid date "${value}"`, options);
+    return date14;
   }, true)]);
 };
 Schema.regExp = function regExp(flag = "") {
@@ -24836,12 +24962,12 @@ Schema.arrayBuffer = function arrayBuffer(encoding) {
     Schema.is(ArrayBuffer),
     Schema.is(SharedArrayBuffer),
     Schema.transform(Schema.any(), (value, options) => {
-      if (Binary.isSource(value)) return Binary.fromSource(value);
+      if (Binary2.isSource(value)) return Binary2.fromSource(value);
       throw new ValidationError2(`expected ArrayBufferSource but got ${value}`, options);
     }, true),
     ...encoding ? [Schema.transform(Schema.string(), (value, options) => {
       try {
-        return encoding === "base64" ? Binary.fromBase64(value) : Binary.fromHex(value);
+        return encoding === "base64" ? Binary2.fromBase64(value) : Binary2.fromHex(value);
       } catch (e) {
         throw new ValidationError2(e.message, options);
       }
@@ -24935,7 +25061,7 @@ Schema.extend("is", (data, { constructor }, options) => {
     if (data instanceof constructor) return [data];
     throw new ValidationError2(`expected ${constructor.name} but got ${data}`, options);
   } else {
-    if (isNullable(data)) throw new ValidationError2(`expected ${constructor} but got ${data}`, options);
+    if (isNullable2(data)) throw new ValidationError2(`expected ${constructor} but got ${data}`, options);
     let prototype = Object.getPrototypeOf(data);
     while (prototype) {
       if (prototype.constructor?.name === constructor) return [data];
@@ -24960,11 +25086,11 @@ function property(data, key, schema, options) {
 }
 Schema.extend("array", (data, { inner, meta: meta5 }, options) => {
   if (!Array.isArray(data)) throw new ValidationError2(`expected array but got ${data}`, options);
-  checkWithinRange(data.length, meta5, "array length", options, !isNullable(inner.meta.default));
+  checkWithinRange(data.length, meta5, "array length", options, !isNullable2(inner.meta.default));
   return [data.map((_, index) => property(data, index, inner, options))];
 });
 Schema.extend("dict", (data, { inner, sKey }, options, strict) => {
-  if (!isPlainObject(data)) throw new ValidationError2(`expected object but got ${data}`, options);
+  if (!isPlainObject2(data)) throw new ValidationError2(`expected object but got ${data}`, options);
   const result = {};
   for (const key in data) {
     let rKey;
@@ -24994,36 +25120,36 @@ function merge2(result, data) {
   }
 }
 Schema.extend("object", (data, { dict }, options, strict) => {
-  if (!isPlainObject(data)) throw new ValidationError2(`expected object but got ${data}`, options);
+  if (!isPlainObject2(data)) throw new ValidationError2(`expected object but got ${data}`, options);
   const result = {};
   for (const key in dict) {
     const value = property(data, key, dict[key], options);
-    if (!isNullable(value) || key in data) result[key] = value;
+    if (!isNullable2(value) || key in data) result[key] = value;
   }
   if (!strict) merge2(result, data);
   return [result];
 });
-Schema.extend("union", (data, { list, toString: toString2 }, options, strict) => {
+Schema.extend("union", (data, { list, toString: toString6 }, options, strict) => {
   const messages = [];
   for (const inner of list) try {
     return Schema.resolve(data, inner, options, strict);
   } catch (error112) {
     messages.push(error112);
   }
-  throw new ValidationError2(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
+  throw new ValidationError2(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
 });
-Schema.extend("intersect", (data, { list, toString: toString2 }, options, strict) => {
+Schema.extend("intersect", (data, { list, toString: toString6 }, options, strict) => {
   if (!list.length) return [data];
   let result;
   for (const inner of list) {
     const value = Schema.resolve(data, inner, options, true)[0];
-    if (isNullable(value)) continue;
-    if (isNullable(result)) result = value;
-    else if (typeof result !== typeof value) throw new ValidationError2(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
+    if (isNullable2(value)) continue;
+    if (isNullable2(result)) result = value;
+    else if (typeof result !== typeof value) throw new ValidationError2(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
     else if (typeof value === "object") merge2(result ??= {}, value);
-    else if (result !== value) throw new ValidationError2(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
+    else if (result !== value) throw new ValidationError2(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
   }
-  if (!strict && isPlainObject(data)) merge2(result, data);
+  if (!strict && isPlainObject2(data)) merge2(result, data);
   return [result];
 });
 Schema.extend("transform", (data, { inner, callback, preserve }, options) => {
@@ -25113,15 +25239,23 @@ defineMethod("transform", [
 
 // ../../node_modules/@deepseek-ai/dsh-sandbox-policy/lib/index.js
 function resolveWorkspaceRoot(path) {
-  if (!isAbsolute(path)) throw new Error("sandbox-policy: workspace root must be an absolute execution-world path");
+  if (!isAbsolute(path) || path.includes("\0")) throw new Error("sandbox-policy: workspace root must be an absolute execution-world path without NUL bytes");
   return path;
+}
+function resolveAdditionalWritableRoots(roots) {
+  if (roots === void 0 || roots.length === 0) return void 0;
+  for (const root of roots) if (!isAbsolute(root) || root.includes("\0")) throw new Error("sandbox-policy: additionalWritableRoots entries must be absolute execution-world paths");
+  return Object.freeze([...new Set(roots)]);
 }
 function renderPolicyContext(policy) {
   switch (policy.mode) {
     case "read-only":
       return "Current DSH file policy: read-only. Any available operation enforced by the DSH file sandbox cannot modify files in the standing mode. Do not refuse a required modification from this policy alone: try an available tool normally and follow any denial and escalation guidance it returns.";
-    case "workspace-write":
-      return `Current DSH file policy: workspace-write. Any available operation enforced by the DSH file sandbox may modify files under the session workspace: ${JSON.stringify(policy.workspaceRoot)}. Some platform temporary areas may also be writable.`;
+    case "workspace-write": {
+      const additional = policy.additionalWritableRoots;
+      const extra6 = additional === void 0 ? "" : ` Additional writable directories: ${JSON.stringify(additional)}.`;
+      return `Current DSH file policy: workspace-write. Any available operation enforced by the DSH file sandbox may modify files under the session workspace: ${JSON.stringify(policy.workspaceRoot)}.${extra6} Some platform temporary areas may also be writable.`;
+    }
     case "danger-full-access":
       return "Current DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.";
     /* v8 ignore next 4 -- SandboxMode is a typed same-process closed union; this branch is only the static exhaustiveness guard. */
@@ -25143,18 +25277,26 @@ var SandboxPolicyService = class extends Service {
       "workspace-write",
       "danger-full-access"
     ]).default("read-only"),
-    workspaceRoot: Schema.string()
+    workspaceRoot: Schema.string(),
+    additionalWritableRoots: Schema.array(Schema.string()).default([])
   });
   static inject = ["sessionProjections"];
   /** The deployment default mode — the fallback beneath a session override. */
   defaultMode;
   /** The absolute `workspace-write` fallback root for calls without a session cwd. */
   workspaceRoot;
+  /** The frozen extra writable directories shared by every resolved policy, or `undefined` for none. */
+  additionalWritableRoots;
+  sandboxModeProjectionHandle;
   constructor(ctx, config3) {
     super(ctx, "sandboxPolicy");
     this.defaultMode = config3.mode;
     this.workspaceRoot = resolveWorkspaceRoot(config3.workspaceRoot ?? process.cwd());
-    ctx.sessionProjections.register({
+    this.additionalWritableRoots = resolveAdditionalWritableRoots(config3.additionalWritableRoots);
+  }
+  async [Service.init]() {
+    const ctx = this.ctx;
+    this.sandboxModeProjectionHandle = await ctx.sessionProjections.register({
       key: "sandboxMode",
       stateVersion: 1,
       stateSchema: sandboxModeStateSchema,
@@ -25186,6 +25328,7 @@ var SandboxPolicyService = class extends Service {
     return {
       mode: request.mode ?? (session === void 0 ? void 0 : this.overrideOf(session)) ?? this.defaultMode,
       workspaceRoot: resolveWorkspaceRoot(session?.header.cwd ?? this.workspaceRoot),
+      ...this.additionalWritableRoots === void 0 ? {} : { additionalWritableRoots: this.additionalWritableRoots },
       ...session === void 0 ? {} : { sessionId: session.id }
     };
   }
@@ -25195,9 +25338,105 @@ var SandboxPolicyService = class extends Service {
   * @returns the last logged mode, or `undefined` without one.
   */
   overrideOf(session) {
-    return this.ctx.sessionProjections.stateOf(session, "sandboxMode") ?? void 0;
+    return this.sandboxModeProjectionHandle.stateOf(session) ?? void 0;
   }
 };
+
+// ../../node_modules/@deepseek-ai/dsh-fs-patch/lib/index.js
+var WHITE_SPACE$1 = new RegExp("\\p{White_Space}", "u");
+var WHITE_SPACE = new RegExp("\\p{White_Space}", "u");
+function trimWhitespace(value, leading) {
+  let start = 0;
+  let end = value.length;
+  if (leading) while (start < end && WHITE_SPACE.test(value.charAt(start))) start++;
+  while (end > start && WHITE_SPACE.test(value.charAt(end - 1))) end--;
+  return value.slice(start, end);
+}
+function normalizePunctuation(value) {
+  return trimWhitespace(value, true).replace(/[\u2010-\u2015\u2212]/gu, "-").replace(/[\u2018-\u201B]/gu, "'").replace(/[\u201C-\u201F]/gu, '"').replace(/[\u00A0\u2002-\u200A\u202F\u205F\u3000]/gu, " ");
+}
+var MATCH_PASSES = [
+  (value) => value,
+  (value) => trimWhitespace(value, false),
+  (value) => trimWhitespace(value, true),
+  normalizePunctuation
+];
+function seekSequence(lines, pattern6, start, eof) {
+  if (pattern6.length === 0) return start;
+  if (pattern6.length > lines.length) return void 0;
+  const last = lines.length - pattern6.length;
+  const first = eof ? last : start;
+  for (const normalize2 of MATCH_PASSES) {
+    const expected = pattern6.map(normalize2);
+    for (let index = first; index <= last; index++) if (expected.every((line, offset) => normalize2(lines[index + offset]) === line)) return index;
+  }
+}
+function applyHunks(before, hunks) {
+  const original = before.split("\n");
+  if (original.at(-1) === "") original.pop();
+  const replacements = [];
+  let lineIndex = 0;
+  for (const hunk of hunks) {
+    if (hunk.context !== void 0) {
+      const pattern7 = [hunk.context];
+      const found2 = seekSequence(original, pattern7, lineIndex, false);
+      if (found2 === void 0) return {
+        ok: false,
+        failure: {
+          hunkLineNumber: hunk.lineNumber,
+          stage: "context",
+          searchStart: lineIndex,
+          pattern: pattern7
+        }
+      };
+      lineIndex = found2 + 1;
+    }
+    if (hunk.oldLines.length === 0) {
+      const start = original.at(-1) === "" ? original.length - 1 : original.length;
+      replacements.push({
+        start,
+        oldLength: 0,
+        newLines: hunk.newLines
+      });
+      continue;
+    }
+    let pattern6 = hunk.oldLines;
+    let newLines = hunk.newLines;
+    let found = seekSequence(original, pattern6, lineIndex, hunk.isEndOfFile);
+    if (found === void 0 && pattern6.at(-1) === "") {
+      pattern6 = pattern6.slice(0, -1);
+      if (newLines.at(-1) === "") newLines = newLines.slice(0, -1);
+      found = seekSequence(original, pattern6, lineIndex, hunk.isEndOfFile);
+    }
+    if (found === void 0) return {
+      ok: false,
+      failure: {
+        hunkLineNumber: hunk.lineNumber,
+        stage: "oldLines",
+        searchStart: lineIndex,
+        pattern: [...hunk.oldLines]
+      }
+    };
+    replacements.push({
+      start: found,
+      oldLength: pattern6.length,
+      newLines
+    });
+    lineIndex = found + pattern6.length;
+  }
+  replacements.sort((left, right) => left.start - right.start);
+  let lines = original;
+  for (const replacement of replacements.reverse()) lines = [
+    ...lines.slice(0, replacement.start),
+    ...replacement.newLines,
+    ...lines.slice(replacement.start + replacement.oldLength)
+  ];
+  if (lines.at(-1) !== "") lines.push("");
+  return {
+    ok: true,
+    after: lines.join("\n")
+  };
+}
 
 // ../../node_modules/@deepseek-ai/dsh-fs-local/lib/index.js
 import { constants } from "node:buffer";
@@ -25796,9 +26035,9 @@ var addAndConvert = (main, prop, item) => {
   container.add(item);
 };
 var clearItem = (cont) => (key) => {
-  const set4 = cont[key];
-  if (set4 instanceof Set) {
-    set4.clear();
+  const set8 = cont[key];
+  if (set8 instanceof Set) {
+    set8.clear();
   } else {
     delete cont[key];
   }
@@ -26115,7 +26354,7 @@ var NodeFsHandler = class {
         this._addToNodeFs(path, initialAdd, wh, depth + 1);
       }
     }).on(EV.ERROR, this._boundHandleError);
-    return new Promise((resolve9, reject) => {
+    return new Promise((resolve14, reject) => {
       if (!stream)
         return reject();
       stream.once(STR_END, () => {
@@ -26124,7 +26363,7 @@ var NodeFsHandler = class {
           return;
         }
         const wasThrottled = throttler ? throttler.clear() : false;
-        resolve9(void 0);
+        resolve14(void 0);
         previous.getChildren().filter((item) => {
           return item !== directory && !current.has(item);
         }).forEach((item) => {
@@ -26295,8 +26534,8 @@ function normalizePath(path) {
 function matchPatterns(patterns, testString, stats) {
   const path = normalizePath(testString);
   for (let index = 0; index < patterns.length; index++) {
-    const pattern2 = patterns[index];
-    if (pattern2(path, stats)) {
+    const pattern6 = patterns[index];
+    if (pattern6(path, stats)) {
       return true;
     }
   }
@@ -26976,8 +27215,874 @@ function watch(paths, options = {}) {
 }
 
 // ../../node_modules/@deepseek-ai/dsh-fs-local/lib/index.js
-import { basename as basename3, dirname as dirname3, isAbsolute as isAbsolute3, join as join4, relative as relative3, resolve as resolve4, sep, toNamespacedPath } from "node:path";
+import { basename as basename3, dirname as dirname3, isAbsolute as isAbsolute3, join as join4, relative as relative3, resolve as resolve6, sep, toNamespacedPath } from "node:path";
 import { pathToFileURL } from "node:url";
+
+// ../../node_modules/@deepseek-ai/dsh-fs-local/node_modules/@deepseek-ai/cosmokit/lib/index.js
+function isNullable3(value) {
+  return value === null || value === void 0;
+}
+function isPlainObject3(data) {
+  return data && typeof data === "object" && !Array.isArray(data);
+}
+function filterKeys2(object4, filter) {
+  return Object.fromEntries(Object.entries(object4).filter(([key, value]) => filter(key, value)));
+}
+function mapValues2(object4, transform3) {
+  return Object.fromEntries(Object.entries(object4).map(([key, value]) => [key, transform3(value, key)]));
+}
+function pick3(source, keys, forced) {
+  if (!keys) return { ...source };
+  const result = {};
+  for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
+  return result;
+}
+var write2 = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
+function snapshot2(value, ancestors = /* @__PURE__ */ new Set()) {
+  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
+  if (value === null || typeof value !== "object") return value;
+  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot2(item, ancestors)));
+    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new TypeError("volatile config objects must be plain objects or arrays");
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot2(item, ancestors)])));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+function createVolatile2(value) {
+  let current = snapshot2(value);
+  return Object.freeze({
+    get: () => current,
+    [write2]: (value2) => {
+      current = value2;
+    }
+  });
+}
+function isVolatile2(value) {
+  return typeof value === "object" && value !== null && write2 in value;
+}
+function is3(type, value) {
+  if (arguments.length === 1) return (value2) => is3(type, value2);
+  return type in globalThis && value instanceof globalThis[type] || Object.prototype.toString.call(value).slice(8, -1) === type;
+}
+function isArrayBufferLike3(value) {
+  return is3("ArrayBuffer", value) || is3("SharedArrayBuffer", value);
+}
+function isArrayBufferSource3(value) {
+  return isArrayBufferLike3(value) || ArrayBuffer.isView(value);
+}
+var Binary3;
+(function(Binary7) {
+  Binary7.is = isArrayBufferLike3;
+  Binary7.isSource = isArrayBufferSource3;
+  function fromSource(source) {
+    if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+    else return source;
+  }
+  Binary7.fromSource = fromSource;
+  function toBase64(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
+    let binary = "";
+    const bytes = new Uint8Array(source);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+  Binary7.toBase64 = toBase64;
+  function fromBase64(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
+    return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
+  }
+  Binary7.fromBase64 = fromBase64;
+  function toHex(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
+    return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  Binary7.toHex = toHex;
+  function fromHex(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
+    const hex5 = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
+    const buffer = [];
+    for (let i = 0; i < hex5.length; i += 2) buffer.push(parseInt(`${hex5[i]}${hex5[i + 1]}`, 16));
+    return Uint8Array.from(buffer).buffer;
+  }
+  Binary7.fromHex = fromHex;
+})(Binary3 || (Binary3 = {}));
+var base64ToArrayBuffer3 = Binary3.fromBase64;
+var arrayBufferToBase643 = Binary3.toBase64;
+var hexToArrayBuffer3 = Binary3.fromHex;
+var arrayBufferToHex3 = Binary3.toHex;
+function clone3(source, refs = /* @__PURE__ */ new Map()) {
+  if (!source || typeof source !== "object") return source;
+  if (is3("Date", source)) return new Date(source.valueOf());
+  if (is3("RegExp", source)) return new RegExp(source.source, source.flags);
+  if (isArrayBufferLike3(source)) return source.slice(0);
+  if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+  const cached5 = refs.get(source);
+  if (cached5) return cached5;
+  if (Array.isArray(source)) {
+    const result2 = [];
+    refs.set(source, result2);
+    source.forEach((value, index) => {
+      result2[index] = Reflect.apply(clone3, null, [value, refs]);
+    });
+    return result2;
+  }
+  const result = Object.create(Object.getPrototypeOf(source));
+  refs.set(source, result);
+  for (const key of Reflect.ownKeys(source)) {
+    const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
+    if ("value" in descriptor) descriptor.value = Reflect.apply(clone3, null, [descriptor.value, refs]);
+    Reflect.defineProperty(result, key, descriptor);
+  }
+  return result;
+}
+function deepEqual2(a, b, strict) {
+  const ancestors = /* @__PURE__ */ new Set();
+  function compare(a2, b2) {
+    if (a2 === b2) return true;
+    if (isVolatile2(a2) || isVolatile2(b2)) return isVolatile2(a2) && isVolatile2(b2);
+    if (!strict && isNullable3(a2) && isNullable3(b2)) return true;
+    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
+    if (ancestors.has(a2)) return false;
+    function check3(test, then) {
+      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
+    }
+    ancestors.add(a2);
+    try {
+      return check3(Array.isArray, (a3, b3) => {
+        if (a3.length !== b3.length) return false;
+        for (let index = 0; index < a3.length; index++) if (!compare(a3[index], b3[index])) return false;
+        return true;
+      }) ?? check3(is3("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is3("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is3("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike3, (a3, b3) => {
+        if (a3.byteLength !== b3.byteLength) return false;
+        const viewA = new Uint8Array(a3);
+        const viewB = new Uint8Array(b3);
+        for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
+        return true;
+      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({
+        ...a2,
+        ...b2
+      }).every((key) => compare(a2[key], b2[key])));
+    } finally {
+      ancestors.delete(a2);
+    }
+  }
+  return compare(a, b);
+}
+var Time3;
+(function(Time7) {
+  Time7.millisecond = 1;
+  Time7.second = 1e3;
+  Time7.minute = Time7.second * 60;
+  Time7.hour = Time7.minute * 60;
+  Time7.day = Time7.hour * 24;
+  Time7.week = Time7.day * 7;
+  let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
+  function setTimezoneOffset(offset) {
+    timezoneOffset = offset;
+  }
+  Time7.setTimezoneOffset = setTimezoneOffset;
+  function getTimezoneOffset() {
+    return timezoneOffset;
+  }
+  Time7.getTimezoneOffset = getTimezoneOffset;
+  function getDateNumber(date14 = /* @__PURE__ */ new Date(), offset) {
+    if (typeof date14 === "number") date14 = new Date(date14);
+    if (offset === void 0) offset = timezoneOffset;
+    return Math.floor((date14.valueOf() / Time7.minute - offset) / 1440);
+  }
+  Time7.getDateNumber = getDateNumber;
+  function fromDateNumber(value, offset) {
+    const date14 = new Date(value * Time7.day);
+    if (offset === void 0) offset = timezoneOffset;
+    return new Date(+date14 + offset * Time7.minute);
+  }
+  Time7.fromDateNumber = fromDateNumber;
+  const numeric = /\d+(?:\.\d+)?/.source;
+  const timeRegExp = new RegExp(`^${[
+    "w(?:eek(?:s)?)?",
+    "d(?:ay(?:s)?)?",
+    "h(?:our(?:s)?)?",
+    "m(?:in(?:ute)?(?:s)?)?",
+    "s(?:ec(?:ond)?(?:s)?)?"
+  ].map((unit) => `(${numeric}${unit})?`).join("")}$`);
+  function parseTime(source) {
+    const capture = timeRegExp.exec(source);
+    if (!capture) return 0;
+    return (parseFloat(capture[1]) * Time7.week || 0) + (parseFloat(capture[2]) * Time7.day || 0) + (parseFloat(capture[3]) * Time7.hour || 0) + (parseFloat(capture[4]) * Time7.minute || 0) + (parseFloat(capture[5]) * Time7.second || 0);
+  }
+  Time7.parseTime = parseTime;
+  function parseDate(date14) {
+    const parsed = parseTime(date14);
+    if (parsed) date14 = Date.now() + parsed;
+    else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date14}`;
+    else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date14}`;
+    return date14 ? new Date(date14) : /* @__PURE__ */ new Date();
+  }
+  Time7.parseDate = parseDate;
+  function format(ms) {
+    const abs = Math.abs(ms);
+    if (abs >= Time7.day - Time7.hour / 2) return Math.round(ms / Time7.day) + "d";
+    else if (abs >= Time7.hour - Time7.minute / 2) return Math.round(ms / Time7.hour) + "h";
+    else if (abs >= Time7.minute - Time7.second / 2) return Math.round(ms / Time7.minute) + "m";
+    else if (abs >= Time7.second) return Math.round(ms / Time7.second) + "s";
+    return ms + "ms";
+  }
+  Time7.format = format;
+  function toDigits(source, length = 2) {
+    return source.toString().padStart(length, "0");
+  }
+  Time7.toDigits = toDigits;
+  function template(template2, time5 = /* @__PURE__ */ new Date()) {
+    return template2.replace("yyyy", time5.getFullYear().toString()).replace("yy", time5.getFullYear().toString().slice(2)).replace("MM", toDigits(time5.getMonth() + 1)).replace("dd", toDigits(time5.getDate())).replace("hh", toDigits(time5.getHours())).replace("mm", toDigits(time5.getMinutes())).replace("ss", toDigits(time5.getSeconds())).replace("SSS", toDigits(time5.getMilliseconds(), 3));
+  }
+  Time7.template = template;
+})(Time3 || (Time3 = {}));
+
+// ../../node_modules/@deepseek-ai/dsh-fs-local/node_modules/@deepseek-ai/schemastery/lib/index.mjs
+var kSchema2 = /* @__PURE__ */ Symbol.for("schemastery");
+var kValidationError3 = /* @__PURE__ */ Symbol.for("ValidationError");
+globalThis.__schemastery_index__ ??= 0;
+globalThis.__schemastery_refs__ = void 0;
+var ValidationError3 = class extends TypeError {
+  options;
+  name = "ValidationError";
+  constructor(message, options) {
+    let prefix = "$";
+    for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
+    else if (typeof segment === "number") prefix += "[" + segment + "]";
+    else if (typeof segment === "symbol") prefix += `[Symbol(${segment.toString()})]`;
+    if (prefix.startsWith(".")) prefix = prefix.slice(1);
+    super((prefix === "$" ? "" : `${prefix} `) + message);
+    this.options = options;
+  }
+  static is(error112) {
+    return !!error112?.[kValidationError3];
+  }
+};
+Object.defineProperty(ValidationError3.prototype, kValidationError3, { value: true });
+var Schema2 = function(options) {
+  const schema = function(data, options2 = {}) {
+    return Schema2.resolve(data, schema, options2)[0];
+  };
+  if (options.refs) {
+    const refs = mapValues2(options.refs, (options2) => new Schema2(options2));
+    const getRef = (uid) => refs[uid];
+    for (const key in refs) {
+      const options2 = refs[key];
+      options2.sKey = getRef(options2.sKey);
+      options2.inner = getRef(options2.inner);
+      options2.list = options2.list && options2.list.map(getRef);
+      options2.dict = options2.dict && mapValues2(options2.dict, getRef);
+    }
+    return refs[options.uid];
+  }
+  Object.assign(schema, options);
+  if (typeof schema.callback === "string") try {
+    schema.callback = new Function("return " + schema.callback)();
+  } catch {
+  }
+  Object.defineProperty(schema, "uid", { value: globalThis.__schemastery_index__++ });
+  Object.setPrototypeOf(schema, Schema2.prototype);
+  schema.meta ||= {};
+  schema.toString = schema.toString.bind(schema);
+  return schema;
+};
+Schema2.prototype = Object.create(Function.prototype);
+Schema2.prototype[kSchema2] = true;
+Object.defineProperty(Schema2.prototype, "~standard", { get() {
+  return {
+    version: 1,
+    vendor: "schemastery",
+    validate: (value) => {
+      try {
+        return { value: Schema2.resolve(value, this, {})[0] };
+      } catch (error112) {
+        if (ValidationError3.is(error112)) return { issues: [{
+          message: error112.message,
+          path: error112.options.path
+        }] };
+        throw error112;
+      }
+    }
+  };
+} });
+Schema2.ValidationError = ValidationError3;
+Schema2.prototype.toJSON = function toJSON2() {
+  if (globalThis.__schemastery_refs__) {
+    globalThis.__schemastery_refs__[this.uid] ??= JSON.parse(JSON.stringify({ ...this }));
+    return this.uid;
+  }
+  globalThis.__schemastery_refs__ = { [this.uid]: { ...this } };
+  globalThis.__schemastery_refs__[this.uid] = JSON.parse(JSON.stringify({ ...this }));
+  const result = {
+    uid: this.uid,
+    refs: globalThis.__schemastery_refs__
+  };
+  globalThis.__schemastery_refs__ = void 0;
+  return result;
+};
+Schema2.prototype.set = function set3(key, value) {
+  this.dict[key] = value;
+  return this;
+};
+Schema2.prototype.push = function push2(value) {
+  this.list.push(value);
+  return this;
+};
+function mergeDesc2(original, messages) {
+  const result = typeof original === "string" ? { "": original } : { ...original };
+  for (const locale in messages) {
+    const value = messages[locale];
+    if (value?.$description || value?.$desc) result[locale] = value.$description || value.$desc;
+    else if (typeof value === "string") result[locale] = value;
+  }
+  return result;
+}
+function getInner2(value) {
+  return value?.$value ?? value?.$inner;
+}
+function extractKeys2(data) {
+  return filterKeys2(data ?? {}, (key) => !key.startsWith("$"));
+}
+Schema2.prototype.i18n = function i18n2(messages) {
+  const schema = Schema2(this);
+  const desc = mergeDesc2(schema.meta.description, messages);
+  if (Object.keys(desc).length) schema.meta.description = desc;
+  if (schema.dict) schema.dict = mapValues2(schema.dict, (inner, key) => {
+    return inner.i18n(mapValues2(messages, (data) => getInner2(data)?.[key] ?? data?.[key]));
+  });
+  if (schema.list) schema.list = schema.list.map((inner, index) => {
+    return inner.i18n(mapValues2(messages, (data = {}) => {
+      if (Array.isArray(getInner2(data))) return getInner2(data)[index];
+      if (Array.isArray(data)) return data[index];
+      return extractKeys2(data);
+    }));
+  });
+  if (schema.inner) schema.inner = schema.inner.i18n(mapValues2(messages, (data) => {
+    if (getInner2(data)) return getInner2(data);
+    return extractKeys2(data);
+  }));
+  if (schema.sKey) schema.sKey = schema.sKey.i18n(mapValues2(messages, (data) => data?.$key));
+  return schema;
+};
+Schema2.prototype.extra = function extra2(key, value) {
+  const schema = Schema2(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+};
+for (const key of [
+  "required",
+  "disabled",
+  "collapse",
+  "hidden",
+  "loose"
+]) Object.assign(Schema2.prototype, { [key](value = true) {
+  const schema = Schema2(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+} });
+Schema2.prototype.deprecated = function deprecated2() {
+  const schema = Schema2(this);
+  schema.meta.badges ||= [];
+  schema.meta.badges.push({
+    text: "deprecated",
+    type: "danger"
+  });
+  return schema;
+};
+Schema2.prototype.experimental = function experimental2() {
+  const schema = Schema2(this);
+  schema.meta.badges ||= [];
+  schema.meta.badges.push({
+    text: "experimental",
+    type: "warning"
+  });
+  return schema;
+};
+Schema2.prototype.pattern = function pattern2(regexp) {
+  const schema = Schema2(this);
+  const pattern6 = pick3(regexp, ["source", "flags"]);
+  schema.meta = {
+    ...schema.meta,
+    pattern: pattern6
+  };
+  return schema;
+};
+Schema2.prototype.simplify = function simplify2(value) {
+  if (isVolatile2(value)) value = value.get();
+  if (deepEqual2(value, this.meta.default, this.type === "dict")) return null;
+  if (isNullable3(value)) return value;
+  if (this.type === "object" || this.type === "dict") {
+    const result = {};
+    for (const key in value) {
+      const item = (this.type === "object" ? this.dict[key] : this.inner)?.simplify(value[key]);
+      if (this.type === "dict" || !isNullable3(item)) result[key] = item;
+    }
+    if (deepEqual2(result, this.meta.default, this.type === "dict")) return null;
+    return result;
+  } else if (this.type === "array" || this.type === "tuple") {
+    const result = [];
+    value.forEach((value2, index) => {
+      const schema = this.type === "array" ? this.inner : this.list[index];
+      const item = schema ? schema.simplify(value2) : value2;
+      result.push(item);
+    });
+    return result;
+  } else if (this.type === "intersect") {
+    const result = {};
+    for (const item of this.list) Object.assign(result, item.simplify(value));
+    return result;
+  } else if (this.type === "union") for (const schema of this.list) try {
+    Schema2.resolve(value, schema, {});
+    return schema.simplify(value);
+  } catch {
+  }
+  return value;
+};
+Schema2.prototype.toString = function toString2(inline) {
+  return formatters2[this.type]?.(this, inline) ?? `Schema<${this.type}>`;
+};
+Schema2.prototype.role = function role2(role2, extra6) {
+  const schema = Schema2(this);
+  schema.meta = {
+    ...schema.meta,
+    role: role2,
+    extra: extra6
+  };
+  return schema;
+};
+for (const key of [
+  "default",
+  "link",
+  "comment",
+  "description",
+  "max",
+  "min",
+  "step"
+]) Object.assign(Schema2.prototype, { [key](value) {
+  const schema = Schema2(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+} });
+Schema2.prototype.volatile = function volatile2() {
+  if (this.meta.volatile) throw new TypeError("volatile schema is already wrapped");
+  return this.extra("volatile", true);
+};
+var resolvers2 = {};
+var checkedVolatile2 = /* @__PURE__ */ Symbol("checked-volatile-schema");
+function validateVolatileSchema2(schema, path = [], blocked = false, seen = /* @__PURE__ */ new Map()) {
+  const states = seen.get(schema) ?? /* @__PURE__ */ new Set();
+  if (states.has(blocked)) return;
+  states.add(blocked);
+  seen.set(schema, states);
+  if (schema.meta?.volatile && blocked) throw new ValidationError3("volatile fields require a fixed object path without an enclosing volatile field", { path });
+  const nested = blocked || !!schema.meta?.volatile;
+  if (schema.dict) for (const [key, child] of Object.entries(schema.dict)) validateVolatileSchema2(child, [...path, key], nested, seen);
+  if (schema.sKey) validateVolatileSchema2(schema.sKey, [...path, "<key>"], true, seen);
+  if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema2])) validateVolatileSchema2(schema.inner, [...path, "*"], true, seen);
+  if (schema.list) for (let index = 0; index < schema.list.length; index++) validateVolatileSchema2(schema.list[index], [...path, String(index)], true, seen);
+}
+Schema2.extend = function extend3(type, resolve14) {
+  resolvers2[type] = resolve14;
+};
+Schema2.resolve = function resolve4(data, schema, options = {}, strict = false) {
+  if (!schema) return [data];
+  if (!options[checkedVolatile2]) {
+    validateVolatileSchema2(schema, options.path);
+    options = {
+      ...options,
+      [checkedVolatile2]: true
+    };
+  }
+  if (schema.meta?.volatile) {
+    const inner = Schema2(schema);
+    inner.meta = {
+      ...schema.meta,
+      volatile: false
+    };
+    const [value, adapted] = Schema2.resolve(data, inner, options, strict);
+    try {
+      return [createVolatile2(value), adapted];
+    } catch (error112) {
+      throw new ValidationError3(error112 instanceof Error ? error112.message : String(error112), options);
+    }
+  }
+  if (options.ignore?.(data, schema)) return [data];
+  if (isNullable3(data) && schema.type !== "lazy") {
+    if (schema.meta.required) throw new ValidationError3(`missing required value`, options);
+    let current = schema;
+    let fallback = schema.meta.default;
+    while (current?.type === "intersect" && isNullable3(fallback)) {
+      current = current.list[0];
+      fallback = current?.meta.default;
+    }
+    if (isNullable3(fallback)) return [data];
+    data = clone3(fallback);
+  }
+  const callback = resolvers2[schema.type];
+  if (!callback) throw new ValidationError3(`unsupported type "${schema.type}"`, options);
+  try {
+    return callback(data, schema, options, strict);
+  } catch (error112) {
+    if (!schema.meta.loose) throw error112;
+    return [schema.meta.default];
+  }
+};
+Schema2.from = function from2(source) {
+  if (isNullable3(source)) return Schema2.any();
+  else if ([
+    "string",
+    "number",
+    "boolean"
+  ].includes(typeof source)) return Schema2.const(source).required();
+  else if (source[kSchema2]) return source;
+  else if (typeof source === "function") switch (source) {
+    case String:
+      return Schema2.string().required();
+    case Number:
+      return Schema2.number().required();
+    case Boolean:
+      return Schema2.boolean().required();
+    case Function:
+      return Schema2.function().required();
+    default:
+      return Schema2.is(source).required();
+  }
+  else throw new TypeError(`cannot infer schema from ${source}`);
+};
+Schema2.lazy = function lazy3(builder) {
+  const toJSON6 = () => {
+    if (!schema.inner[kSchema2]) {
+      schema.inner = schema.builder();
+      schema.inner.meta = {
+        ...schema.meta,
+        ...schema.inner.meta
+      };
+    }
+    return schema.inner.toJSON();
+  };
+  const schema = new Schema2({
+    type: "lazy",
+    builder,
+    inner: { toJSON: toJSON6 }
+  });
+  return schema;
+};
+Schema2.natural = function natural2() {
+  return Schema2.number().step(1).min(0);
+};
+Schema2.percent = function percent2() {
+  return Schema2.number().step(0.01).min(0).max(1).role("slider");
+};
+Schema2.date = function date6() {
+  return Schema2.union([Schema2.is(Date), Schema2.transform(Schema2.string().role("datetime"), (value, options) => {
+    const date14 = new Date(value);
+    if (isNaN(+date14)) throw new ValidationError3(`invalid date "${value}"`, options);
+    return date14;
+  }, true)]);
+};
+Schema2.regExp = function regExp2(flag = "") {
+  return Schema2.union([Schema2.is(RegExp), Schema2.transform(Schema2.string().role("regexp", { flag }), (value, options) => {
+    try {
+      return new RegExp(value, flag);
+    } catch (e) {
+      throw new ValidationError3(e.message, options);
+    }
+  }, true)]);
+};
+Schema2.arrayBuffer = function arrayBuffer2(encoding) {
+  return Schema2.union([
+    Schema2.is(ArrayBuffer),
+    Schema2.is(SharedArrayBuffer),
+    Schema2.transform(Schema2.any(), (value, options) => {
+      if (Binary3.isSource(value)) return Binary3.fromSource(value);
+      throw new ValidationError3(`expected ArrayBufferSource but got ${value}`, options);
+    }, true),
+    ...encoding ? [Schema2.transform(Schema2.string(), (value, options) => {
+      try {
+        return encoding === "base64" ? Binary3.fromBase64(value) : Binary3.fromHex(value);
+      } catch (e) {
+        throw new ValidationError3(e.message, options);
+      }
+    }, true)] : []
+  ]);
+};
+Schema2.extend("lazy", (data, schema, options, strict) => {
+  if (!schema.inner[kSchema2]) {
+    schema.inner = schema.builder();
+    schema.inner.meta = {
+      ...schema.meta,
+      ...schema.inner.meta
+    };
+    validateVolatileSchema2(schema.inner, options.path, true);
+  }
+  return Schema2.resolve(data, schema.inner, options, strict);
+});
+Schema2.extend("any", (data) => {
+  return [data];
+});
+Schema2.extend("never", (data, _, options) => {
+  throw new ValidationError3(`expected nullable but got ${data}`, options);
+});
+Schema2.extend("const", (data, { value }, options) => {
+  if (deepEqual2(data, value)) return [value];
+  throw new ValidationError3(`expected ${value} but got ${data}`, options);
+});
+function checkWithinRange2(data, meta5, description, options, skipMin = false) {
+  const { max = Infinity, min = -Infinity } = meta5;
+  if (data > max) throw new ValidationError3(`expected ${description} <= ${max} but got ${data}`, options);
+  if (data < min && !skipMin) throw new ValidationError3(`expected ${description} >= ${min} but got ${data}`, options);
+}
+Schema2.extend("string", (data, { meta: meta5 }, options) => {
+  if (typeof data !== "string") throw new ValidationError3(`expected string but got ${data}`, options);
+  if (meta5.pattern) {
+    const regexp = new RegExp(meta5.pattern.source, meta5.pattern.flags);
+    if (!regexp.test(data)) throw new ValidationError3(`expect string to match regexp ${regexp}`, options);
+  }
+  checkWithinRange2(data.length, meta5, "string length", options);
+  return [data];
+});
+function decimalShift2(data, digits) {
+  const str = data.toString();
+  if (str.includes("e")) return data * Math.pow(10, digits);
+  const index = str.indexOf(".");
+  if (index === -1) return data * Math.pow(10, digits);
+  const frac = str.slice(index + 1);
+  const integer3 = str.slice(0, index);
+  if (frac.length <= digits) return +(integer3 + frac.padEnd(digits, "0"));
+  return +(integer3 + frac.slice(0, digits) + "." + frac.slice(digits));
+}
+function isMultipleOf2(data, min, step) {
+  step = Math.abs(step);
+  if (!/^\d+\.\d+$/.test(step.toString())) return (data - min) % step === 0;
+  const index = step.toString().indexOf(".");
+  const digits = step.toString().slice(index + 1).length;
+  return Math.abs(decimalShift2(data, digits) - decimalShift2(min, digits)) % decimalShift2(step, digits) === 0;
+}
+Schema2.extend("number", (data, { meta: meta5 }, options) => {
+  if (typeof data !== "number") throw new ValidationError3(`expected number but got ${data}`, options);
+  checkWithinRange2(data, meta5, "number", options);
+  const { step } = meta5;
+  if (step && !isMultipleOf2(data, meta5.min ?? 0, step)) throw new ValidationError3(`expected number multiple of ${step} but got ${data}`, options);
+  return [data];
+});
+Schema2.extend("boolean", (data, _, options) => {
+  if (typeof data === "boolean") return [data];
+  throw new ValidationError3(`expected boolean but got ${data}`, options);
+});
+Schema2.extend("bitset", (data, { bits, meta: meta5 }, options) => {
+  let value = 0, keys = [];
+  if (typeof data === "number") {
+    value = data;
+    for (const key in bits) if (data & bits[key]) keys.push(key);
+  } else if (Array.isArray(data)) {
+    keys = data;
+    for (const key of keys) {
+      if (typeof key !== "string") throw new ValidationError3(`expected string but got ${key}`, options);
+      if (key in bits) value |= bits[key];
+    }
+  } else throw new ValidationError3(`expected number or array but got ${data}`, options);
+  if (value === meta5.default) return [value];
+  return [value, keys];
+});
+Schema2.extend("function", (data, _, options) => {
+  if (typeof data === "function") return [data];
+  throw new ValidationError3(`expected function but got ${data}`, options);
+});
+Schema2.extend("is", (data, { constructor }, options) => {
+  if (typeof constructor === "function") {
+    if (data instanceof constructor) return [data];
+    throw new ValidationError3(`expected ${constructor.name} but got ${data}`, options);
+  } else {
+    if (isNullable3(data)) throw new ValidationError3(`expected ${constructor} but got ${data}`, options);
+    let prototype = Object.getPrototypeOf(data);
+    while (prototype) {
+      if (prototype.constructor?.name === constructor) return [data];
+      prototype = Object.getPrototypeOf(prototype);
+    }
+    throw new ValidationError3(`expected ${constructor} but got ${data}`, options);
+  }
+});
+function property2(data, key, schema, options) {
+  try {
+    const [value, adapted] = Schema2.resolve(data[key], schema, {
+      ...options,
+      path: [...options.path || [], key]
+    });
+    if (adapted !== void 0) data[key] = adapted;
+    return value;
+  } catch (e) {
+    if (!options?.autofix) throw e;
+    delete data[key];
+    return schema.meta.volatile ? createVolatile2(schema.meta.default) : schema.meta.default;
+  }
+}
+Schema2.extend("array", (data, { inner, meta: meta5 }, options) => {
+  if (!Array.isArray(data)) throw new ValidationError3(`expected array but got ${data}`, options);
+  checkWithinRange2(data.length, meta5, "array length", options, !isNullable3(inner.meta.default));
+  return [data.map((_, index) => property2(data, index, inner, options))];
+});
+Schema2.extend("dict", (data, { inner, sKey }, options, strict) => {
+  if (!isPlainObject3(data)) throw new ValidationError3(`expected object but got ${data}`, options);
+  const result = {};
+  for (const key in data) {
+    let rKey;
+    try {
+      rKey = Schema2.resolve(key, sKey, options)[0];
+    } catch (error112) {
+      if (strict) continue;
+      throw error112;
+    }
+    result[rKey] = property2(data, key, inner, options);
+    data[rKey] = data[key];
+    if (key !== rKey) delete data[key];
+  }
+  return [result];
+});
+Schema2.extend("tuple", (data, { list }, options, strict) => {
+  if (!Array.isArray(data)) throw new ValidationError3(`expected array but got ${data}`, options);
+  const result = list.map((inner, index) => property2(data, index, inner, options));
+  if (strict) return [result];
+  result.push(...data.slice(list.length));
+  return [result];
+});
+function merge3(result, data) {
+  for (const key in data) {
+    if (key in result) continue;
+    result[key] = data[key];
+  }
+}
+Schema2.extend("object", (data, { dict }, options, strict) => {
+  if (!isPlainObject3(data)) throw new ValidationError3(`expected object but got ${data}`, options);
+  const result = {};
+  for (const key in dict) {
+    const value = property2(data, key, dict[key], options);
+    if (!isNullable3(value) || key in data) result[key] = value;
+  }
+  if (!strict) merge3(result, data);
+  return [result];
+});
+Schema2.extend("union", (data, { list, toString: toString6 }, options, strict) => {
+  const messages = [];
+  for (const inner of list) try {
+    return Schema2.resolve(data, inner, options, strict);
+  } catch (error112) {
+    messages.push(error112);
+  }
+  throw new ValidationError3(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+});
+Schema2.extend("intersect", (data, { list, toString: toString6 }, options, strict) => {
+  if (!list.length) return [data];
+  let result;
+  for (const inner of list) {
+    const value = Schema2.resolve(data, inner, options, true)[0];
+    if (isNullable3(value)) continue;
+    if (isNullable3(result)) result = value;
+    else if (typeof result !== typeof value) throw new ValidationError3(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+    else if (typeof value === "object") merge3(result ??= {}, value);
+    else if (result !== value) throw new ValidationError3(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+  }
+  if (!strict && isPlainObject3(data)) merge3(result, data);
+  return [result];
+});
+Schema2.extend("transform", (data, { inner, callback, preserve }, options) => {
+  const [result, adapted = data] = Schema2.resolve(data, inner, options, true);
+  if (preserve) return [callback(result)];
+  else return [callback(result), callback(adapted)];
+});
+var formatters2 = {};
+function defineMethod2(name, keys, format) {
+  formatters2[name] = format;
+  Object.assign(Schema2, { [name](...args) {
+    const schema = new Schema2({ type: name });
+    keys.forEach((key, index) => {
+      switch (key) {
+        case "sKey":
+          schema.sKey = args[index] ?? Schema2.string();
+          break;
+        case "inner":
+          schema.inner = Schema2.from(args[index]);
+          break;
+        case "list":
+          schema.list = args[index].map(Schema2.from);
+          break;
+        case "dict":
+          schema.dict = mapValues2(args[index], Schema2.from);
+          break;
+        case "bits":
+          schema.bits = {};
+          for (const key2 in args[index]) {
+            if (typeof args[index][key2] !== "number") continue;
+            schema.bits[key2] = args[index][key2];
+          }
+          break;
+        case "callback": {
+          const callback = schema.callback = args[index];
+          callback["toJSON"] ||= () => callback.toString();
+          break;
+        }
+        case "constructor": {
+          const constructor = schema.constructor = args[index];
+          if (typeof constructor === "function") constructor["toJSON"] ||= () => constructor["name"];
+          break;
+        }
+        default:
+          schema[key] = args[index];
+      }
+    });
+    if (name === "object" || name === "dict") schema.meta.default = {};
+    else if (name === "array" || name === "tuple") schema.meta.default = [];
+    else if (name === "bitset") schema.meta.default = 0;
+    return schema;
+  } });
+}
+defineMethod2("is", ["constructor"], ({ constructor }) => {
+  if (typeof constructor === "function") return constructor.name;
+  else return constructor;
+});
+defineMethod2("any", [], () => "any");
+defineMethod2("never", [], () => "never");
+defineMethod2("const", ["value"], ({ value }) => typeof value === "string" ? JSON.stringify(value) : value);
+defineMethod2("string", [], () => "string");
+defineMethod2("number", [], () => "number");
+defineMethod2("boolean", [], () => "boolean");
+defineMethod2("bitset", ["bits"], () => "bitset");
+defineMethod2("function", [], () => "function");
+defineMethod2("array", ["inner"], ({ inner }) => `${inner.toString(true)}[]`);
+defineMethod2("dict", ["inner", "sKey"], ({ inner, sKey }) => `{ [key: ${sKey.toString()}]: ${inner.toString()} }`);
+defineMethod2("tuple", ["list"], ({ list }) => `[${list.map((inner) => inner.toString()).join(", ")}]`);
+defineMethod2("object", ["dict"], ({ dict }) => {
+  if (Object.keys(dict).length === 0) return "{}";
+  return `{ ${Object.entries(dict).map(([key, inner]) => {
+    return `${key}${inner.meta.required ? "" : "?"}: ${inner.toString()}`;
+  }).join(", ")} }`;
+});
+defineMethod2("union", ["list"], ({ list }, inline) => {
+  const result = list.map(({ toString: format }) => format()).join(" | ");
+  return inline ? `(${result})` : result;
+});
+defineMethod2("intersect", ["list"], ({ list }) => {
+  return `${list.map((inner) => inner.toString(true)).join(" & ")}`;
+});
+defineMethod2("transform", [
+  "inner",
+  "callback",
+  "preserve"
+], ({ inner }, isInner) => inner.toString(isInner));
 
 // ../../node_modules/@deepseek-ai/dsh-llm/lib/index.js
 import { createRequire } from "node:module";
@@ -27076,9 +28181,9 @@ function remoteDecorator(invocation, options = {}) {
   };
 }
 function readRemoteMethodDescriptor(prototype) {
-  const property2 = Object.getOwnPropertyDescriptor(prototype, REMOTE_METHOD_DESCRIPTOR);
-  if (property2 === void 0) return void 0;
-  const descriptor = property2.value;
+  const property6 = Object.getOwnPropertyDescriptor(prototype, REMOTE_METHOD_DESCRIPTOR);
+  if (property6 === void 0) return void 0;
+  const descriptor = property6.value;
   if (descriptor === null || typeof descriptor !== "object") throw new TypeError("typert-protocol: Remote method descriptor must be an object");
   const version5 = Reflect.get(descriptor, "version");
   if (version5 !== 1) throw new TypeError(`typert-protocol: unsupported Remote method descriptor version ${String(version5)}`);
@@ -27777,109 +28882,93 @@ function enumerableStringKeys(value) {
 function walkJsonValue(value, detach) {
   const ancestors = /* @__PURE__ */ new Set();
   let root;
-  const assign = (destination, item) => {
-    if (destination === void 0) return;
-    if (destination.kind === "root") root = item;
-    else if (destination.kind === "array") destination.target[destination.index] = item;
-    else Object.defineProperty(destination.target, destination.key, {
+  let parent;
+  const assign = (item) => {
+    if (parent === void 0) {
+      if (detach) root = item;
+    } else if (parent.kind === "array") {
+      if (parent.target !== void 0) parent.target[parent.key] = item;
+    } else if (parent.target !== void 0) Object.defineProperty(parent.target, parent.key, {
       value: item,
       enumerable: true,
       configurable: true,
       writable: true
     });
   };
-  const tasks = [{
-    kind: "visit",
-    value,
-    ...detach ? { destination: { kind: "root" } } : {}
-  }];
-  for (let task = tasks.pop(); task !== void 0; task = tasks.pop()) {
-    if (task.kind === "leave") {
-      ancestors.delete(task.source);
-      continue;
-    }
-    if (task.kind === "array-item") {
-      if (!Object.prototype.hasOwnProperty.call(task.source, task.index)) return void 0;
-      tasks.push({
-        kind: "visit",
-        value: task.source[task.index],
-        ...task.target === void 0 ? {} : { destination: {
-          kind: "array",
-          target: task.target,
-          index: task.index
-        } }
-      });
-      continue;
-    }
-    if (task.kind === "object-property") {
-      tasks.push({
-        kind: "visit",
-        value: task.source[task.key],
-        ...task.target === void 0 ? {} : { destination: {
-          kind: "object",
-          target: task.target,
-          key: task.key
-        } }
-      });
-      continue;
-    }
-    const current = task.value;
-    if (current === null) {
-      assign(task.destination, null);
-      continue;
-    }
-    if (typeof current === "boolean" || typeof current === "string") {
-      assign(task.destination, current);
-      continue;
-    }
-    if (typeof current === "number") {
+  const frames = [];
+  let current = value;
+  for (; ; ) {
+    if (current === null) assign(null);
+    else if (typeof current === "boolean" || typeof current === "string") assign(current);
+    else if (typeof current === "number") {
       if (!Number.isFinite(current) || Object.is(current, -0)) return void 0;
-      assign(task.destination, current);
-      continue;
-    }
-    if (typeof current !== "object") return void 0;
-    if (ancestors.has(current)) return void 0;
-    if (Array.isArray(current)) {
-      if (!hasPlainArrayPrototype(current)) return void 0;
-      const length = current.length;
-      if (Reflect.ownKeys(current).length !== length + 1) return void 0;
-      const target2 = detach ? [] : void 0;
-      if (target2 !== void 0) assign(task.destination, target2);
+      assign(current);
+    } else {
+      if (typeof current !== "object") return void 0;
+      if (ancestors.has(current)) return void 0;
+      if (Array.isArray(current)) {
+        if (!hasPlainArrayPrototype(current)) return void 0;
+        const length = current.length;
+        if (Reflect.ownKeys(current).length !== length + 1) return void 0;
+        const target = detach ? [] : void 0;
+        if (target !== void 0) assign(target);
+        let indices;
+        if (!Number.isInteger(length)) {
+          indices = [];
+          for (let index = length - 1; index >= 0; index--) indices.push(index);
+        }
+        frames.push({
+          kind: "array",
+          source: current,
+          length: indices?.length ?? length,
+          index: 0,
+          key: 0,
+          indices,
+          target
+        });
+      } else {
+        if (!hasPlainObjectPrototype(current)) return void 0;
+        const keys = enumerableStringKeys(current);
+        if (keys === void 0) return void 0;
+        const target = detach ? {} : void 0;
+        if (target !== void 0) assign(target);
+        frames.push({
+          kind: "object",
+          source: current,
+          keys,
+          index: 0,
+          key: "",
+          target
+        });
+      }
       ancestors.add(current);
-      tasks.push({
-        kind: "leave",
-        source: current
-      });
-      for (let index = length - 1; index >= 0; index--) tasks.push({
-        kind: "array-item",
-        source: current,
-        index,
-        ...target2 === void 0 ? {} : { target: target2 }
-      });
-      continue;
     }
-    if (!hasPlainObjectPrototype(current)) return void 0;
-    const keys = enumerableStringKeys(current);
-    if (keys === void 0) return void 0;
-    const target = detach ? {} : void 0;
-    if (target !== void 0) assign(task.destination, target);
-    ancestors.add(current);
-    tasks.push({
-      kind: "leave",
-      source: current
-    });
-    for (let index = keys.length - 1; index >= 0; index--) {
-      const key = keys[index];
-      if (key === void 0) return void 0;
-      tasks.push({
-        kind: "object-property",
-        source: current,
-        key,
-        ...target === void 0 ? {} : { target }
-      });
+    for (; ; ) {
+      const frame = frames.at(-1);
+      if (frame === void 0) return detach ? root : true;
+      const length = frame.kind === "array" ? frame.length : frame.keys.length;
+      if (frame.index >= length) {
+        ancestors.delete(frame.source);
+        frames.pop();
+        continue;
+      }
+      const index = frame.index++;
+      parent = frame;
+      if (frame.kind === "array") {
+        const key = frame.indices === void 0 ? index : frame.indices[frame.indices.length - index - 1];
+        if (key === void 0) return void 0;
+        if (!Object.prototype.hasOwnProperty.call(frame.source, key)) return void 0;
+        frame.key = key;
+        current = frame.source[key];
+      } else {
+        const key = frame.keys[index];
+        if (key === void 0) return void 0;
+        frame.key = key;
+        current = frame.source[key];
+      }
+      break;
     }
   }
-  return detach ? root : true;
 }
 function snapshotJsonValue(value) {
   return walkJsonValue(value, true);
@@ -27925,6 +29014,872 @@ function brandNumber(value) {
   return value;
 }
 
+// ../../node_modules/@deepseek-ai/dsh-llm/node_modules/@deepseek-ai/cosmokit/lib/index.js
+function isNullable4(value) {
+  return value === null || value === void 0;
+}
+function isPlainObject4(data) {
+  return data && typeof data === "object" && !Array.isArray(data);
+}
+function filterKeys3(object4, filter) {
+  return Object.fromEntries(Object.entries(object4).filter(([key, value]) => filter(key, value)));
+}
+function mapValues3(object4, transform3) {
+  return Object.fromEntries(Object.entries(object4).map(([key, value]) => [key, transform3(value, key)]));
+}
+function pick4(source, keys, forced) {
+  if (!keys) return { ...source };
+  const result = {};
+  for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
+  return result;
+}
+var write3 = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
+function snapshot3(value, ancestors = /* @__PURE__ */ new Set()) {
+  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
+  if (value === null || typeof value !== "object") return value;
+  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot3(item, ancestors)));
+    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new TypeError("volatile config objects must be plain objects or arrays");
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot3(item, ancestors)])));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+function createVolatile3(value) {
+  let current = snapshot3(value);
+  return Object.freeze({
+    get: () => current,
+    [write3]: (value2) => {
+      current = value2;
+    }
+  });
+}
+function isVolatile3(value) {
+  return typeof value === "object" && value !== null && write3 in value;
+}
+function is4(type, value) {
+  if (arguments.length === 1) return (value2) => is4(type, value2);
+  return type in globalThis && value instanceof globalThis[type] || Object.prototype.toString.call(value).slice(8, -1) === type;
+}
+function isArrayBufferLike4(value) {
+  return is4("ArrayBuffer", value) || is4("SharedArrayBuffer", value);
+}
+function isArrayBufferSource4(value) {
+  return isArrayBufferLike4(value) || ArrayBuffer.isView(value);
+}
+var Binary4;
+(function(Binary7) {
+  Binary7.is = isArrayBufferLike4;
+  Binary7.isSource = isArrayBufferSource4;
+  function fromSource(source) {
+    if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+    else return source;
+  }
+  Binary7.fromSource = fromSource;
+  function toBase64(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
+    let binary = "";
+    const bytes = new Uint8Array(source);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+  Binary7.toBase64 = toBase64;
+  function fromBase64(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
+    return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
+  }
+  Binary7.fromBase64 = fromBase64;
+  function toHex(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
+    return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  Binary7.toHex = toHex;
+  function fromHex(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
+    const hex5 = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
+    const buffer = [];
+    for (let i = 0; i < hex5.length; i += 2) buffer.push(parseInt(`${hex5[i]}${hex5[i + 1]}`, 16));
+    return Uint8Array.from(buffer).buffer;
+  }
+  Binary7.fromHex = fromHex;
+})(Binary4 || (Binary4 = {}));
+var base64ToArrayBuffer4 = Binary4.fromBase64;
+var arrayBufferToBase644 = Binary4.toBase64;
+var hexToArrayBuffer4 = Binary4.fromHex;
+var arrayBufferToHex4 = Binary4.toHex;
+function clone4(source, refs = /* @__PURE__ */ new Map()) {
+  if (!source || typeof source !== "object") return source;
+  if (is4("Date", source)) return new Date(source.valueOf());
+  if (is4("RegExp", source)) return new RegExp(source.source, source.flags);
+  if (isArrayBufferLike4(source)) return source.slice(0);
+  if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+  const cached5 = refs.get(source);
+  if (cached5) return cached5;
+  if (Array.isArray(source)) {
+    const result2 = [];
+    refs.set(source, result2);
+    source.forEach((value, index) => {
+      result2[index] = Reflect.apply(clone4, null, [value, refs]);
+    });
+    return result2;
+  }
+  const result = Object.create(Object.getPrototypeOf(source));
+  refs.set(source, result);
+  for (const key of Reflect.ownKeys(source)) {
+    const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
+    if ("value" in descriptor) descriptor.value = Reflect.apply(clone4, null, [descriptor.value, refs]);
+    Reflect.defineProperty(result, key, descriptor);
+  }
+  return result;
+}
+function deepEqual3(a, b, strict) {
+  const ancestors = /* @__PURE__ */ new Set();
+  function compare(a2, b2) {
+    if (a2 === b2) return true;
+    if (isVolatile3(a2) || isVolatile3(b2)) return isVolatile3(a2) && isVolatile3(b2);
+    if (!strict && isNullable4(a2) && isNullable4(b2)) return true;
+    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
+    if (ancestors.has(a2)) return false;
+    function check3(test, then) {
+      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
+    }
+    ancestors.add(a2);
+    try {
+      return check3(Array.isArray, (a3, b3) => {
+        if (a3.length !== b3.length) return false;
+        for (let index = 0; index < a3.length; index++) if (!compare(a3[index], b3[index])) return false;
+        return true;
+      }) ?? check3(is4("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is4("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is4("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike4, (a3, b3) => {
+        if (a3.byteLength !== b3.byteLength) return false;
+        const viewA = new Uint8Array(a3);
+        const viewB = new Uint8Array(b3);
+        for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
+        return true;
+      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({
+        ...a2,
+        ...b2
+      }).every((key) => compare(a2[key], b2[key])));
+    } finally {
+      ancestors.delete(a2);
+    }
+  }
+  return compare(a, b);
+}
+var Time4;
+(function(Time7) {
+  Time7.millisecond = 1;
+  Time7.second = 1e3;
+  Time7.minute = Time7.second * 60;
+  Time7.hour = Time7.minute * 60;
+  Time7.day = Time7.hour * 24;
+  Time7.week = Time7.day * 7;
+  let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
+  function setTimezoneOffset(offset) {
+    timezoneOffset = offset;
+  }
+  Time7.setTimezoneOffset = setTimezoneOffset;
+  function getTimezoneOffset() {
+    return timezoneOffset;
+  }
+  Time7.getTimezoneOffset = getTimezoneOffset;
+  function getDateNumber(date14 = /* @__PURE__ */ new Date(), offset) {
+    if (typeof date14 === "number") date14 = new Date(date14);
+    if (offset === void 0) offset = timezoneOffset;
+    return Math.floor((date14.valueOf() / Time7.minute - offset) / 1440);
+  }
+  Time7.getDateNumber = getDateNumber;
+  function fromDateNumber(value, offset) {
+    const date14 = new Date(value * Time7.day);
+    if (offset === void 0) offset = timezoneOffset;
+    return new Date(+date14 + offset * Time7.minute);
+  }
+  Time7.fromDateNumber = fromDateNumber;
+  const numeric = /\d+(?:\.\d+)?/.source;
+  const timeRegExp = new RegExp(`^${[
+    "w(?:eek(?:s)?)?",
+    "d(?:ay(?:s)?)?",
+    "h(?:our(?:s)?)?",
+    "m(?:in(?:ute)?(?:s)?)?",
+    "s(?:ec(?:ond)?(?:s)?)?"
+  ].map((unit) => `(${numeric}${unit})?`).join("")}$`);
+  function parseTime(source) {
+    const capture = timeRegExp.exec(source);
+    if (!capture) return 0;
+    return (parseFloat(capture[1]) * Time7.week || 0) + (parseFloat(capture[2]) * Time7.day || 0) + (parseFloat(capture[3]) * Time7.hour || 0) + (parseFloat(capture[4]) * Time7.minute || 0) + (parseFloat(capture[5]) * Time7.second || 0);
+  }
+  Time7.parseTime = parseTime;
+  function parseDate(date14) {
+    const parsed = parseTime(date14);
+    if (parsed) date14 = Date.now() + parsed;
+    else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date14}`;
+    else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date14}`;
+    return date14 ? new Date(date14) : /* @__PURE__ */ new Date();
+  }
+  Time7.parseDate = parseDate;
+  function format(ms) {
+    const abs = Math.abs(ms);
+    if (abs >= Time7.day - Time7.hour / 2) return Math.round(ms / Time7.day) + "d";
+    else if (abs >= Time7.hour - Time7.minute / 2) return Math.round(ms / Time7.hour) + "h";
+    else if (abs >= Time7.minute - Time7.second / 2) return Math.round(ms / Time7.minute) + "m";
+    else if (abs >= Time7.second) return Math.round(ms / Time7.second) + "s";
+    return ms + "ms";
+  }
+  Time7.format = format;
+  function toDigits(source, length = 2) {
+    return source.toString().padStart(length, "0");
+  }
+  Time7.toDigits = toDigits;
+  function template(template2, time5 = /* @__PURE__ */ new Date()) {
+    return template2.replace("yyyy", time5.getFullYear().toString()).replace("yy", time5.getFullYear().toString().slice(2)).replace("MM", toDigits(time5.getMonth() + 1)).replace("dd", toDigits(time5.getDate())).replace("hh", toDigits(time5.getHours())).replace("mm", toDigits(time5.getMinutes())).replace("ss", toDigits(time5.getSeconds())).replace("SSS", toDigits(time5.getMilliseconds(), 3));
+  }
+  Time7.template = template;
+})(Time4 || (Time4 = {}));
+
+// ../../node_modules/@deepseek-ai/dsh-llm/node_modules/@deepseek-ai/schemastery/lib/index.mjs
+var kSchema3 = /* @__PURE__ */ Symbol.for("schemastery");
+var kValidationError4 = /* @__PURE__ */ Symbol.for("ValidationError");
+globalThis.__schemastery_index__ ??= 0;
+globalThis.__schemastery_refs__ = void 0;
+var ValidationError4 = class extends TypeError {
+  options;
+  name = "ValidationError";
+  constructor(message, options) {
+    let prefix = "$";
+    for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
+    else if (typeof segment === "number") prefix += "[" + segment + "]";
+    else if (typeof segment === "symbol") prefix += `[Symbol(${segment.toString()})]`;
+    if (prefix.startsWith(".")) prefix = prefix.slice(1);
+    super((prefix === "$" ? "" : `${prefix} `) + message);
+    this.options = options;
+  }
+  static is(error112) {
+    return !!error112?.[kValidationError4];
+  }
+};
+Object.defineProperty(ValidationError4.prototype, kValidationError4, { value: true });
+var Schema3 = function(options) {
+  const schema = function(data, options2 = {}) {
+    return Schema3.resolve(data, schema, options2)[0];
+  };
+  if (options.refs) {
+    const refs = mapValues3(options.refs, (options2) => new Schema3(options2));
+    const getRef = (uid) => refs[uid];
+    for (const key in refs) {
+      const options2 = refs[key];
+      options2.sKey = getRef(options2.sKey);
+      options2.inner = getRef(options2.inner);
+      options2.list = options2.list && options2.list.map(getRef);
+      options2.dict = options2.dict && mapValues3(options2.dict, getRef);
+    }
+    return refs[options.uid];
+  }
+  Object.assign(schema, options);
+  if (typeof schema.callback === "string") try {
+    schema.callback = new Function("return " + schema.callback)();
+  } catch {
+  }
+  Object.defineProperty(schema, "uid", { value: globalThis.__schemastery_index__++ });
+  Object.setPrototypeOf(schema, Schema3.prototype);
+  schema.meta ||= {};
+  schema.toString = schema.toString.bind(schema);
+  return schema;
+};
+Schema3.prototype = Object.create(Function.prototype);
+Schema3.prototype[kSchema3] = true;
+Object.defineProperty(Schema3.prototype, "~standard", { get() {
+  return {
+    version: 1,
+    vendor: "schemastery",
+    validate: (value) => {
+      try {
+        return { value: Schema3.resolve(value, this, {})[0] };
+      } catch (error112) {
+        if (ValidationError4.is(error112)) return { issues: [{
+          message: error112.message,
+          path: error112.options.path
+        }] };
+        throw error112;
+      }
+    }
+  };
+} });
+Schema3.ValidationError = ValidationError4;
+Schema3.prototype.toJSON = function toJSON3() {
+  if (globalThis.__schemastery_refs__) {
+    globalThis.__schemastery_refs__[this.uid] ??= JSON.parse(JSON.stringify({ ...this }));
+    return this.uid;
+  }
+  globalThis.__schemastery_refs__ = { [this.uid]: { ...this } };
+  globalThis.__schemastery_refs__[this.uid] = JSON.parse(JSON.stringify({ ...this }));
+  const result = {
+    uid: this.uid,
+    refs: globalThis.__schemastery_refs__
+  };
+  globalThis.__schemastery_refs__ = void 0;
+  return result;
+};
+Schema3.prototype.set = function set4(key, value) {
+  this.dict[key] = value;
+  return this;
+};
+Schema3.prototype.push = function push3(value) {
+  this.list.push(value);
+  return this;
+};
+function mergeDesc3(original, messages) {
+  const result = typeof original === "string" ? { "": original } : { ...original };
+  for (const locale in messages) {
+    const value = messages[locale];
+    if (value?.$description || value?.$desc) result[locale] = value.$description || value.$desc;
+    else if (typeof value === "string") result[locale] = value;
+  }
+  return result;
+}
+function getInner3(value) {
+  return value?.$value ?? value?.$inner;
+}
+function extractKeys3(data) {
+  return filterKeys3(data ?? {}, (key) => !key.startsWith("$"));
+}
+Schema3.prototype.i18n = function i18n3(messages) {
+  const schema = Schema3(this);
+  const desc = mergeDesc3(schema.meta.description, messages);
+  if (Object.keys(desc).length) schema.meta.description = desc;
+  if (schema.dict) schema.dict = mapValues3(schema.dict, (inner, key) => {
+    return inner.i18n(mapValues3(messages, (data) => getInner3(data)?.[key] ?? data?.[key]));
+  });
+  if (schema.list) schema.list = schema.list.map((inner, index) => {
+    return inner.i18n(mapValues3(messages, (data = {}) => {
+      if (Array.isArray(getInner3(data))) return getInner3(data)[index];
+      if (Array.isArray(data)) return data[index];
+      return extractKeys3(data);
+    }));
+  });
+  if (schema.inner) schema.inner = schema.inner.i18n(mapValues3(messages, (data) => {
+    if (getInner3(data)) return getInner3(data);
+    return extractKeys3(data);
+  }));
+  if (schema.sKey) schema.sKey = schema.sKey.i18n(mapValues3(messages, (data) => data?.$key));
+  return schema;
+};
+Schema3.prototype.extra = function extra3(key, value) {
+  const schema = Schema3(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+};
+for (const key of [
+  "required",
+  "disabled",
+  "collapse",
+  "hidden",
+  "loose"
+]) Object.assign(Schema3.prototype, { [key](value = true) {
+  const schema = Schema3(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+} });
+Schema3.prototype.deprecated = function deprecated3() {
+  const schema = Schema3(this);
+  schema.meta.badges ||= [];
+  schema.meta.badges.push({
+    text: "deprecated",
+    type: "danger"
+  });
+  return schema;
+};
+Schema3.prototype.experimental = function experimental3() {
+  const schema = Schema3(this);
+  schema.meta.badges ||= [];
+  schema.meta.badges.push({
+    text: "experimental",
+    type: "warning"
+  });
+  return schema;
+};
+Schema3.prototype.pattern = function pattern3(regexp) {
+  const schema = Schema3(this);
+  const pattern6 = pick4(regexp, ["source", "flags"]);
+  schema.meta = {
+    ...schema.meta,
+    pattern: pattern6
+  };
+  return schema;
+};
+Schema3.prototype.simplify = function simplify3(value) {
+  if (isVolatile3(value)) value = value.get();
+  if (deepEqual3(value, this.meta.default, this.type === "dict")) return null;
+  if (isNullable4(value)) return value;
+  if (this.type === "object" || this.type === "dict") {
+    const result = {};
+    for (const key in value) {
+      const item = (this.type === "object" ? this.dict[key] : this.inner)?.simplify(value[key]);
+      if (this.type === "dict" || !isNullable4(item)) result[key] = item;
+    }
+    if (deepEqual3(result, this.meta.default, this.type === "dict")) return null;
+    return result;
+  } else if (this.type === "array" || this.type === "tuple") {
+    const result = [];
+    value.forEach((value2, index) => {
+      const schema = this.type === "array" ? this.inner : this.list[index];
+      const item = schema ? schema.simplify(value2) : value2;
+      result.push(item);
+    });
+    return result;
+  } else if (this.type === "intersect") {
+    const result = {};
+    for (const item of this.list) Object.assign(result, item.simplify(value));
+    return result;
+  } else if (this.type === "union") for (const schema of this.list) try {
+    Schema3.resolve(value, schema, {});
+    return schema.simplify(value);
+  } catch {
+  }
+  return value;
+};
+Schema3.prototype.toString = function toString3(inline) {
+  return formatters3[this.type]?.(this, inline) ?? `Schema<${this.type}>`;
+};
+Schema3.prototype.role = function role3(role3, extra6) {
+  const schema = Schema3(this);
+  schema.meta = {
+    ...schema.meta,
+    role: role3,
+    extra: extra6
+  };
+  return schema;
+};
+for (const key of [
+  "default",
+  "link",
+  "comment",
+  "description",
+  "max",
+  "min",
+  "step"
+]) Object.assign(Schema3.prototype, { [key](value) {
+  const schema = Schema3(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+} });
+Schema3.prototype.volatile = function volatile3() {
+  if (this.meta.volatile) throw new TypeError("volatile schema is already wrapped");
+  return this.extra("volatile", true);
+};
+var resolvers3 = {};
+var checkedVolatile3 = /* @__PURE__ */ Symbol("checked-volatile-schema");
+function validateVolatileSchema3(schema, path = [], blocked = false, seen = /* @__PURE__ */ new Map()) {
+  const states = seen.get(schema) ?? /* @__PURE__ */ new Set();
+  if (states.has(blocked)) return;
+  states.add(blocked);
+  seen.set(schema, states);
+  if (schema.meta?.volatile && blocked) throw new ValidationError4("volatile fields require a fixed object path without an enclosing volatile field", { path });
+  const nested = blocked || !!schema.meta?.volatile;
+  if (schema.dict) for (const [key, child] of Object.entries(schema.dict)) validateVolatileSchema3(child, [...path, key], nested, seen);
+  if (schema.sKey) validateVolatileSchema3(schema.sKey, [...path, "<key>"], true, seen);
+  if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema3])) validateVolatileSchema3(schema.inner, [...path, "*"], true, seen);
+  if (schema.list) for (let index = 0; index < schema.list.length; index++) validateVolatileSchema3(schema.list[index], [...path, String(index)], true, seen);
+}
+Schema3.extend = function extend4(type, resolve14) {
+  resolvers3[type] = resolve14;
+};
+Schema3.resolve = function resolve5(data, schema, options = {}, strict = false) {
+  if (!schema) return [data];
+  if (!options[checkedVolatile3]) {
+    validateVolatileSchema3(schema, options.path);
+    options = {
+      ...options,
+      [checkedVolatile3]: true
+    };
+  }
+  if (schema.meta?.volatile) {
+    const inner = Schema3(schema);
+    inner.meta = {
+      ...schema.meta,
+      volatile: false
+    };
+    const [value, adapted] = Schema3.resolve(data, inner, options, strict);
+    try {
+      return [createVolatile3(value), adapted];
+    } catch (error112) {
+      throw new ValidationError4(error112 instanceof Error ? error112.message : String(error112), options);
+    }
+  }
+  if (options.ignore?.(data, schema)) return [data];
+  if (isNullable4(data) && schema.type !== "lazy") {
+    if (schema.meta.required) throw new ValidationError4(`missing required value`, options);
+    let current = schema;
+    let fallback = schema.meta.default;
+    while (current?.type === "intersect" && isNullable4(fallback)) {
+      current = current.list[0];
+      fallback = current?.meta.default;
+    }
+    if (isNullable4(fallback)) return [data];
+    data = clone4(fallback);
+  }
+  const callback = resolvers3[schema.type];
+  if (!callback) throw new ValidationError4(`unsupported type "${schema.type}"`, options);
+  try {
+    return callback(data, schema, options, strict);
+  } catch (error112) {
+    if (!schema.meta.loose) throw error112;
+    return [schema.meta.default];
+  }
+};
+Schema3.from = function from3(source) {
+  if (isNullable4(source)) return Schema3.any();
+  else if ([
+    "string",
+    "number",
+    "boolean"
+  ].includes(typeof source)) return Schema3.const(source).required();
+  else if (source[kSchema3]) return source;
+  else if (typeof source === "function") switch (source) {
+    case String:
+      return Schema3.string().required();
+    case Number:
+      return Schema3.number().required();
+    case Boolean:
+      return Schema3.boolean().required();
+    case Function:
+      return Schema3.function().required();
+    default:
+      return Schema3.is(source).required();
+  }
+  else throw new TypeError(`cannot infer schema from ${source}`);
+};
+Schema3.lazy = function lazy4(builder) {
+  const toJSON6 = () => {
+    if (!schema.inner[kSchema3]) {
+      schema.inner = schema.builder();
+      schema.inner.meta = {
+        ...schema.meta,
+        ...schema.inner.meta
+      };
+    }
+    return schema.inner.toJSON();
+  };
+  const schema = new Schema3({
+    type: "lazy",
+    builder,
+    inner: { toJSON: toJSON6 }
+  });
+  return schema;
+};
+Schema3.natural = function natural3() {
+  return Schema3.number().step(1).min(0);
+};
+Schema3.percent = function percent3() {
+  return Schema3.number().step(0.01).min(0).max(1).role("slider");
+};
+Schema3.date = function date7() {
+  return Schema3.union([Schema3.is(Date), Schema3.transform(Schema3.string().role("datetime"), (value, options) => {
+    const date14 = new Date(value);
+    if (isNaN(+date14)) throw new ValidationError4(`invalid date "${value}"`, options);
+    return date14;
+  }, true)]);
+};
+Schema3.regExp = function regExp3(flag = "") {
+  return Schema3.union([Schema3.is(RegExp), Schema3.transform(Schema3.string().role("regexp", { flag }), (value, options) => {
+    try {
+      return new RegExp(value, flag);
+    } catch (e) {
+      throw new ValidationError4(e.message, options);
+    }
+  }, true)]);
+};
+Schema3.arrayBuffer = function arrayBuffer3(encoding) {
+  return Schema3.union([
+    Schema3.is(ArrayBuffer),
+    Schema3.is(SharedArrayBuffer),
+    Schema3.transform(Schema3.any(), (value, options) => {
+      if (Binary4.isSource(value)) return Binary4.fromSource(value);
+      throw new ValidationError4(`expected ArrayBufferSource but got ${value}`, options);
+    }, true),
+    ...encoding ? [Schema3.transform(Schema3.string(), (value, options) => {
+      try {
+        return encoding === "base64" ? Binary4.fromBase64(value) : Binary4.fromHex(value);
+      } catch (e) {
+        throw new ValidationError4(e.message, options);
+      }
+    }, true)] : []
+  ]);
+};
+Schema3.extend("lazy", (data, schema, options, strict) => {
+  if (!schema.inner[kSchema3]) {
+    schema.inner = schema.builder();
+    schema.inner.meta = {
+      ...schema.meta,
+      ...schema.inner.meta
+    };
+    validateVolatileSchema3(schema.inner, options.path, true);
+  }
+  return Schema3.resolve(data, schema.inner, options, strict);
+});
+Schema3.extend("any", (data) => {
+  return [data];
+});
+Schema3.extend("never", (data, _, options) => {
+  throw new ValidationError4(`expected nullable but got ${data}`, options);
+});
+Schema3.extend("const", (data, { value }, options) => {
+  if (deepEqual3(data, value)) return [value];
+  throw new ValidationError4(`expected ${value} but got ${data}`, options);
+});
+function checkWithinRange3(data, meta5, description, options, skipMin = false) {
+  const { max = Infinity, min = -Infinity } = meta5;
+  if (data > max) throw new ValidationError4(`expected ${description} <= ${max} but got ${data}`, options);
+  if (data < min && !skipMin) throw new ValidationError4(`expected ${description} >= ${min} but got ${data}`, options);
+}
+Schema3.extend("string", (data, { meta: meta5 }, options) => {
+  if (typeof data !== "string") throw new ValidationError4(`expected string but got ${data}`, options);
+  if (meta5.pattern) {
+    const regexp = new RegExp(meta5.pattern.source, meta5.pattern.flags);
+    if (!regexp.test(data)) throw new ValidationError4(`expect string to match regexp ${regexp}`, options);
+  }
+  checkWithinRange3(data.length, meta5, "string length", options);
+  return [data];
+});
+function decimalShift3(data, digits) {
+  const str = data.toString();
+  if (str.includes("e")) return data * Math.pow(10, digits);
+  const index = str.indexOf(".");
+  if (index === -1) return data * Math.pow(10, digits);
+  const frac = str.slice(index + 1);
+  const integer3 = str.slice(0, index);
+  if (frac.length <= digits) return +(integer3 + frac.padEnd(digits, "0"));
+  return +(integer3 + frac.slice(0, digits) + "." + frac.slice(digits));
+}
+function isMultipleOf3(data, min, step) {
+  step = Math.abs(step);
+  if (!/^\d+\.\d+$/.test(step.toString())) return (data - min) % step === 0;
+  const index = step.toString().indexOf(".");
+  const digits = step.toString().slice(index + 1).length;
+  return Math.abs(decimalShift3(data, digits) - decimalShift3(min, digits)) % decimalShift3(step, digits) === 0;
+}
+Schema3.extend("number", (data, { meta: meta5 }, options) => {
+  if (typeof data !== "number") throw new ValidationError4(`expected number but got ${data}`, options);
+  checkWithinRange3(data, meta5, "number", options);
+  const { step } = meta5;
+  if (step && !isMultipleOf3(data, meta5.min ?? 0, step)) throw new ValidationError4(`expected number multiple of ${step} but got ${data}`, options);
+  return [data];
+});
+Schema3.extend("boolean", (data, _, options) => {
+  if (typeof data === "boolean") return [data];
+  throw new ValidationError4(`expected boolean but got ${data}`, options);
+});
+Schema3.extend("bitset", (data, { bits, meta: meta5 }, options) => {
+  let value = 0, keys = [];
+  if (typeof data === "number") {
+    value = data;
+    for (const key in bits) if (data & bits[key]) keys.push(key);
+  } else if (Array.isArray(data)) {
+    keys = data;
+    for (const key of keys) {
+      if (typeof key !== "string") throw new ValidationError4(`expected string but got ${key}`, options);
+      if (key in bits) value |= bits[key];
+    }
+  } else throw new ValidationError4(`expected number or array but got ${data}`, options);
+  if (value === meta5.default) return [value];
+  return [value, keys];
+});
+Schema3.extend("function", (data, _, options) => {
+  if (typeof data === "function") return [data];
+  throw new ValidationError4(`expected function but got ${data}`, options);
+});
+Schema3.extend("is", (data, { constructor }, options) => {
+  if (typeof constructor === "function") {
+    if (data instanceof constructor) return [data];
+    throw new ValidationError4(`expected ${constructor.name} but got ${data}`, options);
+  } else {
+    if (isNullable4(data)) throw new ValidationError4(`expected ${constructor} but got ${data}`, options);
+    let prototype = Object.getPrototypeOf(data);
+    while (prototype) {
+      if (prototype.constructor?.name === constructor) return [data];
+      prototype = Object.getPrototypeOf(prototype);
+    }
+    throw new ValidationError4(`expected ${constructor} but got ${data}`, options);
+  }
+});
+function property3(data, key, schema, options) {
+  try {
+    const [value, adapted] = Schema3.resolve(data[key], schema, {
+      ...options,
+      path: [...options.path || [], key]
+    });
+    if (adapted !== void 0) data[key] = adapted;
+    return value;
+  } catch (e) {
+    if (!options?.autofix) throw e;
+    delete data[key];
+    return schema.meta.volatile ? createVolatile3(schema.meta.default) : schema.meta.default;
+  }
+}
+Schema3.extend("array", (data, { inner, meta: meta5 }, options) => {
+  if (!Array.isArray(data)) throw new ValidationError4(`expected array but got ${data}`, options);
+  checkWithinRange3(data.length, meta5, "array length", options, !isNullable4(inner.meta.default));
+  return [data.map((_, index) => property3(data, index, inner, options))];
+});
+Schema3.extend("dict", (data, { inner, sKey }, options, strict) => {
+  if (!isPlainObject4(data)) throw new ValidationError4(`expected object but got ${data}`, options);
+  const result = {};
+  for (const key in data) {
+    let rKey;
+    try {
+      rKey = Schema3.resolve(key, sKey, options)[0];
+    } catch (error112) {
+      if (strict) continue;
+      throw error112;
+    }
+    result[rKey] = property3(data, key, inner, options);
+    data[rKey] = data[key];
+    if (key !== rKey) delete data[key];
+  }
+  return [result];
+});
+Schema3.extend("tuple", (data, { list }, options, strict) => {
+  if (!Array.isArray(data)) throw new ValidationError4(`expected array but got ${data}`, options);
+  const result = list.map((inner, index) => property3(data, index, inner, options));
+  if (strict) return [result];
+  result.push(...data.slice(list.length));
+  return [result];
+});
+function merge4(result, data) {
+  for (const key in data) {
+    if (key in result) continue;
+    result[key] = data[key];
+  }
+}
+Schema3.extend("object", (data, { dict }, options, strict) => {
+  if (!isPlainObject4(data)) throw new ValidationError4(`expected object but got ${data}`, options);
+  const result = {};
+  for (const key in dict) {
+    const value = property3(data, key, dict[key], options);
+    if (!isNullable4(value) || key in data) result[key] = value;
+  }
+  if (!strict) merge4(result, data);
+  return [result];
+});
+Schema3.extend("union", (data, { list, toString: toString6 }, options, strict) => {
+  const messages = [];
+  for (const inner of list) try {
+    return Schema3.resolve(data, inner, options, strict);
+  } catch (error112) {
+    messages.push(error112);
+  }
+  throw new ValidationError4(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+});
+Schema3.extend("intersect", (data, { list, toString: toString6 }, options, strict) => {
+  if (!list.length) return [data];
+  let result;
+  for (const inner of list) {
+    const value = Schema3.resolve(data, inner, options, true)[0];
+    if (isNullable4(value)) continue;
+    if (isNullable4(result)) result = value;
+    else if (typeof result !== typeof value) throw new ValidationError4(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+    else if (typeof value === "object") merge4(result ??= {}, value);
+    else if (result !== value) throw new ValidationError4(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+  }
+  if (!strict && isPlainObject4(data)) merge4(result, data);
+  return [result];
+});
+Schema3.extend("transform", (data, { inner, callback, preserve }, options) => {
+  const [result, adapted = data] = Schema3.resolve(data, inner, options, true);
+  if (preserve) return [callback(result)];
+  else return [callback(result), callback(adapted)];
+});
+var formatters3 = {};
+function defineMethod3(name, keys, format) {
+  formatters3[name] = format;
+  Object.assign(Schema3, { [name](...args) {
+    const schema = new Schema3({ type: name });
+    keys.forEach((key, index) => {
+      switch (key) {
+        case "sKey":
+          schema.sKey = args[index] ?? Schema3.string();
+          break;
+        case "inner":
+          schema.inner = Schema3.from(args[index]);
+          break;
+        case "list":
+          schema.list = args[index].map(Schema3.from);
+          break;
+        case "dict":
+          schema.dict = mapValues3(args[index], Schema3.from);
+          break;
+        case "bits":
+          schema.bits = {};
+          for (const key2 in args[index]) {
+            if (typeof args[index][key2] !== "number") continue;
+            schema.bits[key2] = args[index][key2];
+          }
+          break;
+        case "callback": {
+          const callback = schema.callback = args[index];
+          callback["toJSON"] ||= () => callback.toString();
+          break;
+        }
+        case "constructor": {
+          const constructor = schema.constructor = args[index];
+          if (typeof constructor === "function") constructor["toJSON"] ||= () => constructor["name"];
+          break;
+        }
+        default:
+          schema[key] = args[index];
+      }
+    });
+    if (name === "object" || name === "dict") schema.meta.default = {};
+    else if (name === "array" || name === "tuple") schema.meta.default = [];
+    else if (name === "bitset") schema.meta.default = 0;
+    return schema;
+  } });
+}
+defineMethod3("is", ["constructor"], ({ constructor }) => {
+  if (typeof constructor === "function") return constructor.name;
+  else return constructor;
+});
+defineMethod3("any", [], () => "any");
+defineMethod3("never", [], () => "never");
+defineMethod3("const", ["value"], ({ value }) => typeof value === "string" ? JSON.stringify(value) : value);
+defineMethod3("string", [], () => "string");
+defineMethod3("number", [], () => "number");
+defineMethod3("boolean", [], () => "boolean");
+defineMethod3("bitset", ["bits"], () => "bitset");
+defineMethod3("function", [], () => "function");
+defineMethod3("array", ["inner"], ({ inner }) => `${inner.toString(true)}[]`);
+defineMethod3("dict", ["inner", "sKey"], ({ inner, sKey }) => `{ [key: ${sKey.toString()}]: ${inner.toString()} }`);
+defineMethod3("tuple", ["list"], ({ list }) => `[${list.map((inner) => inner.toString()).join(", ")}]`);
+defineMethod3("object", ["dict"], ({ dict }) => {
+  if (Object.keys(dict).length === 0) return "{}";
+  return `{ ${Object.entries(dict).map(([key, inner]) => {
+    return `${key}${inner.meta.required ? "" : "?"}: ${inner.toString()}`;
+  }).join(", ")} }`;
+});
+defineMethod3("union", ["list"], ({ list }, inline) => {
+  const result = list.map(({ toString: format }) => format()).join(" | ");
+  return inline ? `(${result})` : result;
+});
+defineMethod3("intersect", ["list"], ({ list }) => {
+  return `${list.map((inner) => inner.toString(true)).join(" & ")}`;
+});
+defineMethod3("transform", [
+  "inner",
+  "callback",
+  "preserve"
+], ({ inner }, isInner) => inner.toString(isInner));
+
 // ../../node_modules/@deepseek-ai/dsh-timeout/lib/index.js
 var MAX_TIMER_DELAY_MS = 2147483647;
 
@@ -27956,22 +29911,22 @@ var DEFAULT_RETRYABLE_CODES = Object.freeze([
   "TIMEOUT",
   "TRANSPORT"
 ]);
-var backoffSchema = Schema.object({
-  initialDelayMs: Schema.number().max(MAX_TIMER_DELAY_MS).default(DEFAULT_INITIAL_DELAY_MS),
-  maxDelayMs: Schema.number().max(MAX_TIMER_DELAY_MS).default(DEFAULT_MAX_DELAY_MS),
-  jitterRatio: Schema.number().min(0).max(1).default(DEFAULT_JITTER_RATIO)
+var backoffSchema = Schema3.object({
+  initialDelayMs: Schema3.number().max(MAX_TIMER_DELAY_MS).default(DEFAULT_INITIAL_DELAY_MS),
+  maxDelayMs: Schema3.number().max(MAX_TIMER_DELAY_MS).default(DEFAULT_MAX_DELAY_MS),
+  jitterRatio: Schema3.number().min(0).max(1).default(DEFAULT_JITTER_RATIO)
 });
-var normalPolicySchema = Schema.object({
-  mode: Schema.const("normal").required(),
-  maxRetries: Schema.number().step(1).min(0).max(Number.MAX_SAFE_INTEGER).default(DEFAULT_MAX_RETRIES),
-  retryableCodes: Schema.array(Schema.string()).default([...DEFAULT_RETRYABLE_CODES]),
+var normalPolicySchema = Schema3.object({
+  mode: Schema3.const("normal").required(),
+  maxRetries: Schema3.number().step(1).min(0).max(Number.MAX_SAFE_INTEGER).default(DEFAULT_MAX_RETRIES),
+  retryableCodes: Schema3.array(Schema3.string()).default([...DEFAULT_RETRYABLE_CODES]),
   backoff: backoffSchema
 });
-var alwaysPolicySchema = Schema.object({
-  mode: Schema.const("always").required(),
+var alwaysPolicySchema = Schema3.object({
+  mode: Schema3.const("always").required(),
   backoff: backoffSchema
 });
-var RetryPolicySchema = Schema.union([normalPolicySchema, alwaysPolicySchema]);
+var RetryPolicySchema = Schema3.union([normalPolicySchema, alwaysPolicySchema]);
 var NORMAL_POLICY_KEYS = /* @__PURE__ */ new Set([
   "mode",
   "maxRetries",
@@ -28648,12 +30603,17 @@ var LlmRuntime = (() => {
         if (typeof model.provider !== "string" || model.provider !== provider || typeof model.id !== "string" || model.id.length === 0 || typeof model.name !== "string" || model.name.length === 0 || model.description !== void 0 && typeof model.description !== "string" || seen.has(model.id)) throw new LlmError(`adapter returned invalid or duplicate model metadata for provider "${provider}"`, "INVALID_CATALOG");
         seen.add(model.id);
         const inputModalities = this.detachedModalities(model.inputModalities);
+        const badge = model.badge;
         return {
           provider: model.provider,
           id: model.id,
           name: model.name,
           ...model.description === void 0 ? {} : { description: model.description },
-          ...inputModalities === void 0 ? {} : { inputModalities }
+          ...inputModalities === void 0 ? {} : { inputModalities },
+          ...badge === void 0 ? {} : { badge: {
+            text: typeof badge.text === "string" ? badge.text : { ...badge.text },
+            tone: badge.tone
+          } }
         };
       });
     }
@@ -29043,6 +31003,7 @@ import { randomUUID as randomUUID2 } from "node:crypto";
 import { createReadStream, realpath as realpath2 } from "node:fs";
 import { chmod, link, lstat as lstat3, mkdir, open as open2, readFile, readdir as readdir3, rename, rm, stat as stat4 } from "node:fs/promises";
 import { TextDecoder, promisify } from "node:util";
+import { homedir } from "node:os";
 var DACL_SECURITY_INFORMATION = 4;
 var ERROR_FILE_NOT_FOUND = 2;
 var ERROR_PATH_NOT_FOUND = 3;
@@ -29136,11 +31097,15 @@ async function readFileAbortable(absolutePath, verb, signal) {
 function versionOf(info) {
   return FsVersion(`${info.dev}:${info.ino}:${info.size}:${info.mtimeNs}:${info.ctimeNs}`);
 }
+function expandHomePrefix(path) {
+  if (path === "~" || path.startsWith("~/") || process.platform === "win32" && path.startsWith("~\\")) return `${homedir()}${path.slice(1)}`;
+  return path;
+}
 function localDisplayPath(cwd, path) {
   const absoluteCwd = isAbsolute3(cwd) ? cwd : `${process.cwd()}${sep}${cwd}`;
   const raw = isAbsolute3(path) ? path : `${absoluteCwd}${sep}${path}`;
-  const physicalSpelling = /(?:^|[\\/])\.\.(?:[\\/]|$)/u.test(raw) ? raw : resolve4(cwd, path);
-  return process.platform === "win32" ? resolve4(cwd, path) : physicalSpelling;
+  const physicalSpelling = /(?:^|[\\/])\.\.(?:[\\/]|$)/u.test(raw) ? raw : resolve6(cwd, path);
+  return process.platform === "win32" ? resolve6(cwd, path) : physicalSpelling;
 }
 async function resolveLocalTarget(cwd, path) {
   if (path.trim().length === 0) throw new FsError("file_path must be a non-empty string", "FS_NOT_FOUND");
@@ -29393,10 +31358,22 @@ async function throwGuardedCreateFailure(error112, absolutePath, displayPath, in
   if (isEEXIST(error112)) throw new FsError(`cannot overwrite existing "${displayPath}" without reading it first`, "FS_NOT_OBSERVED", { cause: error112 });
   throw new FsError(`cannot write "${displayPath}": ${errorMessage2(error112)}`, "FS_IO_ERROR", { cause: error112 });
 }
-async function writeFileAtomic(absolutePath, content, mode, signal, internals = {}, createIfAbsent) {
+function writeIoError(path, error112) {
+  if (error112 instanceof FsError) return error112;
+  if (isPermissionError(error112)) return new FsError(`cannot write "${path}": permission denied`, "FS_PERMISSION_DENIED", { cause: error112 });
+  if (error112 instanceof Error && "code" in error112 && typeof error112.code === "string") return new FsError(`cannot write "${path}": ${error112.message}`, "FS_IO_ERROR", { cause: error112 });
+  return error112;
+}
+async function writeFileAtomic(absolutePath, content, mode, signal, internals = {}, options = {}) {
+  const displayPath = options.displayPath ?? absolutePath;
+  const existingDestination = options.existingDestination ?? mode !== void 0;
   throwIfAborted(signal, "write");
   const directory = dirname3(absolutePath);
-  await mkdir(directory, { recursive: true });
+  try {
+    await mkdir(directory, { recursive: true });
+  } catch (error112) {
+    throw writeIoError(displayPath, error112);
+  }
   throwIfAborted(signal, "write");
   const stagingDir = join4(directory, internals.tempDirName?.(absolutePath) ?? `.${basename3(absolutePath)}.${process.pid}.${randomUUID2()}.tmpdir`);
   const tempPath = join4(stagingDir, internals.tempName?.(absolutePath) ?? `${basename3(absolutePath)}.tmp`);
@@ -29417,7 +31394,7 @@ async function writeFileAtomic(absolutePath, content, mode, signal, internals = 
     await chmod(stagingDir, 448);
     handle = await open2(tempPath, "wx", 384);
     await handle.chmod(384);
-    if (platform === "win32" && mode !== void 0) await copyFileDacl(absolutePath, tempPath);
+    if (platform === "win32" && existingDestination) await copyFileDacl(absolutePath, tempPath);
     await handle.writeFile(content, {
       encoding: "utf8",
       ...signal ? { signal } : {}
@@ -29431,12 +31408,12 @@ async function writeFileAtomic(absolutePath, content, mode, signal, internals = 
     await handle.close();
     handle = void 0;
     throwIfAborted(signal, "write");
-    if (createIfAbsent !== void 0) try {
+    if (options.createIfAbsent) try {
       await linkFile(tempPath, absolutePath);
     } catch (error112) {
-      await throwGuardedCreateFailure(error112, absolutePath, createIfAbsent.displayPath, inspectPublicationTarget);
+      await throwGuardedCreateFailure(error112, absolutePath, displayPath, inspectPublicationTarget);
     }
-    else if (platform === "win32" && mode !== void 0) try {
+    else if (platform === "win32" && existingDestination) try {
       await replaceFile(absolutePath, tempPath);
     } catch (error112) {
       if (!isENOENT(error112)) throw error112;
@@ -29448,7 +31425,7 @@ async function writeFileAtomic(absolutePath, content, mode, signal, internals = 
     } catch (_committedStagingCleanupFailure) {
     }
   } catch (error112) {
-    let failure2 = isAbortError(error112) ? new FsError("write aborted", "FS_ABORTED") : error112;
+    let failure2 = isAbortError(error112) ? new FsError("write aborted", "FS_ABORTED") : writeIoError(displayPath, error112);
     if (handle) try {
       await handle.close();
     } catch (closeError) {
@@ -29456,6 +31433,13 @@ async function writeFileAtomic(absolutePath, content, mode, signal, internals = 
     }
     if (!stagingCreated) throw failure2;
     return removeStagingDirOrThrow(stagingDir, failure2, removeStagingDir);
+  }
+}
+async function removeFile(absolutePath, displayPath, internals = {}) {
+  try {
+    await (internals.removeFile ?? rm)(absolutePath);
+  } catch (error112) {
+    throw new FsError(`cannot delete "${displayPath}": ${errorMessage2(error112)}`, isPermissionError(error112) ? "FS_PERMISSION_DENIED" : "FS_IO_ERROR", { cause: error112 });
   }
 }
 function normalizeLineEndings(content) {
@@ -29548,17 +31532,17 @@ var MAX_DIFF_BASIS_BYTES = Math.min(constants.MAX_LENGTH, constants.MAX_STRING_L
 var LocalFileSystem = class extends FileSystem {
   async watch(target, changed, signal) {
     signal.throwIfAborted();
-    const path = resolve4(this.processPath(target));
+    const path = resolve6(this.processPath(target));
     const directory = (await this.stat(target, signal))?.type === "directory";
     signal.throwIfAborted();
     const root = directory ? path : dirname3(path);
     const watcher = watch(root, {
       ignoreInitial: true,
       depth: 0,
-      ignored: (entry) => !directory && resolve4(entry) !== root && resolve4(entry) !== path
+      ignored: (entry) => !directory && resolve6(entry) !== root && resolve6(entry) !== path
     });
     watcher.on("all", (_event, entry) => {
-      if (directory || resolve4(entry) === path) changed();
+      if (directory || resolve6(entry) === path) changed();
     });
     watcher.on("error", (error112) => {
       changed(error112 instanceof Error ? error112 : new Error(String(error112)));
@@ -29571,9 +31555,9 @@ var LocalFileSystem = class extends FileSystem {
       throw error112;
     }
   }
-  static Config = Schema.object({
-    cwd: Schema.string().default(process.cwd()),
-    diffBasisMaxBytes: Schema.number().default(DEFAULT_DIFF_BASIS_MAX_BYTES)
+  static Config = Schema2.object({
+    cwd: Schema2.string().default(process.cwd()),
+    diffBasisMaxBytes: Schema2.number().default(DEFAULT_DIFF_BASIS_MAX_BYTES)
   });
   /** Validated config (schemastery applied the defaults before construction). */
   config;
@@ -29589,20 +31573,30 @@ var LocalFileSystem = class extends FileSystem {
     if (!Number.isSafeInteger(resolved.diffBasisMaxBytes) || resolved.diffBasisMaxBytes <= 0 || resolved.diffBasisMaxBytes > MAX_DIFF_BASIS_BYTES) throw new Error(`fs-local: diffBasisMaxBytes must be a positive safe integer no greater than ${MAX_DIFF_BASIS_BYTES}`);
     this.config = resolved;
   }
-  /** Run `op` with exclusive access to `targetKey` (FIFO per key). */
-  async withLock(targetKey, op) {
-    const run = (this.locks.get(targetKey) ?? Promise.resolve()).then(op, op);
-    const tail = run.then(() => void 0, () => void 0);
-    this.locks.set(targetKey, tail);
-    try {
-      return await run;
-    } finally {
-      if (this.locks.get(targetKey) === tail) this.locks.delete(targetKey);
-    }
+  /** Run one mutation under the same lock ordering as multi-target operations. */
+  withLock(targetKey, op) {
+    return this.withLocks([targetKey], op);
+  }
+  /** Acquire distinct keys in lexical order and release inner locks before outer locks. */
+  withLocks(keys, op) {
+    const ordered = [...new Set(keys)].sort();
+    const acquire = async (index) => {
+      const key = ordered[index];
+      if (key === void 0) return op();
+      const run = (this.locks.get(key) ?? Promise.resolve()).then(() => acquire(index + 1));
+      const tail = run.then(() => void 0, () => void 0);
+      this.locks.set(key, tail);
+      try {
+        return await run;
+      } finally {
+        if (this.locks.get(key) === tail) this.locks.delete(key);
+      }
+    };
+    return acquire(0);
   }
   async resolve(path, opts) {
     if (opts?.signal?.aborted) throw new FsError("resolve aborted", "FS_ABORTED");
-    const local = await resolveLocalTarget(opts?.cwd ?? this.config.cwd, path);
+    const local = await resolveLocalTarget(opts?.cwd ?? this.config.cwd, expandHomePrefix(path));
     if (opts?.signal?.aborted) throw new FsError("resolve aborted", "FS_ABORTED");
     return {
       targetKey: local.targetKey,
@@ -29613,7 +31607,7 @@ var LocalFileSystem = class extends FileSystem {
     return String(target.targetKey);
   }
   processPathFromHostPath(hostPath) {
-    return isAbsolute3(hostPath) ? resolve4(hostPath) : void 0;
+    return isAbsolute3(hostPath) ? resolve6(hostPath) : void 0;
   }
   fileUrl(target) {
     return pathToFileURL(this.processPath(target)).href;
@@ -29636,7 +31630,7 @@ var LocalFileSystem = class extends FileSystem {
   async lstat(path, opts, signal) {
     if (signal?.aborted) throw new FsError("lstat aborted", "FS_ABORTED");
     if (path.trim().length === 0) throw new FsError("file_path must be a non-empty string", "FS_NOT_FOUND");
-    const info = await probeNoFollow(localDisplayPath(opts?.cwd ?? this.config.cwd, path));
+    const info = await probeNoFollow(localDisplayPath(opts?.cwd ?? this.config.cwd, expandHomePrefix(path)));
     if (signal?.aborted) throw new FsError("lstat aborted", "FS_ABORTED");
     if (!info) return void 0;
     return {
@@ -29686,14 +31680,12 @@ var LocalFileSystem = class extends FileSystem {
   }
   async writeText(target, content, expected, signal) {
     return this.withLock(target.targetKey, async () => {
-      const existing = await probe(target.targetKey);
-      if (existing && existing.type !== "file") throw new FsError(`cannot write "${target.displayPath}": not a regular file`, "FS_NOT_REGULAR_FILE");
-      if (expected?.kind === "replaceIfVersion") {
-        if (!existing) throw new FsError(`cannot write "${target.displayPath}": file no longer exists`, "FS_STALE_VERSION");
-        if (existing.version !== expected.version) throw new FsError(`cannot write "${target.displayPath}": file changed since it was read`, "FS_STALE_VERSION");
-      } else if (expected?.kind === "createIfAbsent" && existing) throw new FsError(`cannot overwrite existing "${target.displayPath}" without reading it first`, "FS_NOT_OBSERVED");
+      const existing = await this.writeTarget(target, expected);
       const before = existing !== null && Buffer.byteLength(content, "utf8") < this.config.diffBasisMaxBytes ? await readTextForDiff(target.targetKey, this.config.diffBasisMaxBytes, signal) : null;
-      await writeFileAtomic(target.targetKey, content, existing?.mode, signal, this.internals, expected?.kind === "createIfAbsent" ? { displayPath: target.displayPath } : void 0);
+      await writeFileAtomic(target.targetKey, content, existing?.mode, signal, this.internals, {
+        displayPath: target.displayPath,
+        createIfAbsent: expected?.kind === "createIfAbsent"
+      });
       const after = await probe(target.targetKey);
       return {
         operation: existing ? "update" : "create",
@@ -29712,7 +31704,7 @@ var LocalFileSystem = class extends FileSystem {
       const original = await readForEdit(target.targetKey, target.displayPath, signal);
       const edited = applyLiteralEdit(original.content, edit.oldString, edit.newString, edit.replaceAll, target.displayPath);
       const content = restoreLineEndings(edited.content, original.lineEndings);
-      await writeFileAtomic(target.targetKey, content, existing.mode, signal, this.internals);
+      await writeFileAtomic(target.targetKey, content, existing.mode, signal, this.internals, { displayPath: target.displayPath });
       const after = await probe(target.targetKey);
       return {
         version: this.versionAfterWrite(after, target),
@@ -29720,6 +31712,94 @@ var LocalFileSystem = class extends FileSystem {
         after: edited.content
       };
     });
+  }
+  async patchText(target, hunks, expected, signal) {
+    return this.withLock(target.targetKey, async () => {
+      const existing = await this.requireFile(target, expected, "patch");
+      const original = await readForEdit(target.targetKey, target.displayPath, signal);
+      const after = this.patchContent(target, original.content, hunks);
+      await writeFileAtomic(target.targetKey, restoreLineEndings(after, original.lineEndings), existing.mode, signal, this.internals, { displayPath: target.displayPath });
+      return {
+        version: this.versionAfterWrite(await probe(target.targetKey), target),
+        before: original.content,
+        after
+      };
+    });
+  }
+  async deleteFile(target, expected, signal) {
+    return this.withLock(target.targetKey, async () => {
+      await this.requireFile(target, expected, "delete");
+      const before = await readTextForDiff(target.targetKey, this.config.diffBasisMaxBytes, signal);
+      await this.internals.inspectBeforeMutation?.(target);
+      if (signal?.aborted) throw new FsError("delete aborted", "FS_ABORTED");
+      await removeFile(target.targetKey, target.displayPath, this.internals);
+      return { before };
+    });
+  }
+  async moveFile(source, destination, options, signal) {
+    if (source.targetKey === destination.targetKey) throw new FsError(`cannot move "${source.displayPath}" to itself`, "FS_SAME_TARGET");
+    return this.withLocks([source.targetKey, destination.targetKey], async () => {
+      const sourceInfo = await this.requireFile(source, options.expectedSource, "move");
+      const existing = await this.writeTarget(destination, options.expectedDestination);
+      const original = await readForEdit(source.targetKey, source.displayPath, signal);
+      const after = options.hunks === void 0 ? original.content : this.patchContent(source, original.content, options.hunks);
+      const content = restoreLineEndings(after, original.lineEndings);
+      const before = existing && Buffer.byteLength(content, "utf8") < this.config.diffBasisMaxBytes ? await readTextForDiff(destination.targetKey, this.config.diffBasisMaxBytes, signal) : null;
+      await this.internals.inspectBeforeMutation?.(source);
+      if (signal?.aborted) throw new FsError("move aborted", "FS_ABORTED");
+      await writeFileAtomic(destination.targetKey, content, sourceInfo.mode, void 0, this.internals, {
+        displayPath: destination.displayPath,
+        createIfAbsent: options.expectedDestination?.kind === "createIfAbsent",
+        existingDestination: existing !== null
+      });
+      const outcome = {
+        operation: existing ? "update" : "create",
+        version: this.versionAfterWrite(await probe(destination.targetKey), destination),
+        before,
+        after
+      };
+      const sourceBefore = Buffer.byteLength(original.content, "utf8") < this.config.diffBasisMaxBytes ? original.content : null;
+      try {
+        await removeFile(source.targetKey, source.displayPath, this.internals);
+      } catch (error112) {
+        if (!(error112 instanceof FsError)) throw error112;
+        return {
+          sourceBefore,
+          destination: outcome,
+          sourceDeleted: false,
+          sourceFailure: {
+            code: error112.code,
+            message: error112.message
+          }
+        };
+      }
+      return {
+        sourceBefore,
+        destination: outcome,
+        sourceDeleted: true
+      };
+    });
+  }
+  async writeTarget(target, expected) {
+    const existing = await probe(target.targetKey);
+    if (existing && existing.type !== "file") throw new FsError(`cannot write "${target.displayPath}": not a regular file`, "FS_NOT_REGULAR_FILE");
+    if (expected?.kind === "replaceIfVersion") {
+      if (!existing) throw new FsError(`cannot write "${target.displayPath}": file no longer exists`, "FS_STALE_VERSION");
+      if (existing.version !== expected.version) throw new FsError(`cannot write "${target.displayPath}": file changed since it was read`, "FS_STALE_VERSION");
+    } else if (expected?.kind === "createIfAbsent" && existing) throw new FsError(`cannot overwrite existing "${target.displayPath}" without reading it first`, "FS_NOT_OBSERVED");
+    return existing;
+  }
+  async requireFile(target, expected, verb) {
+    const existing = await probe(target.targetKey);
+    if (!existing) throw new FsError(`cannot ${verb} "${target.displayPath}": file changed since it was read`, "FS_STALE_VERSION");
+    if (existing.type !== "file") throw new FsError(`cannot ${verb} "${target.displayPath}": not a regular file`, "FS_NOT_REGULAR_FILE");
+    if (expected && existing.version !== expected.version) throw new FsError(`cannot ${verb} "${target.displayPath}": file changed since it was read`, "FS_STALE_VERSION");
+    return existing;
+  }
+  patchContent(target, before, hunks) {
+    const result = applyHunks(before, hunks);
+    if (!result.ok) throw new FsError(`cannot patch "${target.displayPath}": hunk at patch line ${result.failure.hunkLineNumber} (${result.failure.stage}) does not match`, "FS_PATCH_MISMATCH");
+    return result.after;
   }
   /* v8 ignore next 5 -- the post-write probe finding the file absent requires a
   * concurrent unlink between rename and stat; fall back to a sentinel version. */
@@ -29732,6 +31812,26 @@ var LocalFileSystem = class extends FileSystem {
 // ../../node_modules/@deepseek-ai/dsh-sandbox/lib/index.js
 import { accessSync, constants as constants2, realpathSync, statSync } from "node:fs";
 import { tmpdir as tmpdir2 } from "node:os";
+import { resolve as resolve7 } from "node:path";
+var SandboxInvalidRootError = class extends HarnessError {
+  constructor(path, detail) {
+    super(`Invalid additional writable directory ${JSON.stringify(path)}: ${detail}`, "SANDBOX_INVALID_ROOT");
+    this.name = "SandboxInvalidRootError";
+  }
+};
+function additionalRoot(path) {
+  let physical;
+  let directory;
+  try {
+    physical = realpathSync.native(path);
+    directory = statSync(physical).isDirectory();
+  } catch (error112) {
+    throw new SandboxInvalidRootError(path, `cannot read the directory: ${String(error112)}`);
+  }
+  if (!directory) throw new SandboxInvalidRootError(path, "expected an existing directory");
+  if (physical !== resolve7(path)) throw new SandboxInvalidRootError(path, `use the physical directory path ${JSON.stringify(physical)}; symlinked grants are not supported`);
+  return physical;
+}
 function canonicalPath(path) {
   try {
     return realpathSync.native(path);
@@ -29739,19 +31839,29 @@ function canonicalPath(path) {
     return path;
   }
 }
+function workspaceWritableRoots(policy) {
+  if (policy.mode !== "workspace-write") return [];
+  return [.../* @__PURE__ */ new Set([canonicalPath(policy.workspaceRoot), ...(policy.additionalWritableRoots ?? []).map(additionalRoot)])];
+}
 function writableRoots(policy) {
   if (policy.mode !== "workspace-write") return [];
-  return [...new Set([
-    policy.workspaceRoot,
-    "/tmp",
-    tmpdir2()
-  ].map(canonicalPath))];
+  return [.../* @__PURE__ */ new Set([
+    ...workspaceWritableRoots(policy),
+    canonicalPath("/tmp"),
+    canonicalPath(tmpdir2())
+  ])];
 }
 var SANDBOX_UNAVAILABLE = "SANDBOX_UNAVAILABLE";
 var SandboxUnavailableError = class extends HarnessError {
   constructor(mode, detail) {
     super(`sandbox mode "${mode}" is requested but no sandbox backend is usable on this host; refusing to run the command unconfined. Install bubblewrap or run a Landlock-enforcing kernel (Linux), ensure sandbox-exec is usable (macOS), or ensure the ACL restricted-token runner can start (Windows) \u2014 otherwise switch the consumer to danger-full-access.` + (detail === void 0 ? "" : ` Runner failure: ${detail}`), SANDBOX_UNAVAILABLE);
     this.name = "SandboxUnavailableError";
+  }
+};
+var SandboxUnsupportedPolicyError = class extends HarnessError {
+  constructor(detail) {
+    super(detail, "SANDBOX_UNSUPPORTED_POLICY");
+    this.name = "SandboxUnsupportedPolicyError";
   }
 };
 var SandboxProvider = class extends Service {
@@ -29843,6 +31953,29 @@ var SandboxedFileSystem = class extends LocalFileSystem {
     return super.editText(await this.checkedTarget(target, sandboxPolicy), edit, expected, signal);
   }
   /**
+  * Fence the mutation before delegating to the local provider.
+  * @param sandboxPolicy - per-call mode and workspace root; omit for the deployment fallback.
+  */
+  async patchText(target, hunks, expected, signal, sandboxPolicy) {
+    return super.patchText(await this.checkedTarget(target, sandboxPolicy), hunks, expected, signal);
+  }
+  /**
+  * Fence the mutation before delegating to the local provider.
+  * @param sandboxPolicy - per-call mode and workspace root; omit for the deployment fallback.
+  */
+  async deleteFile(target, expected, signal, sandboxPolicy) {
+    return super.deleteFile(await this.checkedTarget(target, sandboxPolicy), expected, signal);
+  }
+  /**
+  * Fence the mutation before delegating to the local provider.
+  * @param sandboxPolicy - per-call mode and workspace root; omit for the deployment fallback.
+  */
+  async moveFile(source, destination, options, signal, sandboxPolicy) {
+    const checkedSource = await this.checkedTarget(source, sandboxPolicy);
+    const checkedDestination = await this.checkedTarget(destination, sandboxPolicy);
+    return super.moveFile(checkedSource, checkedDestination, options, signal);
+  }
+  /**
   * Enforce the per-call policy against `target` and return the EXACT target the
   * mutation must use, so the checked identity is the mutated one (no
   * check-here-write-there TOCTOU). `read-only` denies; `workspace-write`
@@ -29908,9 +32041,875 @@ function probe2(launcher = launcherPath(), options = {}) {
   return /partially enforced/.test(result.stdout) ? "partial" : "full";
 }
 
-// ../../node_modules/@deepseek-ai/dsh-sandbox-windows-acl/lib/types-Cl_DXjhk.js
+// ../../node_modules/@deepseek-ai/dsh-sandbox-local/node_modules/@deepseek-ai/cosmokit/lib/index.js
+function isNullable5(value) {
+  return value === null || value === void 0;
+}
+function isPlainObject5(data) {
+  return data && typeof data === "object" && !Array.isArray(data);
+}
+function filterKeys4(object4, filter) {
+  return Object.fromEntries(Object.entries(object4).filter(([key, value]) => filter(key, value)));
+}
+function mapValues4(object4, transform3) {
+  return Object.fromEntries(Object.entries(object4).map(([key, value]) => [key, transform3(value, key)]));
+}
+function pick5(source, keys, forced) {
+  if (!keys) return { ...source };
+  const result = {};
+  for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
+  return result;
+}
+var write4 = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
+function snapshot4(value, ancestors = /* @__PURE__ */ new Set()) {
+  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
+  if (value === null || typeof value !== "object") return value;
+  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot4(item, ancestors)));
+    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new TypeError("volatile config objects must be plain objects or arrays");
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot4(item, ancestors)])));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+function createVolatile4(value) {
+  let current = snapshot4(value);
+  return Object.freeze({
+    get: () => current,
+    [write4]: (value2) => {
+      current = value2;
+    }
+  });
+}
+function isVolatile4(value) {
+  return typeof value === "object" && value !== null && write4 in value;
+}
+function is5(type, value) {
+  if (arguments.length === 1) return (value2) => is5(type, value2);
+  return type in globalThis && value instanceof globalThis[type] || Object.prototype.toString.call(value).slice(8, -1) === type;
+}
+function isArrayBufferLike5(value) {
+  return is5("ArrayBuffer", value) || is5("SharedArrayBuffer", value);
+}
+function isArrayBufferSource5(value) {
+  return isArrayBufferLike5(value) || ArrayBuffer.isView(value);
+}
+var Binary5;
+(function(Binary7) {
+  Binary7.is = isArrayBufferLike5;
+  Binary7.isSource = isArrayBufferSource5;
+  function fromSource(source) {
+    if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+    else return source;
+  }
+  Binary7.fromSource = fromSource;
+  function toBase64(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
+    let binary = "";
+    const bytes = new Uint8Array(source);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+  Binary7.toBase64 = toBase64;
+  function fromBase64(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
+    return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
+  }
+  Binary7.fromBase64 = fromBase64;
+  function toHex(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
+    return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  Binary7.toHex = toHex;
+  function fromHex(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
+    const hex5 = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
+    const buffer = [];
+    for (let i = 0; i < hex5.length; i += 2) buffer.push(parseInt(`${hex5[i]}${hex5[i + 1]}`, 16));
+    return Uint8Array.from(buffer).buffer;
+  }
+  Binary7.fromHex = fromHex;
+})(Binary5 || (Binary5 = {}));
+var base64ToArrayBuffer5 = Binary5.fromBase64;
+var arrayBufferToBase645 = Binary5.toBase64;
+var hexToArrayBuffer5 = Binary5.fromHex;
+var arrayBufferToHex5 = Binary5.toHex;
+function clone5(source, refs = /* @__PURE__ */ new Map()) {
+  if (!source || typeof source !== "object") return source;
+  if (is5("Date", source)) return new Date(source.valueOf());
+  if (is5("RegExp", source)) return new RegExp(source.source, source.flags);
+  if (isArrayBufferLike5(source)) return source.slice(0);
+  if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+  const cached5 = refs.get(source);
+  if (cached5) return cached5;
+  if (Array.isArray(source)) {
+    const result2 = [];
+    refs.set(source, result2);
+    source.forEach((value, index) => {
+      result2[index] = Reflect.apply(clone5, null, [value, refs]);
+    });
+    return result2;
+  }
+  const result = Object.create(Object.getPrototypeOf(source));
+  refs.set(source, result);
+  for (const key of Reflect.ownKeys(source)) {
+    const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
+    if ("value" in descriptor) descriptor.value = Reflect.apply(clone5, null, [descriptor.value, refs]);
+    Reflect.defineProperty(result, key, descriptor);
+  }
+  return result;
+}
+function deepEqual4(a, b, strict) {
+  const ancestors = /* @__PURE__ */ new Set();
+  function compare(a2, b2) {
+    if (a2 === b2) return true;
+    if (isVolatile4(a2) || isVolatile4(b2)) return isVolatile4(a2) && isVolatile4(b2);
+    if (!strict && isNullable5(a2) && isNullable5(b2)) return true;
+    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
+    if (ancestors.has(a2)) return false;
+    function check3(test, then) {
+      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
+    }
+    ancestors.add(a2);
+    try {
+      return check3(Array.isArray, (a3, b3) => {
+        if (a3.length !== b3.length) return false;
+        for (let index = 0; index < a3.length; index++) if (!compare(a3[index], b3[index])) return false;
+        return true;
+      }) ?? check3(is5("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is5("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is5("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike5, (a3, b3) => {
+        if (a3.byteLength !== b3.byteLength) return false;
+        const viewA = new Uint8Array(a3);
+        const viewB = new Uint8Array(b3);
+        for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
+        return true;
+      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({
+        ...a2,
+        ...b2
+      }).every((key) => compare(a2[key], b2[key])));
+    } finally {
+      ancestors.delete(a2);
+    }
+  }
+  return compare(a, b);
+}
+var Time5;
+(function(Time7) {
+  Time7.millisecond = 1;
+  Time7.second = 1e3;
+  Time7.minute = Time7.second * 60;
+  Time7.hour = Time7.minute * 60;
+  Time7.day = Time7.hour * 24;
+  Time7.week = Time7.day * 7;
+  let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
+  function setTimezoneOffset(offset) {
+    timezoneOffset = offset;
+  }
+  Time7.setTimezoneOffset = setTimezoneOffset;
+  function getTimezoneOffset() {
+    return timezoneOffset;
+  }
+  Time7.getTimezoneOffset = getTimezoneOffset;
+  function getDateNumber(date14 = /* @__PURE__ */ new Date(), offset) {
+    if (typeof date14 === "number") date14 = new Date(date14);
+    if (offset === void 0) offset = timezoneOffset;
+    return Math.floor((date14.valueOf() / Time7.minute - offset) / 1440);
+  }
+  Time7.getDateNumber = getDateNumber;
+  function fromDateNumber(value, offset) {
+    const date14 = new Date(value * Time7.day);
+    if (offset === void 0) offset = timezoneOffset;
+    return new Date(+date14 + offset * Time7.minute);
+  }
+  Time7.fromDateNumber = fromDateNumber;
+  const numeric = /\d+(?:\.\d+)?/.source;
+  const timeRegExp = new RegExp(`^${[
+    "w(?:eek(?:s)?)?",
+    "d(?:ay(?:s)?)?",
+    "h(?:our(?:s)?)?",
+    "m(?:in(?:ute)?(?:s)?)?",
+    "s(?:ec(?:ond)?(?:s)?)?"
+  ].map((unit) => `(${numeric}${unit})?`).join("")}$`);
+  function parseTime(source) {
+    const capture = timeRegExp.exec(source);
+    if (!capture) return 0;
+    return (parseFloat(capture[1]) * Time7.week || 0) + (parseFloat(capture[2]) * Time7.day || 0) + (parseFloat(capture[3]) * Time7.hour || 0) + (parseFloat(capture[4]) * Time7.minute || 0) + (parseFloat(capture[5]) * Time7.second || 0);
+  }
+  Time7.parseTime = parseTime;
+  function parseDate(date14) {
+    const parsed = parseTime(date14);
+    if (parsed) date14 = Date.now() + parsed;
+    else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date14}`;
+    else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date14}`;
+    return date14 ? new Date(date14) : /* @__PURE__ */ new Date();
+  }
+  Time7.parseDate = parseDate;
+  function format(ms) {
+    const abs = Math.abs(ms);
+    if (abs >= Time7.day - Time7.hour / 2) return Math.round(ms / Time7.day) + "d";
+    else if (abs >= Time7.hour - Time7.minute / 2) return Math.round(ms / Time7.hour) + "h";
+    else if (abs >= Time7.minute - Time7.second / 2) return Math.round(ms / Time7.minute) + "m";
+    else if (abs >= Time7.second) return Math.round(ms / Time7.second) + "s";
+    return ms + "ms";
+  }
+  Time7.format = format;
+  function toDigits(source, length = 2) {
+    return source.toString().padStart(length, "0");
+  }
+  Time7.toDigits = toDigits;
+  function template(template2, time5 = /* @__PURE__ */ new Date()) {
+    return template2.replace("yyyy", time5.getFullYear().toString()).replace("yy", time5.getFullYear().toString().slice(2)).replace("MM", toDigits(time5.getMonth() + 1)).replace("dd", toDigits(time5.getDate())).replace("hh", toDigits(time5.getHours())).replace("mm", toDigits(time5.getMinutes())).replace("ss", toDigits(time5.getSeconds())).replace("SSS", toDigits(time5.getMilliseconds(), 3));
+  }
+  Time7.template = template;
+})(Time5 || (Time5 = {}));
+
+// ../../node_modules/@deepseek-ai/dsh-sandbox-local/node_modules/@deepseek-ai/schemastery/lib/index.mjs
+var kSchema4 = /* @__PURE__ */ Symbol.for("schemastery");
+var kValidationError5 = /* @__PURE__ */ Symbol.for("ValidationError");
+globalThis.__schemastery_index__ ??= 0;
+globalThis.__schemastery_refs__ = void 0;
+var ValidationError5 = class extends TypeError {
+  options;
+  name = "ValidationError";
+  constructor(message, options) {
+    let prefix = "$";
+    for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
+    else if (typeof segment === "number") prefix += "[" + segment + "]";
+    else if (typeof segment === "symbol") prefix += `[Symbol(${segment.toString()})]`;
+    if (prefix.startsWith(".")) prefix = prefix.slice(1);
+    super((prefix === "$" ? "" : `${prefix} `) + message);
+    this.options = options;
+  }
+  static is(error112) {
+    return !!error112?.[kValidationError5];
+  }
+};
+Object.defineProperty(ValidationError5.prototype, kValidationError5, { value: true });
+var Schema4 = function(options) {
+  const schema = function(data, options2 = {}) {
+    return Schema4.resolve(data, schema, options2)[0];
+  };
+  if (options.refs) {
+    const refs = mapValues4(options.refs, (options2) => new Schema4(options2));
+    const getRef = (uid) => refs[uid];
+    for (const key in refs) {
+      const options2 = refs[key];
+      options2.sKey = getRef(options2.sKey);
+      options2.inner = getRef(options2.inner);
+      options2.list = options2.list && options2.list.map(getRef);
+      options2.dict = options2.dict && mapValues4(options2.dict, getRef);
+    }
+    return refs[options.uid];
+  }
+  Object.assign(schema, options);
+  if (typeof schema.callback === "string") try {
+    schema.callback = new Function("return " + schema.callback)();
+  } catch {
+  }
+  Object.defineProperty(schema, "uid", { value: globalThis.__schemastery_index__++ });
+  Object.setPrototypeOf(schema, Schema4.prototype);
+  schema.meta ||= {};
+  schema.toString = schema.toString.bind(schema);
+  return schema;
+};
+Schema4.prototype = Object.create(Function.prototype);
+Schema4.prototype[kSchema4] = true;
+Object.defineProperty(Schema4.prototype, "~standard", { get() {
+  return {
+    version: 1,
+    vendor: "schemastery",
+    validate: (value) => {
+      try {
+        return { value: Schema4.resolve(value, this, {})[0] };
+      } catch (error112) {
+        if (ValidationError5.is(error112)) return { issues: [{
+          message: error112.message,
+          path: error112.options.path
+        }] };
+        throw error112;
+      }
+    }
+  };
+} });
+Schema4.ValidationError = ValidationError5;
+Schema4.prototype.toJSON = function toJSON4() {
+  if (globalThis.__schemastery_refs__) {
+    globalThis.__schemastery_refs__[this.uid] ??= JSON.parse(JSON.stringify({ ...this }));
+    return this.uid;
+  }
+  globalThis.__schemastery_refs__ = { [this.uid]: { ...this } };
+  globalThis.__schemastery_refs__[this.uid] = JSON.parse(JSON.stringify({ ...this }));
+  const result = {
+    uid: this.uid,
+    refs: globalThis.__schemastery_refs__
+  };
+  globalThis.__schemastery_refs__ = void 0;
+  return result;
+};
+Schema4.prototype.set = function set5(key, value) {
+  this.dict[key] = value;
+  return this;
+};
+Schema4.prototype.push = function push4(value) {
+  this.list.push(value);
+  return this;
+};
+function mergeDesc4(original, messages) {
+  const result = typeof original === "string" ? { "": original } : { ...original };
+  for (const locale in messages) {
+    const value = messages[locale];
+    if (value?.$description || value?.$desc) result[locale] = value.$description || value.$desc;
+    else if (typeof value === "string") result[locale] = value;
+  }
+  return result;
+}
+function getInner4(value) {
+  return value?.$value ?? value?.$inner;
+}
+function extractKeys4(data) {
+  return filterKeys4(data ?? {}, (key) => !key.startsWith("$"));
+}
+Schema4.prototype.i18n = function i18n4(messages) {
+  const schema = Schema4(this);
+  const desc = mergeDesc4(schema.meta.description, messages);
+  if (Object.keys(desc).length) schema.meta.description = desc;
+  if (schema.dict) schema.dict = mapValues4(schema.dict, (inner, key) => {
+    return inner.i18n(mapValues4(messages, (data) => getInner4(data)?.[key] ?? data?.[key]));
+  });
+  if (schema.list) schema.list = schema.list.map((inner, index) => {
+    return inner.i18n(mapValues4(messages, (data = {}) => {
+      if (Array.isArray(getInner4(data))) return getInner4(data)[index];
+      if (Array.isArray(data)) return data[index];
+      return extractKeys4(data);
+    }));
+  });
+  if (schema.inner) schema.inner = schema.inner.i18n(mapValues4(messages, (data) => {
+    if (getInner4(data)) return getInner4(data);
+    return extractKeys4(data);
+  }));
+  if (schema.sKey) schema.sKey = schema.sKey.i18n(mapValues4(messages, (data) => data?.$key));
+  return schema;
+};
+Schema4.prototype.extra = function extra4(key, value) {
+  const schema = Schema4(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+};
+for (const key of [
+  "required",
+  "disabled",
+  "collapse",
+  "hidden",
+  "loose"
+]) Object.assign(Schema4.prototype, { [key](value = true) {
+  const schema = Schema4(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+} });
+Schema4.prototype.deprecated = function deprecated4() {
+  const schema = Schema4(this);
+  schema.meta.badges ||= [];
+  schema.meta.badges.push({
+    text: "deprecated",
+    type: "danger"
+  });
+  return schema;
+};
+Schema4.prototype.experimental = function experimental4() {
+  const schema = Schema4(this);
+  schema.meta.badges ||= [];
+  schema.meta.badges.push({
+    text: "experimental",
+    type: "warning"
+  });
+  return schema;
+};
+Schema4.prototype.pattern = function pattern4(regexp) {
+  const schema = Schema4(this);
+  const pattern6 = pick5(regexp, ["source", "flags"]);
+  schema.meta = {
+    ...schema.meta,
+    pattern: pattern6
+  };
+  return schema;
+};
+Schema4.prototype.simplify = function simplify4(value) {
+  if (isVolatile4(value)) value = value.get();
+  if (deepEqual4(value, this.meta.default, this.type === "dict")) return null;
+  if (isNullable5(value)) return value;
+  if (this.type === "object" || this.type === "dict") {
+    const result = {};
+    for (const key in value) {
+      const item = (this.type === "object" ? this.dict[key] : this.inner)?.simplify(value[key]);
+      if (this.type === "dict" || !isNullable5(item)) result[key] = item;
+    }
+    if (deepEqual4(result, this.meta.default, this.type === "dict")) return null;
+    return result;
+  } else if (this.type === "array" || this.type === "tuple") {
+    const result = [];
+    value.forEach((value2, index) => {
+      const schema = this.type === "array" ? this.inner : this.list[index];
+      const item = schema ? schema.simplify(value2) : value2;
+      result.push(item);
+    });
+    return result;
+  } else if (this.type === "intersect") {
+    const result = {};
+    for (const item of this.list) Object.assign(result, item.simplify(value));
+    return result;
+  } else if (this.type === "union") for (const schema of this.list) try {
+    Schema4.resolve(value, schema, {});
+    return schema.simplify(value);
+  } catch {
+  }
+  return value;
+};
+Schema4.prototype.toString = function toString4(inline) {
+  return formatters4[this.type]?.(this, inline) ?? `Schema<${this.type}>`;
+};
+Schema4.prototype.role = function role4(role4, extra6) {
+  const schema = Schema4(this);
+  schema.meta = {
+    ...schema.meta,
+    role: role4,
+    extra: extra6
+  };
+  return schema;
+};
+for (const key of [
+  "default",
+  "link",
+  "comment",
+  "description",
+  "max",
+  "min",
+  "step"
+]) Object.assign(Schema4.prototype, { [key](value) {
+  const schema = Schema4(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+} });
+Schema4.prototype.volatile = function volatile4() {
+  if (this.meta.volatile) throw new TypeError("volatile schema is already wrapped");
+  return this.extra("volatile", true);
+};
+var resolvers4 = {};
+var checkedVolatile4 = /* @__PURE__ */ Symbol("checked-volatile-schema");
+function validateVolatileSchema4(schema, path = [], blocked = false, seen = /* @__PURE__ */ new Map()) {
+  const states = seen.get(schema) ?? /* @__PURE__ */ new Set();
+  if (states.has(blocked)) return;
+  states.add(blocked);
+  seen.set(schema, states);
+  if (schema.meta?.volatile && blocked) throw new ValidationError5("volatile fields require a fixed object path without an enclosing volatile field", { path });
+  const nested = blocked || !!schema.meta?.volatile;
+  if (schema.dict) for (const [key, child] of Object.entries(schema.dict)) validateVolatileSchema4(child, [...path, key], nested, seen);
+  if (schema.sKey) validateVolatileSchema4(schema.sKey, [...path, "<key>"], true, seen);
+  if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema4])) validateVolatileSchema4(schema.inner, [...path, "*"], true, seen);
+  if (schema.list) for (let index = 0; index < schema.list.length; index++) validateVolatileSchema4(schema.list[index], [...path, String(index)], true, seen);
+}
+Schema4.extend = function extend5(type, resolve14) {
+  resolvers4[type] = resolve14;
+};
+Schema4.resolve = function resolve8(data, schema, options = {}, strict = false) {
+  if (!schema) return [data];
+  if (!options[checkedVolatile4]) {
+    validateVolatileSchema4(schema, options.path);
+    options = {
+      ...options,
+      [checkedVolatile4]: true
+    };
+  }
+  if (schema.meta?.volatile) {
+    const inner = Schema4(schema);
+    inner.meta = {
+      ...schema.meta,
+      volatile: false
+    };
+    const [value, adapted] = Schema4.resolve(data, inner, options, strict);
+    try {
+      return [createVolatile4(value), adapted];
+    } catch (error112) {
+      throw new ValidationError5(error112 instanceof Error ? error112.message : String(error112), options);
+    }
+  }
+  if (options.ignore?.(data, schema)) return [data];
+  if (isNullable5(data) && schema.type !== "lazy") {
+    if (schema.meta.required) throw new ValidationError5(`missing required value`, options);
+    let current = schema;
+    let fallback = schema.meta.default;
+    while (current?.type === "intersect" && isNullable5(fallback)) {
+      current = current.list[0];
+      fallback = current?.meta.default;
+    }
+    if (isNullable5(fallback)) return [data];
+    data = clone5(fallback);
+  }
+  const callback = resolvers4[schema.type];
+  if (!callback) throw new ValidationError5(`unsupported type "${schema.type}"`, options);
+  try {
+    return callback(data, schema, options, strict);
+  } catch (error112) {
+    if (!schema.meta.loose) throw error112;
+    return [schema.meta.default];
+  }
+};
+Schema4.from = function from4(source) {
+  if (isNullable5(source)) return Schema4.any();
+  else if ([
+    "string",
+    "number",
+    "boolean"
+  ].includes(typeof source)) return Schema4.const(source).required();
+  else if (source[kSchema4]) return source;
+  else if (typeof source === "function") switch (source) {
+    case String:
+      return Schema4.string().required();
+    case Number:
+      return Schema4.number().required();
+    case Boolean:
+      return Schema4.boolean().required();
+    case Function:
+      return Schema4.function().required();
+    default:
+      return Schema4.is(source).required();
+  }
+  else throw new TypeError(`cannot infer schema from ${source}`);
+};
+Schema4.lazy = function lazy5(builder) {
+  const toJSON6 = () => {
+    if (!schema.inner[kSchema4]) {
+      schema.inner = schema.builder();
+      schema.inner.meta = {
+        ...schema.meta,
+        ...schema.inner.meta
+      };
+    }
+    return schema.inner.toJSON();
+  };
+  const schema = new Schema4({
+    type: "lazy",
+    builder,
+    inner: { toJSON: toJSON6 }
+  });
+  return schema;
+};
+Schema4.natural = function natural4() {
+  return Schema4.number().step(1).min(0);
+};
+Schema4.percent = function percent4() {
+  return Schema4.number().step(0.01).min(0).max(1).role("slider");
+};
+Schema4.date = function date8() {
+  return Schema4.union([Schema4.is(Date), Schema4.transform(Schema4.string().role("datetime"), (value, options) => {
+    const date14 = new Date(value);
+    if (isNaN(+date14)) throw new ValidationError5(`invalid date "${value}"`, options);
+    return date14;
+  }, true)]);
+};
+Schema4.regExp = function regExp4(flag = "") {
+  return Schema4.union([Schema4.is(RegExp), Schema4.transform(Schema4.string().role("regexp", { flag }), (value, options) => {
+    try {
+      return new RegExp(value, flag);
+    } catch (e) {
+      throw new ValidationError5(e.message, options);
+    }
+  }, true)]);
+};
+Schema4.arrayBuffer = function arrayBuffer4(encoding) {
+  return Schema4.union([
+    Schema4.is(ArrayBuffer),
+    Schema4.is(SharedArrayBuffer),
+    Schema4.transform(Schema4.any(), (value, options) => {
+      if (Binary5.isSource(value)) return Binary5.fromSource(value);
+      throw new ValidationError5(`expected ArrayBufferSource but got ${value}`, options);
+    }, true),
+    ...encoding ? [Schema4.transform(Schema4.string(), (value, options) => {
+      try {
+        return encoding === "base64" ? Binary5.fromBase64(value) : Binary5.fromHex(value);
+      } catch (e) {
+        throw new ValidationError5(e.message, options);
+      }
+    }, true)] : []
+  ]);
+};
+Schema4.extend("lazy", (data, schema, options, strict) => {
+  if (!schema.inner[kSchema4]) {
+    schema.inner = schema.builder();
+    schema.inner.meta = {
+      ...schema.meta,
+      ...schema.inner.meta
+    };
+    validateVolatileSchema4(schema.inner, options.path, true);
+  }
+  return Schema4.resolve(data, schema.inner, options, strict);
+});
+Schema4.extend("any", (data) => {
+  return [data];
+});
+Schema4.extend("never", (data, _, options) => {
+  throw new ValidationError5(`expected nullable but got ${data}`, options);
+});
+Schema4.extend("const", (data, { value }, options) => {
+  if (deepEqual4(data, value)) return [value];
+  throw new ValidationError5(`expected ${value} but got ${data}`, options);
+});
+function checkWithinRange4(data, meta5, description, options, skipMin = false) {
+  const { max = Infinity, min = -Infinity } = meta5;
+  if (data > max) throw new ValidationError5(`expected ${description} <= ${max} but got ${data}`, options);
+  if (data < min && !skipMin) throw new ValidationError5(`expected ${description} >= ${min} but got ${data}`, options);
+}
+Schema4.extend("string", (data, { meta: meta5 }, options) => {
+  if (typeof data !== "string") throw new ValidationError5(`expected string but got ${data}`, options);
+  if (meta5.pattern) {
+    const regexp = new RegExp(meta5.pattern.source, meta5.pattern.flags);
+    if (!regexp.test(data)) throw new ValidationError5(`expect string to match regexp ${regexp}`, options);
+  }
+  checkWithinRange4(data.length, meta5, "string length", options);
+  return [data];
+});
+function decimalShift4(data, digits) {
+  const str = data.toString();
+  if (str.includes("e")) return data * Math.pow(10, digits);
+  const index = str.indexOf(".");
+  if (index === -1) return data * Math.pow(10, digits);
+  const frac = str.slice(index + 1);
+  const integer3 = str.slice(0, index);
+  if (frac.length <= digits) return +(integer3 + frac.padEnd(digits, "0"));
+  return +(integer3 + frac.slice(0, digits) + "." + frac.slice(digits));
+}
+function isMultipleOf4(data, min, step) {
+  step = Math.abs(step);
+  if (!/^\d+\.\d+$/.test(step.toString())) return (data - min) % step === 0;
+  const index = step.toString().indexOf(".");
+  const digits = step.toString().slice(index + 1).length;
+  return Math.abs(decimalShift4(data, digits) - decimalShift4(min, digits)) % decimalShift4(step, digits) === 0;
+}
+Schema4.extend("number", (data, { meta: meta5 }, options) => {
+  if (typeof data !== "number") throw new ValidationError5(`expected number but got ${data}`, options);
+  checkWithinRange4(data, meta5, "number", options);
+  const { step } = meta5;
+  if (step && !isMultipleOf4(data, meta5.min ?? 0, step)) throw new ValidationError5(`expected number multiple of ${step} but got ${data}`, options);
+  return [data];
+});
+Schema4.extend("boolean", (data, _, options) => {
+  if (typeof data === "boolean") return [data];
+  throw new ValidationError5(`expected boolean but got ${data}`, options);
+});
+Schema4.extend("bitset", (data, { bits, meta: meta5 }, options) => {
+  let value = 0, keys = [];
+  if (typeof data === "number") {
+    value = data;
+    for (const key in bits) if (data & bits[key]) keys.push(key);
+  } else if (Array.isArray(data)) {
+    keys = data;
+    for (const key of keys) {
+      if (typeof key !== "string") throw new ValidationError5(`expected string but got ${key}`, options);
+      if (key in bits) value |= bits[key];
+    }
+  } else throw new ValidationError5(`expected number or array but got ${data}`, options);
+  if (value === meta5.default) return [value];
+  return [value, keys];
+});
+Schema4.extend("function", (data, _, options) => {
+  if (typeof data === "function") return [data];
+  throw new ValidationError5(`expected function but got ${data}`, options);
+});
+Schema4.extend("is", (data, { constructor }, options) => {
+  if (typeof constructor === "function") {
+    if (data instanceof constructor) return [data];
+    throw new ValidationError5(`expected ${constructor.name} but got ${data}`, options);
+  } else {
+    if (isNullable5(data)) throw new ValidationError5(`expected ${constructor} but got ${data}`, options);
+    let prototype = Object.getPrototypeOf(data);
+    while (prototype) {
+      if (prototype.constructor?.name === constructor) return [data];
+      prototype = Object.getPrototypeOf(prototype);
+    }
+    throw new ValidationError5(`expected ${constructor} but got ${data}`, options);
+  }
+});
+function property4(data, key, schema, options) {
+  try {
+    const [value, adapted] = Schema4.resolve(data[key], schema, {
+      ...options,
+      path: [...options.path || [], key]
+    });
+    if (adapted !== void 0) data[key] = adapted;
+    return value;
+  } catch (e) {
+    if (!options?.autofix) throw e;
+    delete data[key];
+    return schema.meta.volatile ? createVolatile4(schema.meta.default) : schema.meta.default;
+  }
+}
+Schema4.extend("array", (data, { inner, meta: meta5 }, options) => {
+  if (!Array.isArray(data)) throw new ValidationError5(`expected array but got ${data}`, options);
+  checkWithinRange4(data.length, meta5, "array length", options, !isNullable5(inner.meta.default));
+  return [data.map((_, index) => property4(data, index, inner, options))];
+});
+Schema4.extend("dict", (data, { inner, sKey }, options, strict) => {
+  if (!isPlainObject5(data)) throw new ValidationError5(`expected object but got ${data}`, options);
+  const result = {};
+  for (const key in data) {
+    let rKey;
+    try {
+      rKey = Schema4.resolve(key, sKey, options)[0];
+    } catch (error112) {
+      if (strict) continue;
+      throw error112;
+    }
+    result[rKey] = property4(data, key, inner, options);
+    data[rKey] = data[key];
+    if (key !== rKey) delete data[key];
+  }
+  return [result];
+});
+Schema4.extend("tuple", (data, { list }, options, strict) => {
+  if (!Array.isArray(data)) throw new ValidationError5(`expected array but got ${data}`, options);
+  const result = list.map((inner, index) => property4(data, index, inner, options));
+  if (strict) return [result];
+  result.push(...data.slice(list.length));
+  return [result];
+});
+function merge5(result, data) {
+  for (const key in data) {
+    if (key in result) continue;
+    result[key] = data[key];
+  }
+}
+Schema4.extend("object", (data, { dict }, options, strict) => {
+  if (!isPlainObject5(data)) throw new ValidationError5(`expected object but got ${data}`, options);
+  const result = {};
+  for (const key in dict) {
+    const value = property4(data, key, dict[key], options);
+    if (!isNullable5(value) || key in data) result[key] = value;
+  }
+  if (!strict) merge5(result, data);
+  return [result];
+});
+Schema4.extend("union", (data, { list, toString: toString6 }, options, strict) => {
+  const messages = [];
+  for (const inner of list) try {
+    return Schema4.resolve(data, inner, options, strict);
+  } catch (error112) {
+    messages.push(error112);
+  }
+  throw new ValidationError5(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+});
+Schema4.extend("intersect", (data, { list, toString: toString6 }, options, strict) => {
+  if (!list.length) return [data];
+  let result;
+  for (const inner of list) {
+    const value = Schema4.resolve(data, inner, options, true)[0];
+    if (isNullable5(value)) continue;
+    if (isNullable5(result)) result = value;
+    else if (typeof result !== typeof value) throw new ValidationError5(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+    else if (typeof value === "object") merge5(result ??= {}, value);
+    else if (result !== value) throw new ValidationError5(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+  }
+  if (!strict && isPlainObject5(data)) merge5(result, data);
+  return [result];
+});
+Schema4.extend("transform", (data, { inner, callback, preserve }, options) => {
+  const [result, adapted = data] = Schema4.resolve(data, inner, options, true);
+  if (preserve) return [callback(result)];
+  else return [callback(result), callback(adapted)];
+});
+var formatters4 = {};
+function defineMethod4(name, keys, format) {
+  formatters4[name] = format;
+  Object.assign(Schema4, { [name](...args) {
+    const schema = new Schema4({ type: name });
+    keys.forEach((key, index) => {
+      switch (key) {
+        case "sKey":
+          schema.sKey = args[index] ?? Schema4.string();
+          break;
+        case "inner":
+          schema.inner = Schema4.from(args[index]);
+          break;
+        case "list":
+          schema.list = args[index].map(Schema4.from);
+          break;
+        case "dict":
+          schema.dict = mapValues4(args[index], Schema4.from);
+          break;
+        case "bits":
+          schema.bits = {};
+          for (const key2 in args[index]) {
+            if (typeof args[index][key2] !== "number") continue;
+            schema.bits[key2] = args[index][key2];
+          }
+          break;
+        case "callback": {
+          const callback = schema.callback = args[index];
+          callback["toJSON"] ||= () => callback.toString();
+          break;
+        }
+        case "constructor": {
+          const constructor = schema.constructor = args[index];
+          if (typeof constructor === "function") constructor["toJSON"] ||= () => constructor["name"];
+          break;
+        }
+        default:
+          schema[key] = args[index];
+      }
+    });
+    if (name === "object" || name === "dict") schema.meta.default = {};
+    else if (name === "array" || name === "tuple") schema.meta.default = [];
+    else if (name === "bitset") schema.meta.default = 0;
+    return schema;
+  } });
+}
+defineMethod4("is", ["constructor"], ({ constructor }) => {
+  if (typeof constructor === "function") return constructor.name;
+  else return constructor;
+});
+defineMethod4("any", [], () => "any");
+defineMethod4("never", [], () => "never");
+defineMethod4("const", ["value"], ({ value }) => typeof value === "string" ? JSON.stringify(value) : value);
+defineMethod4("string", [], () => "string");
+defineMethod4("number", [], () => "number");
+defineMethod4("boolean", [], () => "boolean");
+defineMethod4("bitset", ["bits"], () => "bitset");
+defineMethod4("function", [], () => "function");
+defineMethod4("array", ["inner"], ({ inner }) => `${inner.toString(true)}[]`);
+defineMethod4("dict", ["inner", "sKey"], ({ inner, sKey }) => `{ [key: ${sKey.toString()}]: ${inner.toString()} }`);
+defineMethod4("tuple", ["list"], ({ list }) => `[${list.map((inner) => inner.toString()).join(", ")}]`);
+defineMethod4("object", ["dict"], ({ dict }) => {
+  if (Object.keys(dict).length === 0) return "{}";
+  return `{ ${Object.entries(dict).map(([key, inner]) => {
+    return `${key}${inner.meta.required ? "" : "?"}: ${inner.toString()}`;
+  }).join(", ")} }`;
+});
+defineMethod4("union", ["list"], ({ list }, inline) => {
+  const result = list.map(({ toString: format }) => format()).join(" | ");
+  return inline ? `(${result})` : result;
+});
+defineMethod4("intersect", ["list"], ({ list }) => {
+  return `${list.map((inner) => inner.toString(true)).join(" & ")}`;
+});
+defineMethod4("transform", [
+  "inner",
+  "callback",
+  "preserve"
+], ({ inner }, isInner) => inner.toString(isInner));
+
+// ../../node_modules/@deepseek-ai/dsh-sandbox-windows-acl/lib/types-DFdfvhLN.js
 import { existsSync, mkdirSync, mkdtempSync as mkdtempSync2, readFileSync, realpathSync as realpathSync2, statSync as statSync2, writeFileSync } from "node:fs";
-import { dirname as dirname6, isAbsolute as isAbsolute4, join as join6, relative as relative4, resolve as resolve5, sep as sep3 } from "node:path";
+import { dirname as dirname6, isAbsolute as isAbsolute4, join as join6, relative as relative4, resolve as resolve10, sep as sep3 } from "node:path";
 
 // ../../node_modules/@deepseek-ai/dsh-lazy-require/lib/index.js
 import { createRequire as createRequire5 } from "node:module";
@@ -30148,7 +33147,7 @@ function closeHandleChecked(api, handle, detail) {
   if (api.closeHandle(handle) === 0) throwLastError(api, "CloseHandle", detail);
 }
 
-// ../../node_modules/@deepseek-ai/dsh-sandbox-windows-acl/lib/types-Cl_DXjhk.js
+// ../../node_modules/@deepseek-ai/dsh-sandbox-windows-acl/lib/types-DFdfvhLN.js
 import { createHash } from "node:crypto";
 import { readFile as readFile2, rm as rm2 } from "node:fs/promises";
 import { tmpdir as tmpdir3 } from "node:os";
@@ -30269,9 +33268,9 @@ var ScopedLayers = class {
   * @param pick - select the named table from a layer.
   * @returns an insertion-ordered effective map.
   */
-  merge(scope, pick4) {
-    const merged = new Map(pick4(this.global).entries());
-    for (const layer of this.chainLayers(scope)) for (const [name, value] of pick4(layer).entries()) merged.set(name, value);
+  merge(scope, pick8) {
+    const merged = new Map(pick8(this.global).entries());
+    for (const layer of this.chainLayers(scope)) for (const [name, value] of pick8(layer).entries()) merged.set(name, value);
     return merged;
   }
   /**
@@ -30323,6 +33322,872 @@ function scopeOf(ctx) {
   return ctx[kScope];
 }
 
+// ../../node_modules/@deepseek-ai/dsh-skill/node_modules/@deepseek-ai/cosmokit/lib/index.js
+function isNullable6(value) {
+  return value === null || value === void 0;
+}
+function isPlainObject6(data) {
+  return data && typeof data === "object" && !Array.isArray(data);
+}
+function filterKeys5(object4, filter) {
+  return Object.fromEntries(Object.entries(object4).filter(([key, value]) => filter(key, value)));
+}
+function mapValues5(object4, transform3) {
+  return Object.fromEntries(Object.entries(object4).map(([key, value]) => [key, transform3(value, key)]));
+}
+function pick6(source, keys, forced) {
+  if (!keys) return { ...source };
+  const result = {};
+  for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
+  return result;
+}
+var write5 = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
+function snapshot5(value, ancestors = /* @__PURE__ */ new Set()) {
+  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
+  if (value === null || typeof value !== "object") return value;
+  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot5(item, ancestors)));
+    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new TypeError("volatile config objects must be plain objects or arrays");
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot5(item, ancestors)])));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+function createVolatile5(value) {
+  let current = snapshot5(value);
+  return Object.freeze({
+    get: () => current,
+    [write5]: (value2) => {
+      current = value2;
+    }
+  });
+}
+function isVolatile5(value) {
+  return typeof value === "object" && value !== null && write5 in value;
+}
+function is6(type, value) {
+  if (arguments.length === 1) return (value2) => is6(type, value2);
+  return type in globalThis && value instanceof globalThis[type] || Object.prototype.toString.call(value).slice(8, -1) === type;
+}
+function isArrayBufferLike6(value) {
+  return is6("ArrayBuffer", value) || is6("SharedArrayBuffer", value);
+}
+function isArrayBufferSource6(value) {
+  return isArrayBufferLike6(value) || ArrayBuffer.isView(value);
+}
+var Binary6;
+(function(Binary7) {
+  Binary7.is = isArrayBufferLike6;
+  Binary7.isSource = isArrayBufferSource6;
+  function fromSource(source) {
+    if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+    else return source;
+  }
+  Binary7.fromSource = fromSource;
+  function toBase64(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
+    let binary = "";
+    const bytes = new Uint8Array(source);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+  Binary7.toBase64 = toBase64;
+  function fromBase64(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
+    return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
+  }
+  Binary7.fromBase64 = fromBase64;
+  function toHex(source) {
+    source = fromSource(source);
+    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
+    return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  Binary7.toHex = toHex;
+  function fromHex(source) {
+    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
+    const hex5 = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
+    const buffer = [];
+    for (let i = 0; i < hex5.length; i += 2) buffer.push(parseInt(`${hex5[i]}${hex5[i + 1]}`, 16));
+    return Uint8Array.from(buffer).buffer;
+  }
+  Binary7.fromHex = fromHex;
+})(Binary6 || (Binary6 = {}));
+var base64ToArrayBuffer6 = Binary6.fromBase64;
+var arrayBufferToBase646 = Binary6.toBase64;
+var hexToArrayBuffer6 = Binary6.fromHex;
+var arrayBufferToHex6 = Binary6.toHex;
+function clone6(source, refs = /* @__PURE__ */ new Map()) {
+  if (!source || typeof source !== "object") return source;
+  if (is6("Date", source)) return new Date(source.valueOf());
+  if (is6("RegExp", source)) return new RegExp(source.source, source.flags);
+  if (isArrayBufferLike6(source)) return source.slice(0);
+  if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+  const cached5 = refs.get(source);
+  if (cached5) return cached5;
+  if (Array.isArray(source)) {
+    const result2 = [];
+    refs.set(source, result2);
+    source.forEach((value, index) => {
+      result2[index] = Reflect.apply(clone6, null, [value, refs]);
+    });
+    return result2;
+  }
+  const result = Object.create(Object.getPrototypeOf(source));
+  refs.set(source, result);
+  for (const key of Reflect.ownKeys(source)) {
+    const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
+    if ("value" in descriptor) descriptor.value = Reflect.apply(clone6, null, [descriptor.value, refs]);
+    Reflect.defineProperty(result, key, descriptor);
+  }
+  return result;
+}
+function deepEqual5(a, b, strict) {
+  const ancestors = /* @__PURE__ */ new Set();
+  function compare(a2, b2) {
+    if (a2 === b2) return true;
+    if (isVolatile5(a2) || isVolatile5(b2)) return isVolatile5(a2) && isVolatile5(b2);
+    if (!strict && isNullable6(a2) && isNullable6(b2)) return true;
+    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
+    if (ancestors.has(a2)) return false;
+    function check3(test, then) {
+      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
+    }
+    ancestors.add(a2);
+    try {
+      return check3(Array.isArray, (a3, b3) => {
+        if (a3.length !== b3.length) return false;
+        for (let index = 0; index < a3.length; index++) if (!compare(a3[index], b3[index])) return false;
+        return true;
+      }) ?? check3(is6("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is6("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is6("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike6, (a3, b3) => {
+        if (a3.byteLength !== b3.byteLength) return false;
+        const viewA = new Uint8Array(a3);
+        const viewB = new Uint8Array(b3);
+        for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
+        return true;
+      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({
+        ...a2,
+        ...b2
+      }).every((key) => compare(a2[key], b2[key])));
+    } finally {
+      ancestors.delete(a2);
+    }
+  }
+  return compare(a, b);
+}
+var Time6;
+(function(Time7) {
+  Time7.millisecond = 1;
+  Time7.second = 1e3;
+  Time7.minute = Time7.second * 60;
+  Time7.hour = Time7.minute * 60;
+  Time7.day = Time7.hour * 24;
+  Time7.week = Time7.day * 7;
+  let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
+  function setTimezoneOffset(offset) {
+    timezoneOffset = offset;
+  }
+  Time7.setTimezoneOffset = setTimezoneOffset;
+  function getTimezoneOffset() {
+    return timezoneOffset;
+  }
+  Time7.getTimezoneOffset = getTimezoneOffset;
+  function getDateNumber(date14 = /* @__PURE__ */ new Date(), offset) {
+    if (typeof date14 === "number") date14 = new Date(date14);
+    if (offset === void 0) offset = timezoneOffset;
+    return Math.floor((date14.valueOf() / Time7.minute - offset) / 1440);
+  }
+  Time7.getDateNumber = getDateNumber;
+  function fromDateNumber(value, offset) {
+    const date14 = new Date(value * Time7.day);
+    if (offset === void 0) offset = timezoneOffset;
+    return new Date(+date14 + offset * Time7.minute);
+  }
+  Time7.fromDateNumber = fromDateNumber;
+  const numeric = /\d+(?:\.\d+)?/.source;
+  const timeRegExp = new RegExp(`^${[
+    "w(?:eek(?:s)?)?",
+    "d(?:ay(?:s)?)?",
+    "h(?:our(?:s)?)?",
+    "m(?:in(?:ute)?(?:s)?)?",
+    "s(?:ec(?:ond)?(?:s)?)?"
+  ].map((unit) => `(${numeric}${unit})?`).join("")}$`);
+  function parseTime(source) {
+    const capture = timeRegExp.exec(source);
+    if (!capture) return 0;
+    return (parseFloat(capture[1]) * Time7.week || 0) + (parseFloat(capture[2]) * Time7.day || 0) + (parseFloat(capture[3]) * Time7.hour || 0) + (parseFloat(capture[4]) * Time7.minute || 0) + (parseFloat(capture[5]) * Time7.second || 0);
+  }
+  Time7.parseTime = parseTime;
+  function parseDate(date14) {
+    const parsed = parseTime(date14);
+    if (parsed) date14 = Date.now() + parsed;
+    else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date14}`;
+    else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date14)) date14 = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date14}`;
+    return date14 ? new Date(date14) : /* @__PURE__ */ new Date();
+  }
+  Time7.parseDate = parseDate;
+  function format(ms) {
+    const abs = Math.abs(ms);
+    if (abs >= Time7.day - Time7.hour / 2) return Math.round(ms / Time7.day) + "d";
+    else if (abs >= Time7.hour - Time7.minute / 2) return Math.round(ms / Time7.hour) + "h";
+    else if (abs >= Time7.minute - Time7.second / 2) return Math.round(ms / Time7.minute) + "m";
+    else if (abs >= Time7.second) return Math.round(ms / Time7.second) + "s";
+    return ms + "ms";
+  }
+  Time7.format = format;
+  function toDigits(source, length = 2) {
+    return source.toString().padStart(length, "0");
+  }
+  Time7.toDigits = toDigits;
+  function template(template2, time5 = /* @__PURE__ */ new Date()) {
+    return template2.replace("yyyy", time5.getFullYear().toString()).replace("yy", time5.getFullYear().toString().slice(2)).replace("MM", toDigits(time5.getMonth() + 1)).replace("dd", toDigits(time5.getDate())).replace("hh", toDigits(time5.getHours())).replace("mm", toDigits(time5.getMinutes())).replace("ss", toDigits(time5.getSeconds())).replace("SSS", toDigits(time5.getMilliseconds(), 3));
+  }
+  Time7.template = template;
+})(Time6 || (Time6 = {}));
+
+// ../../node_modules/@deepseek-ai/dsh-skill/node_modules/@deepseek-ai/schemastery/lib/index.mjs
+var kSchema5 = /* @__PURE__ */ Symbol.for("schemastery");
+var kValidationError6 = /* @__PURE__ */ Symbol.for("ValidationError");
+globalThis.__schemastery_index__ ??= 0;
+globalThis.__schemastery_refs__ = void 0;
+var ValidationError6 = class extends TypeError {
+  options;
+  name = "ValidationError";
+  constructor(message, options) {
+    let prefix = "$";
+    for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
+    else if (typeof segment === "number") prefix += "[" + segment + "]";
+    else if (typeof segment === "symbol") prefix += `[Symbol(${segment.toString()})]`;
+    if (prefix.startsWith(".")) prefix = prefix.slice(1);
+    super((prefix === "$" ? "" : `${prefix} `) + message);
+    this.options = options;
+  }
+  static is(error112) {
+    return !!error112?.[kValidationError6];
+  }
+};
+Object.defineProperty(ValidationError6.prototype, kValidationError6, { value: true });
+var Schema5 = function(options) {
+  const schema = function(data, options2 = {}) {
+    return Schema5.resolve(data, schema, options2)[0];
+  };
+  if (options.refs) {
+    const refs = mapValues5(options.refs, (options2) => new Schema5(options2));
+    const getRef = (uid) => refs[uid];
+    for (const key in refs) {
+      const options2 = refs[key];
+      options2.sKey = getRef(options2.sKey);
+      options2.inner = getRef(options2.inner);
+      options2.list = options2.list && options2.list.map(getRef);
+      options2.dict = options2.dict && mapValues5(options2.dict, getRef);
+    }
+    return refs[options.uid];
+  }
+  Object.assign(schema, options);
+  if (typeof schema.callback === "string") try {
+    schema.callback = new Function("return " + schema.callback)();
+  } catch {
+  }
+  Object.defineProperty(schema, "uid", { value: globalThis.__schemastery_index__++ });
+  Object.setPrototypeOf(schema, Schema5.prototype);
+  schema.meta ||= {};
+  schema.toString = schema.toString.bind(schema);
+  return schema;
+};
+Schema5.prototype = Object.create(Function.prototype);
+Schema5.prototype[kSchema5] = true;
+Object.defineProperty(Schema5.prototype, "~standard", { get() {
+  return {
+    version: 1,
+    vendor: "schemastery",
+    validate: (value) => {
+      try {
+        return { value: Schema5.resolve(value, this, {})[0] };
+      } catch (error112) {
+        if (ValidationError6.is(error112)) return { issues: [{
+          message: error112.message,
+          path: error112.options.path
+        }] };
+        throw error112;
+      }
+    }
+  };
+} });
+Schema5.ValidationError = ValidationError6;
+Schema5.prototype.toJSON = function toJSON5() {
+  if (globalThis.__schemastery_refs__) {
+    globalThis.__schemastery_refs__[this.uid] ??= JSON.parse(JSON.stringify({ ...this }));
+    return this.uid;
+  }
+  globalThis.__schemastery_refs__ = { [this.uid]: { ...this } };
+  globalThis.__schemastery_refs__[this.uid] = JSON.parse(JSON.stringify({ ...this }));
+  const result = {
+    uid: this.uid,
+    refs: globalThis.__schemastery_refs__
+  };
+  globalThis.__schemastery_refs__ = void 0;
+  return result;
+};
+Schema5.prototype.set = function set6(key, value) {
+  this.dict[key] = value;
+  return this;
+};
+Schema5.prototype.push = function push5(value) {
+  this.list.push(value);
+  return this;
+};
+function mergeDesc5(original, messages) {
+  const result = typeof original === "string" ? { "": original } : { ...original };
+  for (const locale in messages) {
+    const value = messages[locale];
+    if (value?.$description || value?.$desc) result[locale] = value.$description || value.$desc;
+    else if (typeof value === "string") result[locale] = value;
+  }
+  return result;
+}
+function getInner5(value) {
+  return value?.$value ?? value?.$inner;
+}
+function extractKeys5(data) {
+  return filterKeys5(data ?? {}, (key) => !key.startsWith("$"));
+}
+Schema5.prototype.i18n = function i18n5(messages) {
+  const schema = Schema5(this);
+  const desc = mergeDesc5(schema.meta.description, messages);
+  if (Object.keys(desc).length) schema.meta.description = desc;
+  if (schema.dict) schema.dict = mapValues5(schema.dict, (inner, key) => {
+    return inner.i18n(mapValues5(messages, (data) => getInner5(data)?.[key] ?? data?.[key]));
+  });
+  if (schema.list) schema.list = schema.list.map((inner, index) => {
+    return inner.i18n(mapValues5(messages, (data = {}) => {
+      if (Array.isArray(getInner5(data))) return getInner5(data)[index];
+      if (Array.isArray(data)) return data[index];
+      return extractKeys5(data);
+    }));
+  });
+  if (schema.inner) schema.inner = schema.inner.i18n(mapValues5(messages, (data) => {
+    if (getInner5(data)) return getInner5(data);
+    return extractKeys5(data);
+  }));
+  if (schema.sKey) schema.sKey = schema.sKey.i18n(mapValues5(messages, (data) => data?.$key));
+  return schema;
+};
+Schema5.prototype.extra = function extra5(key, value) {
+  const schema = Schema5(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+};
+for (const key of [
+  "required",
+  "disabled",
+  "collapse",
+  "hidden",
+  "loose"
+]) Object.assign(Schema5.prototype, { [key](value = true) {
+  const schema = Schema5(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+} });
+Schema5.prototype.deprecated = function deprecated5() {
+  const schema = Schema5(this);
+  schema.meta.badges ||= [];
+  schema.meta.badges.push({
+    text: "deprecated",
+    type: "danger"
+  });
+  return schema;
+};
+Schema5.prototype.experimental = function experimental5() {
+  const schema = Schema5(this);
+  schema.meta.badges ||= [];
+  schema.meta.badges.push({
+    text: "experimental",
+    type: "warning"
+  });
+  return schema;
+};
+Schema5.prototype.pattern = function pattern5(regexp) {
+  const schema = Schema5(this);
+  const pattern6 = pick6(regexp, ["source", "flags"]);
+  schema.meta = {
+    ...schema.meta,
+    pattern: pattern6
+  };
+  return schema;
+};
+Schema5.prototype.simplify = function simplify5(value) {
+  if (isVolatile5(value)) value = value.get();
+  if (deepEqual5(value, this.meta.default, this.type === "dict")) return null;
+  if (isNullable6(value)) return value;
+  if (this.type === "object" || this.type === "dict") {
+    const result = {};
+    for (const key in value) {
+      const item = (this.type === "object" ? this.dict[key] : this.inner)?.simplify(value[key]);
+      if (this.type === "dict" || !isNullable6(item)) result[key] = item;
+    }
+    if (deepEqual5(result, this.meta.default, this.type === "dict")) return null;
+    return result;
+  } else if (this.type === "array" || this.type === "tuple") {
+    const result = [];
+    value.forEach((value2, index) => {
+      const schema = this.type === "array" ? this.inner : this.list[index];
+      const item = schema ? schema.simplify(value2) : value2;
+      result.push(item);
+    });
+    return result;
+  } else if (this.type === "intersect") {
+    const result = {};
+    for (const item of this.list) Object.assign(result, item.simplify(value));
+    return result;
+  } else if (this.type === "union") for (const schema of this.list) try {
+    Schema5.resolve(value, schema, {});
+    return schema.simplify(value);
+  } catch {
+  }
+  return value;
+};
+Schema5.prototype.toString = function toString5(inline) {
+  return formatters5[this.type]?.(this, inline) ?? `Schema<${this.type}>`;
+};
+Schema5.prototype.role = function role5(role5, extra6) {
+  const schema = Schema5(this);
+  schema.meta = {
+    ...schema.meta,
+    role: role5,
+    extra: extra6
+  };
+  return schema;
+};
+for (const key of [
+  "default",
+  "link",
+  "comment",
+  "description",
+  "max",
+  "min",
+  "step"
+]) Object.assign(Schema5.prototype, { [key](value) {
+  const schema = Schema5(this);
+  schema.meta = {
+    ...schema.meta,
+    [key]: value
+  };
+  return schema;
+} });
+Schema5.prototype.volatile = function volatile5() {
+  if (this.meta.volatile) throw new TypeError("volatile schema is already wrapped");
+  return this.extra("volatile", true);
+};
+var resolvers5 = {};
+var checkedVolatile5 = /* @__PURE__ */ Symbol("checked-volatile-schema");
+function validateVolatileSchema5(schema, path = [], blocked = false, seen = /* @__PURE__ */ new Map()) {
+  const states = seen.get(schema) ?? /* @__PURE__ */ new Set();
+  if (states.has(blocked)) return;
+  states.add(blocked);
+  seen.set(schema, states);
+  if (schema.meta?.volatile && blocked) throw new ValidationError6("volatile fields require a fixed object path without an enclosing volatile field", { path });
+  const nested = blocked || !!schema.meta?.volatile;
+  if (schema.dict) for (const [key, child] of Object.entries(schema.dict)) validateVolatileSchema5(child, [...path, key], nested, seen);
+  if (schema.sKey) validateVolatileSchema5(schema.sKey, [...path, "<key>"], true, seen);
+  if (schema.inner && (schema.type !== "lazy" || schema.inner[kSchema5])) validateVolatileSchema5(schema.inner, [...path, "*"], true, seen);
+  if (schema.list) for (let index = 0; index < schema.list.length; index++) validateVolatileSchema5(schema.list[index], [...path, String(index)], true, seen);
+}
+Schema5.extend = function extend6(type, resolve14) {
+  resolvers5[type] = resolve14;
+};
+Schema5.resolve = function resolve9(data, schema, options = {}, strict = false) {
+  if (!schema) return [data];
+  if (!options[checkedVolatile5]) {
+    validateVolatileSchema5(schema, options.path);
+    options = {
+      ...options,
+      [checkedVolatile5]: true
+    };
+  }
+  if (schema.meta?.volatile) {
+    const inner = Schema5(schema);
+    inner.meta = {
+      ...schema.meta,
+      volatile: false
+    };
+    const [value, adapted] = Schema5.resolve(data, inner, options, strict);
+    try {
+      return [createVolatile5(value), adapted];
+    } catch (error112) {
+      throw new ValidationError6(error112 instanceof Error ? error112.message : String(error112), options);
+    }
+  }
+  if (options.ignore?.(data, schema)) return [data];
+  if (isNullable6(data) && schema.type !== "lazy") {
+    if (schema.meta.required) throw new ValidationError6(`missing required value`, options);
+    let current = schema;
+    let fallback = schema.meta.default;
+    while (current?.type === "intersect" && isNullable6(fallback)) {
+      current = current.list[0];
+      fallback = current?.meta.default;
+    }
+    if (isNullable6(fallback)) return [data];
+    data = clone6(fallback);
+  }
+  const callback = resolvers5[schema.type];
+  if (!callback) throw new ValidationError6(`unsupported type "${schema.type}"`, options);
+  try {
+    return callback(data, schema, options, strict);
+  } catch (error112) {
+    if (!schema.meta.loose) throw error112;
+    return [schema.meta.default];
+  }
+};
+Schema5.from = function from5(source) {
+  if (isNullable6(source)) return Schema5.any();
+  else if ([
+    "string",
+    "number",
+    "boolean"
+  ].includes(typeof source)) return Schema5.const(source).required();
+  else if (source[kSchema5]) return source;
+  else if (typeof source === "function") switch (source) {
+    case String:
+      return Schema5.string().required();
+    case Number:
+      return Schema5.number().required();
+    case Boolean:
+      return Schema5.boolean().required();
+    case Function:
+      return Schema5.function().required();
+    default:
+      return Schema5.is(source).required();
+  }
+  else throw new TypeError(`cannot infer schema from ${source}`);
+};
+Schema5.lazy = function lazy6(builder) {
+  const toJSON6 = () => {
+    if (!schema.inner[kSchema5]) {
+      schema.inner = schema.builder();
+      schema.inner.meta = {
+        ...schema.meta,
+        ...schema.inner.meta
+      };
+    }
+    return schema.inner.toJSON();
+  };
+  const schema = new Schema5({
+    type: "lazy",
+    builder,
+    inner: { toJSON: toJSON6 }
+  });
+  return schema;
+};
+Schema5.natural = function natural5() {
+  return Schema5.number().step(1).min(0);
+};
+Schema5.percent = function percent5() {
+  return Schema5.number().step(0.01).min(0).max(1).role("slider");
+};
+Schema5.date = function date9() {
+  return Schema5.union([Schema5.is(Date), Schema5.transform(Schema5.string().role("datetime"), (value, options) => {
+    const date14 = new Date(value);
+    if (isNaN(+date14)) throw new ValidationError6(`invalid date "${value}"`, options);
+    return date14;
+  }, true)]);
+};
+Schema5.regExp = function regExp5(flag = "") {
+  return Schema5.union([Schema5.is(RegExp), Schema5.transform(Schema5.string().role("regexp", { flag }), (value, options) => {
+    try {
+      return new RegExp(value, flag);
+    } catch (e) {
+      throw new ValidationError6(e.message, options);
+    }
+  }, true)]);
+};
+Schema5.arrayBuffer = function arrayBuffer5(encoding) {
+  return Schema5.union([
+    Schema5.is(ArrayBuffer),
+    Schema5.is(SharedArrayBuffer),
+    Schema5.transform(Schema5.any(), (value, options) => {
+      if (Binary6.isSource(value)) return Binary6.fromSource(value);
+      throw new ValidationError6(`expected ArrayBufferSource but got ${value}`, options);
+    }, true),
+    ...encoding ? [Schema5.transform(Schema5.string(), (value, options) => {
+      try {
+        return encoding === "base64" ? Binary6.fromBase64(value) : Binary6.fromHex(value);
+      } catch (e) {
+        throw new ValidationError6(e.message, options);
+      }
+    }, true)] : []
+  ]);
+};
+Schema5.extend("lazy", (data, schema, options, strict) => {
+  if (!schema.inner[kSchema5]) {
+    schema.inner = schema.builder();
+    schema.inner.meta = {
+      ...schema.meta,
+      ...schema.inner.meta
+    };
+    validateVolatileSchema5(schema.inner, options.path, true);
+  }
+  return Schema5.resolve(data, schema.inner, options, strict);
+});
+Schema5.extend("any", (data) => {
+  return [data];
+});
+Schema5.extend("never", (data, _, options) => {
+  throw new ValidationError6(`expected nullable but got ${data}`, options);
+});
+Schema5.extend("const", (data, { value }, options) => {
+  if (deepEqual5(data, value)) return [value];
+  throw new ValidationError6(`expected ${value} but got ${data}`, options);
+});
+function checkWithinRange5(data, meta5, description, options, skipMin = false) {
+  const { max = Infinity, min = -Infinity } = meta5;
+  if (data > max) throw new ValidationError6(`expected ${description} <= ${max} but got ${data}`, options);
+  if (data < min && !skipMin) throw new ValidationError6(`expected ${description} >= ${min} but got ${data}`, options);
+}
+Schema5.extend("string", (data, { meta: meta5 }, options) => {
+  if (typeof data !== "string") throw new ValidationError6(`expected string but got ${data}`, options);
+  if (meta5.pattern) {
+    const regexp = new RegExp(meta5.pattern.source, meta5.pattern.flags);
+    if (!regexp.test(data)) throw new ValidationError6(`expect string to match regexp ${regexp}`, options);
+  }
+  checkWithinRange5(data.length, meta5, "string length", options);
+  return [data];
+});
+function decimalShift5(data, digits) {
+  const str = data.toString();
+  if (str.includes("e")) return data * Math.pow(10, digits);
+  const index = str.indexOf(".");
+  if (index === -1) return data * Math.pow(10, digits);
+  const frac = str.slice(index + 1);
+  const integer3 = str.slice(0, index);
+  if (frac.length <= digits) return +(integer3 + frac.padEnd(digits, "0"));
+  return +(integer3 + frac.slice(0, digits) + "." + frac.slice(digits));
+}
+function isMultipleOf5(data, min, step) {
+  step = Math.abs(step);
+  if (!/^\d+\.\d+$/.test(step.toString())) return (data - min) % step === 0;
+  const index = step.toString().indexOf(".");
+  const digits = step.toString().slice(index + 1).length;
+  return Math.abs(decimalShift5(data, digits) - decimalShift5(min, digits)) % decimalShift5(step, digits) === 0;
+}
+Schema5.extend("number", (data, { meta: meta5 }, options) => {
+  if (typeof data !== "number") throw new ValidationError6(`expected number but got ${data}`, options);
+  checkWithinRange5(data, meta5, "number", options);
+  const { step } = meta5;
+  if (step && !isMultipleOf5(data, meta5.min ?? 0, step)) throw new ValidationError6(`expected number multiple of ${step} but got ${data}`, options);
+  return [data];
+});
+Schema5.extend("boolean", (data, _, options) => {
+  if (typeof data === "boolean") return [data];
+  throw new ValidationError6(`expected boolean but got ${data}`, options);
+});
+Schema5.extend("bitset", (data, { bits, meta: meta5 }, options) => {
+  let value = 0, keys = [];
+  if (typeof data === "number") {
+    value = data;
+    for (const key in bits) if (data & bits[key]) keys.push(key);
+  } else if (Array.isArray(data)) {
+    keys = data;
+    for (const key of keys) {
+      if (typeof key !== "string") throw new ValidationError6(`expected string but got ${key}`, options);
+      if (key in bits) value |= bits[key];
+    }
+  } else throw new ValidationError6(`expected number or array but got ${data}`, options);
+  if (value === meta5.default) return [value];
+  return [value, keys];
+});
+Schema5.extend("function", (data, _, options) => {
+  if (typeof data === "function") return [data];
+  throw new ValidationError6(`expected function but got ${data}`, options);
+});
+Schema5.extend("is", (data, { constructor }, options) => {
+  if (typeof constructor === "function") {
+    if (data instanceof constructor) return [data];
+    throw new ValidationError6(`expected ${constructor.name} but got ${data}`, options);
+  } else {
+    if (isNullable6(data)) throw new ValidationError6(`expected ${constructor} but got ${data}`, options);
+    let prototype = Object.getPrototypeOf(data);
+    while (prototype) {
+      if (prototype.constructor?.name === constructor) return [data];
+      prototype = Object.getPrototypeOf(prototype);
+    }
+    throw new ValidationError6(`expected ${constructor} but got ${data}`, options);
+  }
+});
+function property5(data, key, schema, options) {
+  try {
+    const [value, adapted] = Schema5.resolve(data[key], schema, {
+      ...options,
+      path: [...options.path || [], key]
+    });
+    if (adapted !== void 0) data[key] = adapted;
+    return value;
+  } catch (e) {
+    if (!options?.autofix) throw e;
+    delete data[key];
+    return schema.meta.volatile ? createVolatile5(schema.meta.default) : schema.meta.default;
+  }
+}
+Schema5.extend("array", (data, { inner, meta: meta5 }, options) => {
+  if (!Array.isArray(data)) throw new ValidationError6(`expected array but got ${data}`, options);
+  checkWithinRange5(data.length, meta5, "array length", options, !isNullable6(inner.meta.default));
+  return [data.map((_, index) => property5(data, index, inner, options))];
+});
+Schema5.extend("dict", (data, { inner, sKey }, options, strict) => {
+  if (!isPlainObject6(data)) throw new ValidationError6(`expected object but got ${data}`, options);
+  const result = {};
+  for (const key in data) {
+    let rKey;
+    try {
+      rKey = Schema5.resolve(key, sKey, options)[0];
+    } catch (error112) {
+      if (strict) continue;
+      throw error112;
+    }
+    result[rKey] = property5(data, key, inner, options);
+    data[rKey] = data[key];
+    if (key !== rKey) delete data[key];
+  }
+  return [result];
+});
+Schema5.extend("tuple", (data, { list }, options, strict) => {
+  if (!Array.isArray(data)) throw new ValidationError6(`expected array but got ${data}`, options);
+  const result = list.map((inner, index) => property5(data, index, inner, options));
+  if (strict) return [result];
+  result.push(...data.slice(list.length));
+  return [result];
+});
+function merge6(result, data) {
+  for (const key in data) {
+    if (key in result) continue;
+    result[key] = data[key];
+  }
+}
+Schema5.extend("object", (data, { dict }, options, strict) => {
+  if (!isPlainObject6(data)) throw new ValidationError6(`expected object but got ${data}`, options);
+  const result = {};
+  for (const key in dict) {
+    const value = property5(data, key, dict[key], options);
+    if (!isNullable6(value) || key in data) result[key] = value;
+  }
+  if (!strict) merge6(result, data);
+  return [result];
+});
+Schema5.extend("union", (data, { list, toString: toString6 }, options, strict) => {
+  const messages = [];
+  for (const inner of list) try {
+    return Schema5.resolve(data, inner, options, strict);
+  } catch (error112) {
+    messages.push(error112);
+  }
+  throw new ValidationError6(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+});
+Schema5.extend("intersect", (data, { list, toString: toString6 }, options, strict) => {
+  if (!list.length) return [data];
+  let result;
+  for (const inner of list) {
+    const value = Schema5.resolve(data, inner, options, true)[0];
+    if (isNullable6(value)) continue;
+    if (isNullable6(result)) result = value;
+    else if (typeof result !== typeof value) throw new ValidationError6(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+    else if (typeof value === "object") merge6(result ??= {}, value);
+    else if (result !== value) throw new ValidationError6(`expected ${toString6()} but got ${JSON.stringify(data)}`, options);
+  }
+  if (!strict && isPlainObject6(data)) merge6(result, data);
+  return [result];
+});
+Schema5.extend("transform", (data, { inner, callback, preserve }, options) => {
+  const [result, adapted = data] = Schema5.resolve(data, inner, options, true);
+  if (preserve) return [callback(result)];
+  else return [callback(result), callback(adapted)];
+});
+var formatters5 = {};
+function defineMethod5(name, keys, format) {
+  formatters5[name] = format;
+  Object.assign(Schema5, { [name](...args) {
+    const schema = new Schema5({ type: name });
+    keys.forEach((key, index) => {
+      switch (key) {
+        case "sKey":
+          schema.sKey = args[index] ?? Schema5.string();
+          break;
+        case "inner":
+          schema.inner = Schema5.from(args[index]);
+          break;
+        case "list":
+          schema.list = args[index].map(Schema5.from);
+          break;
+        case "dict":
+          schema.dict = mapValues5(args[index], Schema5.from);
+          break;
+        case "bits":
+          schema.bits = {};
+          for (const key2 in args[index]) {
+            if (typeof args[index][key2] !== "number") continue;
+            schema.bits[key2] = args[index][key2];
+          }
+          break;
+        case "callback": {
+          const callback = schema.callback = args[index];
+          callback["toJSON"] ||= () => callback.toString();
+          break;
+        }
+        case "constructor": {
+          const constructor = schema.constructor = args[index];
+          if (typeof constructor === "function") constructor["toJSON"] ||= () => constructor["name"];
+          break;
+        }
+        default:
+          schema[key] = args[index];
+      }
+    });
+    if (name === "object" || name === "dict") schema.meta.default = {};
+    else if (name === "array" || name === "tuple") schema.meta.default = [];
+    else if (name === "bitset") schema.meta.default = 0;
+    return schema;
+  } });
+}
+defineMethod5("is", ["constructor"], ({ constructor }) => {
+  if (typeof constructor === "function") return constructor.name;
+  else return constructor;
+});
+defineMethod5("any", [], () => "any");
+defineMethod5("never", [], () => "never");
+defineMethod5("const", ["value"], ({ value }) => typeof value === "string" ? JSON.stringify(value) : value);
+defineMethod5("string", [], () => "string");
+defineMethod5("number", [], () => "number");
+defineMethod5("boolean", [], () => "boolean");
+defineMethod5("bitset", ["bits"], () => "bitset");
+defineMethod5("function", [], () => "function");
+defineMethod5("array", ["inner"], ({ inner }) => `${inner.toString(true)}[]`);
+defineMethod5("dict", ["inner", "sKey"], ({ inner, sKey }) => `{ [key: ${sKey.toString()}]: ${inner.toString()} }`);
+defineMethod5("tuple", ["list"], ({ list }) => `[${list.map((inner) => inner.toString()).join(", ")}]`);
+defineMethod5("object", ["dict"], ({ dict }) => {
+  if (Object.keys(dict).length === 0) return "{}";
+  return `{ ${Object.entries(dict).map(([key, inner]) => {
+    return `${key}${inner.meta.required ? "" : "?"}: ${inner.toString()}`;
+  }).join(", ")} }`;
+});
+defineMethod5("union", ["list"], ({ list }, inline) => {
+  const result = list.map(({ toString: format }) => format()).join(" | ");
+  return inline ? `(${result})` : result;
+});
+defineMethod5("intersect", ["list"], ({ list }) => {
+  return `${list.map((inner) => inner.toString(true)).join(" & ")}`;
+});
+defineMethod5("transform", [
+  "inner",
+  "callback",
+  "preserve"
+], ({ inner }, isInner) => inner.toString(isInner));
+
 // ../../node_modules/@deepseek-ai/dsh-skill/lib/index.js
 var SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 var DEFAULT_COLLECT_CACHE_ENTRIES = 128;
@@ -30347,7 +34212,7 @@ var SkillLayer = class {
   }
 };
 var SkillRegistry = class extends Service {
-  static Config = Schema.object({ collectCacheMaxEntries: Schema.number().default(DEFAULT_COLLECT_CACHE_ENTRIES) });
+  static Config = Schema5.object({ collectCacheMaxEntries: Schema5.number().default(DEFAULT_COLLECT_CACHE_ENTRIES) });
   collectCacheMaxEntries;
   layers = new ScopedLayers((scope) => new SkillLayer(scope), () => {
     this.invalidateCache();
@@ -30754,7 +34619,7 @@ function assertPositiveInteger(name, value, minimum = 1) {
 function waitWithAbort(promise3, signal) {
   if (signal === void 0) return promise3;
   throwIfAborted2(signal);
-  return new Promise((resolve9, reject) => {
+  return new Promise((resolve14, reject) => {
     const cleanup = () => {
       signal.removeEventListener("abort", onAbort);
     };
@@ -30765,7 +34630,7 @@ function waitWithAbort(promise3, signal) {
     signal.addEventListener("abort", onAbort, { once: true });
     promise3.then((value) => {
       cleanup();
-      resolve9(value);
+      resolve14(value);
     }, (error112) => {
       cleanup();
       reject(toError(error112));
@@ -30790,7 +34655,7 @@ function errorMessage3(error112) {
   }
 }
 
-// ../../node_modules/@deepseek-ai/dsh-sandbox-windows-acl/lib/types-Cl_DXjhk.js
+// ../../node_modules/@deepseek-ai/dsh-sandbox-windows-acl/lib/types-DFdfvhLN.js
 var import_yaml = __toESM(require_dist(), 1);
 var GRANT_MASK = 1114454;
 var requireKoffi2 = createLazyRequire("koffi", import.meta.url);
@@ -31327,13 +35192,13 @@ function bwrapProfileArgs(policy) {
   ];
   if (policy.mode === "workspace-write") {
     args.push("--tmpfs", "/tmp");
-    args.push("--bind", policy.workspaceRoot, policy.workspaceRoot);
+    for (const root of workspaceWritableRoots(policy)) args.push("--bind", root, root);
   }
   return args;
 }
 function landlockProfileArgs(policy) {
   const readWrite = ["/dev/null"];
-  if (policy.mode === "workspace-write") readWrite.push("/tmp", policy.workspaceRoot);
+  if (policy.mode === "workspace-write") readWrite.push("/tmp", ...workspaceWritableRoots(policy));
   return grantArgs({
     readOnly: ["/"],
     readWrite
@@ -31440,10 +35305,10 @@ var RUNNER_FAILURE_RULES = {
   }]
 };
 var LocalSandboxProvider = class extends SandboxProvider {
-  static Config = Schema.object({
-    runnerCommand: Schema.array(Schema.string()).default([]),
-    runnerFailureSignatures: Schema.array(Schema.string()).default([]),
-    probeTimeoutMs: Schema.natural().default(5e3)
+  static Config = Schema4.object({
+    runnerCommand: Schema4.array(Schema4.string()).default([]),
+    runnerFailureSignatures: Schema4.array(Schema4.string()).default([]),
+    probeTimeoutMs: Schema4.natural().default(5e3)
   });
   /** Test hook (mirrors the bash executors' `internals`). */
   internals = {};
@@ -31549,6 +35414,7 @@ var LocalSandboxProvider = class extends SandboxProvider {
   * @returns the runner invocation.
   */
   windowsAclRunnerArgv(policy) {
+    if (policy.mode === "workspace-write" && (policy.additionalWritableRoots?.length ?? 0) > 0) throw new SandboxUnsupportedPolicyError("Windows ACL confinement does not support additional writable directories; remove the extra grants or use a supported host");
     const sessionId = policy.sessionId;
     if (sessionId === void 0 || policy.mode === "read-only") return [
       ...this.windowsAclRunnerInvocation(),
@@ -31998,23 +35864,23 @@ function allocNative(type, count) {
 function snapshotWindowsProcesses(bindings4) {
   const koffi = requireKoffi$1();
   const { PROCESSENTRY32W } = win32Structs();
-  const snapshot2 = bindings4.createToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-  if (isInvalidHandle2(snapshot2)) return [];
+  const snapshot6 = bindings4.createToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (isInvalidHandle2(snapshot6)) return [];
   const entries = [];
   try {
     const entry = allocNative(PROCESSENTRY32W, 1);
     koffi.encode(entry, "uint32", PROCESSENTRY32W.size);
-    let ok = bindings4.process32FirstW(snapshot2, entry);
+    let ok = bindings4.process32FirstW(snapshot6, entry);
     while (ok !== 0) {
       const record3 = koffi.decode(entry, PROCESSENTRY32W);
       entries.push({
         pid: record3.th32ProcessID,
         parentPid: record3.th32ParentProcessID
       });
-      ok = bindings4.process32NextW(snapshot2, entry);
+      ok = bindings4.process32NextW(snapshot6, entry);
     }
   } finally {
-    bindings4.closeHandle(snapshot2);
+    bindings4.closeHandle(snapshot6);
   }
   return entries;
 }
@@ -32375,14 +36241,14 @@ function createProcessInspector(platform = process.platform, arch = process.arch
   if (platform === "win32") return createWindowsProcessInspector();
   throw new Error(`subprocess-local: terminal inspection is unsupported on platform ${platform}`);
 }
-function childEnv(extra2) {
+function childEnv(extra6) {
   const env = scrubbedParentEnv();
   if (process.platform !== "win32") return {
     ...env,
-    ...extra2
+    ...extra6
   };
   let entries = Object.entries(env);
-  for (const [key, value] of Object.entries(extra2 ?? {})) {
+  for (const [key, value] of Object.entries(extra6 ?? {})) {
     const normalized = key.toUpperCase();
     entries = entries.filter(([inherited]) => inherited.toUpperCase() !== normalized);
     entries.push([key, value]);
@@ -32433,7 +36299,7 @@ function validateSubprocessSpec(spec) {
   if (program === void 0 || program.length === 0) throw new Error("invalid argv: expected a non-empty program name at argv[0]");
 }
 function directChildResult(child) {
-  return new Promise((resolve9, reject) => {
+  return new Promise((resolve14, reject) => {
     let completed = false;
     child.once("error", (error112) => {
       if (completed) return;
@@ -32443,7 +36309,7 @@ function directChildResult(child) {
     child.once("exit", (exitCode, signal) => {
       if (completed) return;
       completed = true;
-      resolve9({
+      resolve14({
         exitCode,
         signal
       });
@@ -32518,12 +36384,12 @@ function bindManagedProcess(spec, launch, internals = {}) {
   const stderrCollector = collectStream(errMode, stderr, "stderr");
   const observeOutputStream = (mode, stream) => {
     if (mode === "inherit" || stream === null || stream.readableEnded || stream.destroyed) return void 0;
-    return new Promise((resolve9) => {
+    return new Promise((resolve14) => {
       const settle2 = () => {
         stream.off("end", settle2);
         stream.off("close", settle2);
         stream.off("error", settle2);
-        resolve9();
+        resolve14();
       };
       stream.once("end", settle2);
       stream.once("close", settle2);
@@ -32598,14 +36464,14 @@ function bindManagedProcess(spec, launch, internals = {}) {
     });
     stdin.end(stdinMode.data);
   }
-  const done = new Promise((resolve9, reject) => {
+  const done = new Promise((resolve14, reject) => {
     let pipeDrainTimer;
     const settle2 = (outcome) => {
       if (settled) return;
       settled = true;
       stopCollectors();
       cleanup();
-      resolve9(outcome);
+      resolve14(outcome);
     };
     const fail = (error112) => {
       settled = true;
@@ -32873,14 +36739,14 @@ function runnerStdio(spec, ipc, stdinCarrier = "pipe") {
   if (spec.stdio.control === "pipe") runner.push("overlapped");
   return runner;
 }
-function throwNullByteError(property2, value, argument) {
-  const subject = argument ? `The argument '${property2}'` : `The property '${property2}'`;
+function throwNullByteError(property6, value, argument) {
+  const subject = argument ? `The argument '${property6}'` : `The property '${property6}'`;
   const error112 = /* @__PURE__ */ new TypeError(`${subject} must be a string without null bytes. Received ${inspect(value)}`);
   Object.assign(error112, { code: "ERR_INVALID_ARG_VALUE" });
   throw error112;
 }
-function validateNoNullByte(property2, value, argument = false) {
-  if (value.includes("\0")) throwNullByteError(property2, value, argument);
+function validateNoNullByte(property6, value, argument = false) {
+  if (value.includes("\0")) throwNullByteError(property6, value, argument);
 }
 function targetEnvironment(spec) {
   spec.argv.forEach((value, index) => {
@@ -32899,7 +36765,7 @@ function targetEnvironment(spec) {
 import { closeSync as closeSync3, constants as constants4, existsSync as existsSync4, mkdtempSync as mkdtempSync5, openSync as openSync3, readFileSync as readFileSync3, rmSync as rmSync2, statSync as statSync4, writeFileSync as writeFileSync3 } from "node:fs";
 import { access, stat as stat6 } from "node:fs/promises";
 import { constants as constants$1, devNull, tmpdir as tmpdir6, userInfo } from "node:os";
-import { basename as basename5, delimiter, extname as extname3, isAbsolute as isAbsolute6, join as join9, resolve as resolve6 } from "node:path";
+import { basename as basename5, delimiter, extname as extname3, isAbsolute as isAbsolute6, join as join9, resolve as resolve11 } from "node:path";
 import { execFile, spawn as spawn2, spawnSync as spawnSync4 } from "node:child_process";
 import { setTimeout as setTimeout$12 } from "node:timers/promises";
 import { randomBytes as randomBytes2 } from "node:crypto";
@@ -33688,11 +37554,11 @@ function launchWindowsJob(spec, targetEnv, internals = {}) {
   };
 }
 function delay(ms, signal) {
-  return new Promise((resolve9) => {
+  return new Promise((resolve14) => {
     const finish = () => {
       clearTimeout(timer);
       signal?.removeEventListener("abort", finish);
-      resolve9();
+      resolve14();
     };
     const timer = setTimeout(finish, ms);
     signal?.addEventListener("abort", finish, { once: true });
@@ -34320,7 +38186,7 @@ var LocalSubprocessRuntime = class extends SubprocessRuntime {
   executableCandidates(command, env) {
     const path = environmentValue(env, "PATH") ?? "";
     const extensions = process.platform === "win32" && extname3(command) === "" ? (environmentValue(env, "PATHEXT") ?? ".COM;.EXE;.BAT;.CMD").split(";") : [""];
-    return path.split(delimiter).flatMap((directory) => extensions.map((extension) => resolve6(process.cwd(), directory, command + extension)));
+    return path.split(delimiter).flatMap((directory) => extensions.map((extension) => resolve11(process.cwd(), directory, command + extension)));
   }
   spawn(spec) {
     validateSubprocessSpec(spec);
@@ -34876,8 +38742,8 @@ function canonicalHeader(header) {
     ...header.tools !== void 0 && header.tools.length > 0 ? { tools: header.tools } : {}
   };
 }
-function foldRequestHeader(events, from2) {
-  let state = from2;
+function foldRequestHeader(events, from6) {
+  let state = from6;
   for (const event of events) if (event.type === "request/header") state = canonicalHeader(event.data.header);
   return state;
 }
@@ -34978,14 +38844,14 @@ function validateRestoredSessionHeader(id, input2) {
   return validateSessionHeader(id, input2);
 }
 function snapshotSessionHeader(id, source) {
-  const snapshot2 = snapshotJsonValue(source === void 0 ? {
+  const snapshot6 = snapshotJsonValue(source === void 0 ? {
     version: 4,
     id,
     createdAt: Date.now(),
     isSeeded: false
   } : source);
-  if (snapshot2 === void 0) throw new Error("session header is not losslessly JSON-serializable");
-  return validateSessionHeader(id, snapshot2);
+  if (snapshot6 === void 0) throw new Error("session header is not losslessly JSON-serializable");
+  return validateSessionHeader(id, snapshot6);
 }
 function assertSessionEventEnvelope(value, index) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(`seed event at index ${index} has an invalid event envelope`);
@@ -35198,16 +39064,16 @@ var Session = class Session2 {
     this.surfaceManager = new SurfaceManager(this.log, SessionLogOffset(0), projections);
     const restoredHeader = mode === "snapshot" ? void 0 : validateRestoredSessionHeader(id, header);
     if (seed !== void 0) for (const [index, source] of seed.entries()) {
-      const snapshot2 = mode === "snapshot" ? snapshotJsonValue(source) : source;
-      if (snapshot2 === void 0) throw new Error(`seed event at index ${index} is not losslessly JSON-serializable`);
-      assertSessionEventEnvelope(snapshot2, index);
-      if (snapshot2.seq !== index) throw new Error(`seed event at index ${index} has seq ${snapshot2.seq} (expected ${index}); seed must be contiguous from 0`);
+      const snapshot6 = mode === "snapshot" ? snapshotJsonValue(source) : source;
+      if (snapshot6 === void 0) throw new Error(`seed event at index ${index} is not losslessly JSON-serializable`);
+      assertSessionEventEnvelope(snapshot6, index);
+      if (snapshot6.seq !== index) throw new Error(`seed event at index ${index} has seq ${snapshot6.seq} (expected ${index}); seed must be contiguous from 0`);
       try {
-        this.surfaceManager.validateNext(snapshot2);
+        this.surfaceManager.validateNext(snapshot6);
       } catch (error112) {
         throw new Error(`invalid seed event at index ${index}: ${error112 instanceof Error ? error112.message : "invalid surface metadata"}`);
       }
-      this.log.push(mode === "snapshot" ? deepFreeze(snapshot2) : snapshot2);
+      this.log.push(mode === "snapshot" ? deepFreeze(snapshot6) : snapshot6);
     }
     this.firstLiveSeq = SessionLogOffset(this.log.length);
     this.header = restoredHeader ?? snapshotSessionHeader(id, header);
@@ -35282,6 +39148,9 @@ var Session = class Session2 {
   * the log, the append is committed: observer failures are logged and
   * contained per listener, so they do not change the return value or prevent
   * later listeners from observing the same accepted event.
+  * Independent Sessions append without notifying store observers. Once a store
+  * prepares or enters the instance, writes require a completed creation
+  * announcement and remain disabled after removal.
   *
   * @param type - The event type (key of {@link SessionEventMap}).
   * @param data - The event payload; must be JSON-serializable.
@@ -35297,7 +39166,9 @@ var Session = class Session2 {
   * @returns the logged event — its assigned `seq`/`time` plus the SNAPSHOT of
   *   `data` that entered the log, so reading `event.data` back sees the logged
   *   value, never the caller's still-mutable input.
-  * @throws if `data` or surface metadata is not losslessly JSON-serializable
+  * @throws if a store-owned Session is unentered or its creation announcement
+  *   has not completed, or if `data` or surface
+  *   metadata is not losslessly JSON-serializable
   *   (BigInt, function, symbol, undefined, negative zero, non-finite number,
   *   circular reference, sparse array, or an exotic object such as
   *   Map/Set/Date/class instance), or when the candidate violates the
@@ -35313,6 +39184,7 @@ var Session = class Session2 {
   *   rejects before the log changes.
   */
   append(type, data, ...opts) {
+    this.publicationEntry();
     const surfaceOpts = opts[0];
     const surfaceMetadata = {
       ...surfaceOpts?.sourceEventSeqs === void 0 ? {} : { sourceEventSeqs: surfaceOpts.sourceEventSeqs },
@@ -35344,6 +39216,7 @@ var Session = class Session2 {
   * @returns the record's sequence number.
   */
   #appendRecord(type, data) {
+    this.publicationEntry();
     const dataSnapshot = snapshotJsonValue(data);
     if (dataSnapshot === void 0) throw new Error(`plugin record "${type}" carries non-JSON-serializable data`);
     const entry = this.publicationEntry();
@@ -35359,12 +39232,13 @@ var Session = class Session2 {
     return record3.seq;
   }
   /**
-  * Read the store attachment for one append, refusing an append that
-  * reenters while another append is being published.
-  * @returns the attachment, or undefined for a detached Session.
+  * Require announced membership for store-owned Sessions and refuse reentrant publication.
+  * @returns the current store attachment, or undefined for an independent Session.
   */
   publicationEntry() {
     const entry = attachments.get(this);
+    if (entry === null) throw new Error(`session "${this.id}" cannot append outside a SessionStore`);
+    if (entry !== void 0 && entry.announcement !== "complete") throw new Error(`session "${this.id}" cannot append before session/created completes`);
     if (entry?.appending) throw new Error("session append cannot reenter while another append is being published");
     return entry;
   }
@@ -35378,20 +39252,19 @@ var Session = class Session2 {
     this.surfaceManager.validateNext(event);
     if (entry !== void 0) entry.appending = true;
     try {
-      let callbacks;
       const callbackArgs = [this, event];
-      if (entry !== void 0) callbacks = collectSessionCallbacks(entry.emitCtx, [
+      const callbacks = entry === void 0 ? void 0 : collectSessionCallbacks(entry.emitCtx, [
         entry.carrier,
         "session/event",
         ...callbackArgs
       ]);
       this.log.push(event);
       this.eventsSnapshot = void 0;
-      if (callbacks !== void 0 && entry !== void 0) invokeContainedSessionObservers(entry.emitCtx, "session/event", entry.id, callbackArgs, callbacks);
+      if (entry !== void 0 && callbacks !== void 0) invokeContainedSessionObservers(entry.emitCtx, "session/event", entry.id, callbackArgs, callbacks);
     } finally {
       if (entry !== void 0) {
         entry.appending = false;
-        if (entry.detachRequested && !entry.announcing) entry.detach();
+        if (entry.detachRequested && entry.announcement !== "dispatching") entry.detach();
       }
     }
   }
@@ -35495,12 +39368,21 @@ var Session = class Session2 {
 };
 
 // ../../node_modules/@deepseek-ai/dsh-session-projection/lib/index.js
+function selectedKeys(keys) {
+  if (keys === void 0) return void 0;
+  return keys instanceof Set ? keys : new Set(keys);
+}
 function cursorBefore(offset) {
   return offset === 0 ? -1 : SessionSeq(offset - 1);
 }
 var SessionProjectionRegistry = class extends Service {
   registrations = /* @__PURE__ */ new Map();
+  /** Stable summary key set; dropped whenever the key table changes. */
+  summaryKeySet;
   listeners = /* @__PURE__ */ new Set();
+  eventListeners = /* @__PURE__ */ new Set();
+  /** Keys whose deprecated registry-level read has already been reported. */
+  deprecatedStateOfKeys = /* @__PURE__ */ new Set();
   /**
   * Create and install the registry as `ctx.sessionProjections`.
   * @param ctx - Cordis context that owns the service.
@@ -35510,6 +39392,7 @@ var SessionProjectionRegistry = class extends Service {
     ctx.on("session/created", (session) => {
       if (session.seq !== 0) return;
       for (const registration of this.registrations.values()) {
+        if (registration.refs === 0) continue;
         if (registration.cells.has(session)) continue;
         registration.cells.set(session, {
           state: registration.def.init(session.header, session.inheritedEventCount),
@@ -35522,7 +39405,39 @@ var SessionProjectionRegistry = class extends Service {
       this.drive(session, event);
     });
   }
+  /** Legacy runtime behavior: [plugin compatibility](../README.md#deprecated-plugin-compatibility). */
   register(definition) {
+    const owner = this.ctx;
+    let dispose = () => Promise.resolve();
+    const ready = this.acquire(definition, (release) => {
+      dispose = release;
+    });
+    let observed = false;
+    ready.catch((error112) => {
+      setImmediate(() => {
+        if (observed) return;
+        if (owner.fiber.state !== 1 && owner.fiber.state !== 2) return;
+        owner.logger.error(error112);
+      });
+    });
+    return Object.assign(dispose, {
+      then(onFulfilled, onRejected) {
+        observed = true;
+        return ready.then(onFulfilled, onRejected);
+      },
+      catch(onRejected) {
+        observed = true;
+        return ready.catch(onRejected);
+      },
+      finally(onFinally) {
+        observed = true;
+        return ready.finally(onFinally);
+      },
+      [Symbol.toStringTag]: "Promise"
+    });
+  }
+  /** Install one unit; `onEffect` receives its release before the asynchronous handoff. */
+  async acquire(definition, onEffect) {
     const wire = definition.wire;
     const erased = {
       key: definition.key,
@@ -35531,30 +39446,68 @@ var SessionProjectionRegistry = class extends Service {
       apply: (state, event) => definition.apply(state, event),
       wire: wire === void 0 ? void 0 : {
         viewSchema: wire.viewSchema,
-        view: (state) => wire.view(state)
+        view: (state) => wire.view(state),
+        summary: wire.summary !== false
       },
       stateVersion: definition.stateVersion
     };
     if (!Number.isSafeInteger(definition.stateVersion) || definition.stateVersion < 0) throw new Error(`session projection ${JSON.stringify(definition.key)} stateVersion must be a non-negative integer, got ${String(definition.stateVersion)}`);
-    return this.ctx.effect(function* () {
+    let registration;
+    const dispose = this.ctx.effect(() => {
       const key = erased.key;
       const existing = this.registrations.get(key);
-      if (existing === void 0) this.registrations.set(key, {
-        def: erased,
-        cells: /* @__PURE__ */ new WeakMap(),
-        refs: 1
-      });
-      else {
+      if (existing === void 0 || existing.refs === 0) {
+        registration = {
+          def: erased,
+          cells: /* @__PURE__ */ new WeakMap(),
+          refs: 1
+        };
+        this.registrations.set(key, registration);
+        this.summaryKeySet = void 0;
+      } else {
         if (existing.def.stateVersion !== erased.stateVersion) throw new Error(`session projection key ${JSON.stringify(key)} is already registered at stateVersion ${String(existing.def.stateVersion)}; refusing to share it with stateVersion ${String(erased.stateVersion)}`);
+        if (existing.def.wire?.summary !== erased.wire?.summary) throw new Error(`session projection key ${JSON.stringify(key)} is already registered with summary=${String(existing.def.wire?.summary)}; refusing to share it with summary=${String(erased.wire?.summary)}`);
         existing.refs += 1;
+        registration = existing;
       }
-      yield () => {
-        const live = this.registrations.get(key);
-        if (live === void 0) return;
-        live.refs -= 1;
-        if (live.refs === 0) this.registrations.delete(key);
+      return () => {
+        registration.refs -= 1;
+        if (registration.refs === 0) this.summaryKeySet = void 0;
       };
-    }.bind(this), "sessionProjections.register()");
+    }, "sessionProjections.register()");
+    onEffect(dispose);
+    await Promise.resolve();
+    this.ctx.fiber.assertActive();
+    const handle = {
+      async dispose() {
+        await dispose();
+      },
+      stateOf: (session) => {
+        return this.cellFor(registration, session).state;
+      },
+      readerFor: (session) => () => handle.stateOf(session)
+    };
+    return handle;
+  }
+  /**
+  * Read a currently registered unit after materializing every registered
+  * unit at the Session cursor. Unrelated wire views are not produced.
+  * The returned state is live; do not mutate it. A released key has no value.
+  * The first read of each key logs one deprecation warning per registry.
+  * @param session - Session whose committed events are folded.
+  * @param key - key of the registered projection.
+  * @returns the current state, or `undefined` when the unit is not registered.
+  * @deprecated Use an awaited registration's `handle.stateOf(session)` or the owning domain service.
+  */
+  stateOf(session, key) {
+    if (!this.deprecatedStateOfKeys.has(key)) {
+      this.deprecatedStateOfKeys.add(key);
+      this.ctx.logger.warn(`sessionProjections.stateOf(session, ${JSON.stringify(key)}) is deprecated; read handle.stateOf(session) from an awaited registration, or use the owning domain service`);
+    }
+    const registration = this.registrations.get(key);
+    if (registration === void 0 || registration.refs === 0) return void 0;
+    this.materializeCells(session);
+    return this.cellFor(registration, session).state;
   }
   /**
   * Subscribe to the change feed. The registration is an effect on the
@@ -35572,33 +39525,40 @@ var SessionProjectionRegistry = class extends Service {
     return () => void dispose();
   }
   /**
-  * Read one unit's current host state after materializing every registered
-  * unit at the Session cursor. Unrelated wire views are not produced.
-  * The returned value is live; callers must not mutate it.
-  * @param session - the session whose state is read.
-  * @param key - the registered unit key.
-  * @returns current state, or `undefined` when the key is not registered.
+  * Subscribe to the event-level change feed. The registration is an effect on
+  * the calling context's fiber. The listener runs synchronously inside the
+  * committed event's `session/event` handling, once after every unit has been
+  * driven and after every {@link onChanged} call for that event. If a unit or
+  * an {@link onChanged} listener throws during that drive, the listener still
+  * receives the changes made before the throw.
+  * @param listener - called once per committed event that changed at least one client-visible unit's raw view by `Object.is`.
+  * @returns the exact disposer that unsubscribes.
   */
-  stateOf(session, key) {
-    const registration = this.registrations.get(key);
-    if (registration === void 0) return void 0;
-    this.materializeCells(session);
-    return this.cellFor(registration, session).state;
+  onEventChanged(listener) {
+    const dispose = this.ctx.effect(() => {
+      this.eventListeners.add(listener);
+      return () => {
+        this.eventListeners.delete(listener);
+      };
+    }, "sessionProjections.onEventChanged()");
+    return () => void dispose();
   }
   /**
   * One consistent cut over every registered client-visible unit for one session, read from
   * the watermark cache (missing cells fold lazily over the in-memory log).
+  * Only the returned units are computed: other units, including Host-only
+  * units without `wire`, are neither folded nor advanced by this read.
   * Fully synchronous — every value and `asOfSeq` reflect the same log
   * position. Each value passes its unit's `viewSchema` before leaving.
   * @param session - the session whose projection values are read.
-  * @param keys - optional client-visible outputs; state materialization remains complete.
+  * @param keys - optional client-visible outputs; only these units are computed.
   * @returns the snapshot; `values` is empty when no selected client-visible unit is registered.
   */
   snapshot(session, keys) {
     const values = {};
-    const selected = keys === void 0 ? void 0 : new Set(keys);
-    this.materializeCells(session);
+    const selected = selectedKeys(keys);
     for (const registration of this.registrations.values()) {
+      if (registration.refs === 0) continue;
       if (registration.def.wire === void 0) continue;
       if (selected !== void 0 && !selected.has(registration.def.key)) continue;
       const cell = this.cellFor(registration, session);
@@ -35616,12 +39576,15 @@ var SessionProjectionRegistry = class extends Service {
   * @param session - attached Session whose cached cells are inspected.
   * @param keys - optional wire keys to view.
   * @returns the lowest common cached cut, or `undefined` when no wire cell exists.
+  * @deprecated Returns only values another read already computed and may omit keys; never use it to decide behavior.
+  *   Use snapshot(session, keys) for complete values, or a retained handle for host state.
   */
   cachedSnapshot(session, keys) {
     const values = {};
     let asOfSeq;
-    const selected = keys === void 0 ? void 0 : new Set(keys);
+    const selected = selectedKeys(keys);
     for (const registration of this.registrations.values()) {
+      if (registration.refs === 0) continue;
       if (registration.def.wire === void 0) continue;
       if (selected !== void 0 && !selected.has(registration.def.key)) continue;
       const cell = registration.cells.get(session);
@@ -35635,6 +39598,29 @@ var SessionProjectionRegistry = class extends Service {
     };
   }
   /**
+  * The keys a Session summary carries: every registered client-visible key
+  * whose unit does not declare `summary: false`. The returned set is stable —
+  * the same instance on every call — until a registration or its disposal
+  * changes the key table, so a consumer may hold it across rows. Callers pass
+  * it to a key-taking read face such as `snapshot(session, summaryKeys())`
+  * or `viewCheckpoint(rows, summaryKeys())`; those faces use the set as-is.
+  * @returns the current summary key set; do not mutate it.
+  */
+  summaryKeys() {
+    this.summaryKeySet ??= this.deriveSummaryKeys();
+    return this.summaryKeySet;
+  }
+  /** Rebuild the summary key set from the current registrations. */
+  deriveSummaryKeys() {
+    const keys = /* @__PURE__ */ new Set();
+    for (const registration of this.registrations.values()) {
+      if (registration.refs === 0) continue;
+      if (registration.def.wire === void 0 || !registration.def.wire.summary) continue;
+      keys.add(registration.def.key);
+    }
+    return keys;
+  }
+  /**
   * State-level checkpoint of every persisted unit for one session, read
   * from the watermark cache (missing cells fold lazily over the in-memory
   * log). This is the write side of the persisted projection cache: the
@@ -35645,13 +39631,19 @@ var SessionProjectionRegistry = class extends Service {
   * mutable state, and a caller reaching the live reference could corrupt
   * every subsequent snapshot and frame through it (plain JSON by the unit
   * contract, so the clone is total).
+  * A released unit contributes the Session's last cell. The registry no
+  * longer advances that cell, while a retained handle read still advances it
+  * forward, so a writer running after a plugin unloads keeps that unit's
+  * latest state; a Session that has no cell of it gets no row. {@link restore}
+  * folds only live units, so its refreshed rows omit released units.
   * @param session - the session whose unit states are checkpointed.
-  * @returns one row per registered key.
+  * @returns one row per registered key, plus one per released key with a cell for this Session.
   */
   checkpoint(session) {
     const rows = {};
     for (const registration of this.registrations.values()) {
-      const cell = this.cellFor(registration, session);
+      const cell = registration.refs === 0 ? registration.cells.get(session) : this.cellFor(registration, session);
+      if (cell === void 0) continue;
       rows[registration.def.key] = {
         ver: registration.def.stateVersion,
         seq: cell.observedSeq,
@@ -35673,12 +39665,13 @@ var SessionProjectionRegistry = class extends Service {
   * re-read.
   * @param checkpoint - persisted rows for one session (possibly stale or empty).
   * @returns the offset for the stored-log suffix read (`SessionHandle.read`),
-  *   or `undefined` when no unit is registered (no read needed —
+  *   or `undefined` when no live unit is registered (released predecessors do not count; no read needed —
   *   {@link restore} would serve empty values regardless).
   */
   restoreFloor(checkpoint) {
     let floor;
     for (const registration of this.registrations.values()) {
+      if (registration.refs === 0) continue;
       const row = checkpoint[registration.def.key];
       const need = row !== void 0 && row.ver === registration.def.stateVersion ? Math.max(row.seq + 1, 0) : 0;
       floor = floor === void 0 ? need : Math.min(floor, need);
@@ -35698,8 +39691,9 @@ var SessionProjectionRegistry = class extends Service {
   */
   viewCheckpoint(checkpoint, keys) {
     const values = {};
-    const selected = keys === void 0 ? void 0 : new Set(keys);
+    const selected = selectedKeys(keys);
     for (const registration of this.registrations.values()) {
+      if (registration.refs === 0) continue;
       const def = registration.def;
       if (def.wire === void 0) continue;
       if (selected !== void 0 && !selected.has(def.key)) continue;
@@ -35738,6 +39732,8 @@ var SessionProjectionRegistry = class extends Service {
   * @returns the snapshot cut at the supplied log end (`asOfSeq` is the last
   *   supplied event's seq, `baseSeq - 1` for an empty tail) plus the
   *   refreshed checkpoint rows at that cut, ready for a durable write-back.
+  *   The rows cover live units only: a released unit has no cell for a log
+  *   folded without a live `Session`, so a write-back of them omits it.
   */
   restore(checkpoint, events, baseSeq, header, inheritedEventCount) {
     const endSeq = events.at(-1)?.seq ?? cursorBefore(baseSeq);
@@ -35745,6 +39741,7 @@ var SessionProjectionRegistry = class extends Service {
     const values = {};
     const refreshed = {};
     for (const registration of this.registrations.values()) {
+      if (registration.refs === 0) continue;
       const def = registration.def;
       const row = checkpoint[def.key];
       const usable = row !== void 0 && row.ver === def.stateVersion && row.seq >= beforeBase && row.seq <= endSeq;
@@ -35785,13 +39782,17 @@ var SessionProjectionRegistry = class extends Service {
   hydrate(session, checkpoint, events, baseSeq) {
     const endSeq = events.at(-1)?.seq ?? cursorBefore(baseSeq);
     let complete = true;
-    for (const registration of this.registrations.values()) if (registration.cells.get(session)?.observedSeq !== endSeq) {
-      complete = false;
-      break;
+    for (const registration of this.registrations.values()) {
+      if (registration.refs === 0) continue;
+      if (registration.cells.get(session)?.observedSeq !== endSeq) {
+        complete = false;
+        break;
+      }
     }
     if (complete) {
       const values = {};
       for (const registration of this.registrations.values()) {
+        if (registration.refs === 0) continue;
         if (registration.def.wire === void 0) continue;
         const current = registration.cells.get(session);
         values[registration.def.key] = this.viewCell(registration, current);
@@ -35803,6 +39804,7 @@ var SessionProjectionRegistry = class extends Service {
     }
     const restored = this.restore(checkpoint, events, baseSeq, session.header, session.inheritedEventCount);
     for (const registration of this.registrations.values()) {
+      if (registration.refs === 0) continue;
       const row = restored.checkpoint[registration.def.key];
       if (row === void 0) continue;
       const current = registration.cells.get(session);
@@ -35817,7 +39819,10 @@ var SessionProjectionRegistry = class extends Service {
   }
   /** Materialize every registered unit cell at the Session's current cursor. */
   materializeCells(session) {
-    for (const registration of this.registrations.values()) this.cellFor(registration, session);
+    for (const registration of this.registrations.values()) {
+      if (registration.refs === 0) continue;
+      this.cellFor(registration, session);
+    }
   }
   /** Fold one unit from init over `events`, producing a cell watermarked at the last folded event. */
   buildCell(def, header, inheritedEventCount, events) {
@@ -35853,32 +39858,49 @@ var SessionProjectionRegistry = class extends Service {
       cell.observedSeq = SessionSeq(seq);
     }
   }
-  /** Eager drive: pass one committed event through every unit; notify on changed raw view references. */
+  /**
+  * Eager drive: pass one committed event through every unit; notify per-key
+  * listeners on each changed raw view reference, then event listeners once.
+  * When a unit or a per-key listener throws, event listeners still receive
+  * the changes collected before the throw, and the error then propagates.
+  */
   drive(session, event) {
-    for (const registration of this.registrations.values()) {
-      let cell = registration.cells.get(session);
-      if (cell !== void 0 && cell.observedSeq >= event.seq) continue;
-      if (cell === void 0) {
-        cell = this.buildCell(registration.def, session.header, session.inheritedEventCount, session.snapshotEvents(SessionLogOffset(0), SessionLogOffset(event.seq)));
-        registration.cells.set(session, cell);
-      } else this.advanceCell(registration.def, cell, session, event.seq === 0 ? -1 : SessionSeq(event.seq - 1));
-      const previousState = cell.state;
-      const next = registration.def.apply(previousState, event);
-      const changed = !Object.is(next, previousState);
-      cell.state = next;
-      cell.observedSeq = event.seq;
-      const wire = registration.def.wire;
-      if (changed && wire !== void 0) {
-        const views = cell.views;
-        views[0] = views[1];
-        if (this.listeners.size > 0) {
-          views[1] = wire.view(next);
-          if (!Object.is(views[0], views[1])) {
-            const value = wire.viewSchema.parse(views[1]);
-            for (const listener of this.listeners) listener(session, registration.def.key, value, event.seq);
-          }
-        } else views[1] = void 0;
+    const observed = this.listeners.size > 0 || this.eventListeners.size > 0;
+    const changes = [];
+    try {
+      for (const registration of this.registrations.values()) {
+        if (registration.refs === 0) continue;
+        let cell = registration.cells.get(session);
+        if (cell !== void 0 && cell.observedSeq >= event.seq) continue;
+        if (cell === void 0) {
+          cell = this.buildCell(registration.def, session.header, session.inheritedEventCount, session.snapshotEvents(SessionLogOffset(0), SessionLogOffset(event.seq)));
+          registration.cells.set(session, cell);
+        } else this.advanceCell(registration.def, cell, session, event.seq === 0 ? -1 : SessionSeq(event.seq - 1));
+        const previousState = cell.state;
+        const next = registration.def.apply(previousState, event);
+        const changed = !Object.is(next, previousState);
+        cell.state = next;
+        cell.observedSeq = event.seq;
+        const wire = registration.def.wire;
+        if (changed && wire !== void 0) {
+          const views = cell.views;
+          views[0] = views[1];
+          if (observed) {
+            views[1] = wire.view(next);
+            if (!Object.is(views[0], views[1])) {
+              const key = registration.def.key;
+              const value = wire.viewSchema.parse(views[1]);
+              changes.push({
+                key,
+                val: value
+              });
+              for (const listener of this.listeners) listener(session, key, value, event.seq);
+            }
+          } else views[1] = void 0;
+        }
       }
+    } finally {
+      if (changes.length > 0) for (const listener of this.eventListeners) listener(session, changes, event.seq);
     }
   }
   /** Return one schema-validated wire value. */
@@ -35997,7 +40019,7 @@ __export(external_exports2, {
   check: () => check2,
   cidrv4: () => cidrv44,
   cidrv6: () => cidrv64,
-  clone: () => clone3,
+  clone: () => clone7,
   codec: () => codec2,
   coerce: () => coerce_exports2,
   compile: () => compile,
@@ -36008,7 +40030,7 @@ __export(external_exports2, {
   cuid2: () => cuid24,
   currencyCode: () => currencyCode2,
   custom: () => custom2,
-  date: () => date7,
+  date: () => date11,
   decode: () => decode4,
   decodeAsync: () => decodeAsync4,
   deepPartial: () => deepPartial,
@@ -36055,7 +40077,7 @@ __export(external_exports2, {
   jwt: () => jwt2,
   keyof: () => keyof2,
   ksuid: () => ksuid4,
-  lazy: () => lazy3,
+  lazy: () => lazy7,
   length: () => _length2,
   literal: () => literal2,
   locales: () => locales_exports2,
@@ -36114,7 +40136,7 @@ __export(external_exports2, {
   safeEncodeAsync: () => safeEncodeAsync4,
   safeParse: () => safeParse4,
   safeParseAsync: () => safeParseAsync4,
-  set: () => set3,
+  set: () => set7,
   setErrorMap: () => setErrorMap2,
   size: () => _size2,
   slugify: () => _slugify2,
@@ -36410,7 +40432,7 @@ __export(core_exports4, {
   base64Charset: () => base64Charset,
   base64urlCharset: () => base64urlCharset,
   canParseURL: () => canParseURL,
-  clone: () => clone3,
+  clone: () => clone7,
   compile: () => compile,
   compileFn: () => compileFn,
   config: () => config2,
@@ -36495,7 +40517,7 @@ __export(util_exports2, {
   captureStackTrace: () => captureStackTrace2,
   cleanEnum: () => cleanEnum2,
   cleanRegex: () => cleanRegex2,
-  clone: () => clone3,
+  clone: () => clone7,
   cloneDef: () => cloneDef2,
   codePointLength: () => codePointLength,
   constantCatch: () => constantCatch,
@@ -36506,7 +40528,7 @@ __export(util_exports2, {
   esc: () => esc2,
   escapeRegex: () => escapeRegex2,
   explicitlyAborted: () => explicitlyAborted2,
-  extend: () => extend3,
+  extend: () => extend7,
   finalizeIssue: () => finalizeIssue2,
   floatSafeRemainder: () => floatSafeRemainder2,
   getElementAtPath: () => getElementAtPath2,
@@ -36518,12 +40540,12 @@ __export(util_exports2, {
   hide: () => hide,
   installLazyProp: () => installLazyProp,
   isObject: () => isObject3,
-  isPlainObject: () => isPlainObject3,
+  isPlainObject: () => isPlainObject7,
   issue: () => issue2,
   joinValues: () => joinValues2,
   jsonStringifyReplacer: () => jsonStringifyReplacer2,
   members: () => members,
-  merge: () => merge3,
+  merge: () => merge7,
   mergeDefs: () => mergeDefs2,
   normalizeParams: () => normalizeParams2,
   nullish: () => nullish3,
@@ -36534,7 +40556,7 @@ __export(util_exports2, {
   own: () => own,
   parsedType: () => parsedType2,
   partial: () => partial2,
-  pick: () => pick3,
+  pick: () => pick7,
   prefixIssues: () => prefixIssues2,
   primitiveTypes: () => primitiveTypes2,
   promiseAllObject: () => promiseAllObject2,
@@ -36760,7 +40782,7 @@ var allowsEval2 = /* @__PURE__ */ cached4(() => {
     return false;
   }
 });
-function isPlainObject3(o) {
+function isPlainObject7(o) {
   if (isObject3(o) === false)
     return false;
   const ctor = o.constructor;
@@ -36777,7 +40799,7 @@ function isPlainObject3(o) {
   return true;
 }
 function shallowClone2(o) {
-  if (isPlainObject3(o))
+  if (isPlainObject7(o))
     return { ...o };
   if (Array.isArray(o))
     return [...o];
@@ -36852,7 +40874,7 @@ var primitiveTypes2 = /* @__PURE__ */ new Set([
 function escapeRegex2(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-function clone3(inst, def, params) {
+function clone7(inst, def, params) {
   const cl = new inst._zod.constr(def ?? inst._zod.def);
   if (!def || params?.parent)
     cl._zod.parent = inst;
@@ -36930,7 +40952,7 @@ var BIGINT_FORMAT_RANGES2 = {
   int64: [/* @__PURE__ */ BigInt("-9223372036854775808"), /* @__PURE__ */ BigInt("9223372036854775807")],
   uint64: [/* @__PURE__ */ BigInt(0), /* @__PURE__ */ BigInt("18446744073709551615")]
 };
-function pick3(schema, mask) {
+function pick7(schema, mask) {
   const currDef = schema._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
@@ -36939,7 +40961,7 @@ function pick3(schema, mask) {
   }
   const newShape = {};
   mirrorShape(newShape, schema, maskedKeys(schema, mask));
-  return clone3(schema, mergeDefs2(currDef, { shape: newShape, checks: [] }));
+  return clone7(schema, mergeDefs2(currDef, { shape: newShape, checks: [] }));
 }
 function maskedKeys(schema, mask) {
   const raw = sourceShape(schema);
@@ -36963,10 +40985,10 @@ function omit2(schema, mask) {
   const omitted = new Set(maskedKeys(schema, mask));
   const newShape = {};
   mirrorShape(newShape, schema, Reflect.ownKeys(sourceShape(schema)).filter((key) => !omitted.has(key)));
-  return clone3(schema, mergeDefs2(currDef, { shape: newShape, checks: [] }));
+  return clone7(schema, mergeDefs2(currDef, { shape: newShape, checks: [] }));
 }
-function extend3(schema, shape) {
-  if (!isPlainObject3(shape)) {
+function extend7(schema, shape) {
+  if (!isPlainObject7(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
   const checks = schema._zod.def.checks;
@@ -36979,7 +41001,7 @@ function extend3(schema, shape) {
       }
     }
   }
-  return clone3(schema, mergeDefs2(schema._zod.def, { shape: extended(schema, shape) }));
+  return clone7(schema, mergeDefs2(schema._zod.def, { shape: extended(schema, shape) }));
 }
 function extended(schema, shape) {
   const newShape = {};
@@ -36988,12 +41010,12 @@ function extended(schema, shape) {
   return newShape;
 }
 function safeExtend2(schema, shape) {
-  if (!isPlainObject3(shape)) {
+  if (!isPlainObject7(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
-  return clone3(schema, mergeDefs2(schema._zod.def, { shape: extended(schema, shape) }));
+  return clone7(schema, mergeDefs2(schema._zod.def, { shape: extended(schema, shape) }));
 }
-function merge3(a, b) {
+function merge7(a, b) {
   if (!b?._zod?.def) {
     throw new Error("Invalid input to merge: expected an object schema. To merge a plain shape, use `.extend()`.");
   }
@@ -37010,7 +41032,7 @@ function merge3(a, b) {
     },
     checks: b._zod.def.checks ?? []
   });
-  return clone3(a, def);
+  return clone7(a, def);
 }
 function partial2(Class3, schema, mask, name = "partial") {
   const currDef = schema._zod.def;
@@ -37022,7 +41044,7 @@ function partial2(Class3, schema, mask, name = "partial") {
   const selected = mask ? new Set(maskedKeys(schema, mask)) : void 0;
   const newShape = {};
   mirrorShape(newShape, schema, Reflect.ownKeys(sourceShape(schema)), Class3 && ((value, key) => selected && !selected.has(key) ? value : new Class3({ type: "optional", innerType: value })));
-  return clone3(schema, mergeDefs2(schema._zod.def, { shape: newShape, checks: [] }));
+  return clone7(schema, mergeDefs2(schema._zod.def, { shape: newShape, checks: [] }));
 }
 function required2(Class3, schema, mask) {
   const selected = mask ? new Set(maskedKeys(schema, mask)) : void 0;
@@ -37031,7 +41053,7 @@ function required2(Class3, schema, mask) {
     // overwrite with non-optional
     selected && !selected.has(key) ? value : new Class3({ type: "nonoptional", innerType: value })
   ));
-  return clone3(schema, mergeDefs2(schema._zod.def, { shape: newShape }));
+  return clone7(schema, mergeDefs2(schema._zod.def, { shape: newShape }));
 }
 function aborted2(x, startIndex = 0) {
   if (x.aborted === true)
@@ -37818,7 +41840,7 @@ __export(regexes_exports2, {
   cuid: () => cuid4,
   cuid2: () => cuid23,
   currencyCode: () => currencyCode,
-  date: () => date6,
+  date: () => date10,
   datetime: () => datetime3,
   domain: () => domain2,
   duration: () => duration3,
@@ -37922,7 +41944,7 @@ var dateSource2 = `(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468]
 function anchor(source) {
   return new RegExp(`^${source}$`);
 }
-var date6 = /* @__PURE__ */ anchor(dateSource2);
+var date10 = /* @__PURE__ */ anchor(dateSource2);
 function timeSource2(args) {
   const hhmm = `(?:[01]\\d|2[0-3]):[0-5]\\d`;
   const regex = typeof args.precision === "number" ? args.precision === -1 ? `${hhmm}` : args.precision === 0 ? `${hhmm}:[0-5]\\d` : `${hhmm}:[0-5]\\d\\.\\d{${args.precision}}` : args.seconds ? `${hhmm}:[0-5]\\d(?:\\.\\d+)?` : `${hhmm}(?::[0-5]\\d(?:\\.\\d+)?)?`;
@@ -38330,8 +42352,8 @@ var $ZodCheckUpperCase2 = /* @__PURE__ */ $constructor2("$ZodCheckUpperCase", (i
 var $ZodCheckIncludes2 = /* @__PURE__ */ $constructor2("$ZodCheckIncludes", (inst, def) => {
   $ZodCheck2.init(inst, def);
   const escapedRegex = escapeRegex2(def.includes);
-  const pattern2 = new RegExp(typeof def.position === "number" ? `^.{${def.position},}${escapedRegex}` : escapedRegex);
-  def.pattern = pattern2;
+  const pattern6 = new RegExp(typeof def.position === "number" ? `^.{${def.position},}${escapedRegex}` : escapedRegex);
+  def.pattern = pattern6;
   inst._zod.check = (payload) => {
     if (payload.value.includes(def.includes, def.position))
       return;
@@ -38348,8 +42370,8 @@ var $ZodCheckIncludes2 = /* @__PURE__ */ $constructor2("$ZodCheckIncludes", (ins
 });
 var $ZodCheckStartsWith2 = /* @__PURE__ */ $constructor2("$ZodCheckStartsWith", (inst, def) => {
   $ZodCheck2.init(inst, def);
-  const pattern2 = new RegExp(`^${escapeRegex2(def.prefix)}.*`);
-  def.pattern ?? (def.pattern = pattern2);
+  const pattern6 = new RegExp(`^${escapeRegex2(def.prefix)}.*`);
+  def.pattern ?? (def.pattern = pattern6);
   inst._zod.check = (payload) => {
     if (payload.value.startsWith(def.prefix))
       return;
@@ -38366,8 +42388,8 @@ var $ZodCheckStartsWith2 = /* @__PURE__ */ $constructor2("$ZodCheckStartsWith", 
 });
 var $ZodCheckEndsWith2 = /* @__PURE__ */ $constructor2("$ZodCheckEndsWith", (inst, def) => {
   $ZodCheck2.init(inst, def);
-  const pattern2 = new RegExp(`.*${escapeRegex2(def.suffix)}$`);
-  def.pattern ?? (def.pattern = pattern2);
+  const pattern6 = new RegExp(`.*${escapeRegex2(def.suffix)}$`);
+  def.pattern ?? (def.pattern = pattern6);
   inst._zod.check = (payload) => {
     if (payload.value.endsWith(def.suffix))
       return;
@@ -38382,9 +42404,9 @@ var $ZodCheckEndsWith2 = /* @__PURE__ */ $constructor2("$ZodCheckEndsWith", (ins
     });
   };
 });
-function handleCheckPropertyResult2(result, payload, property2) {
+function handleCheckPropertyResult2(result, payload, property6) {
   if (result.issues.length) {
-    payload.issues.push(...prefixIssues2(property2, result.issues));
+    payload.issues.push(...prefixIssues2(property6, result.issues));
   }
 }
 var $ZodCheckProperty2 = /* @__PURE__ */ $constructor2("$ZodCheckProperty", (inst, def) => {
@@ -38828,7 +42850,7 @@ var $ZodISODateTime2 = /* @__PURE__ */ $constructor2("$ZodISODateTime", (inst, d
   $ZodStringFormat2.init(inst, def);
 });
 var $ZodISODate2 = /* @__PURE__ */ $constructor2("$ZodISODate", (inst, def) => {
-  def.pattern ?? (def.pattern = date6);
+  def.pattern ?? (def.pattern = date10);
   $ZodStringFormat2.init(inst, def);
 });
 var $ZodISOTime2 = /* @__PURE__ */ $constructor2("$ZodISOTime", (inst, def) => {
@@ -39868,7 +43890,7 @@ function mergeValues2(a, b) {
   if (a instanceof Date && b instanceof Date && +a === +b) {
     return { valid: true, data: a };
   }
-  if (isPlainObject3(a) && isPlainObject3(b)) {
+  if (isPlainObject7(a) && isPlainObject7(b)) {
     const bKeys = Object.keys(b);
     const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
     const newObj = { ...a, ...b };
@@ -40089,7 +44111,7 @@ var $ZodRecord2 = /* @__PURE__ */ $constructor2("$ZodRecord", (inst, def) => {
   memo2?.attach(inst);
   inst._zod.parse = (payload, ctx) => {
     const input2 = payload.value;
-    if (!isPlainObject3(input2)) {
+    if (!isPlainObject7(input2)) {
       payload.issues.push({
         expected: "record",
         code: "invalid_type",
@@ -40448,8 +44470,8 @@ var $ZodOptional2 = /* @__PURE__ */ $constructor2("$ZodOptional", (inst, def) =>
     return values ? /* @__PURE__ */ new Set([...values, void 0]) : void 0;
   });
   defineLazyInternal(inst, "pattern", (zod) => {
-    const pattern2 = zod.def.innerType._zod.pattern;
-    return pattern2 ? new RegExp(`^(${cleanRegex2(pattern2.source)})?$`) : void 0;
+    const pattern6 = zod.def.innerType._zod.pattern;
+    return pattern6 ? new RegExp(`^(${cleanRegex2(pattern6.source)})?$`) : void 0;
   });
   inst._zod.parse = (payload, ctx) => {
     if (payload.value === void 0) {
@@ -40476,8 +44498,8 @@ var $ZodNullable2 = /* @__PURE__ */ $constructor2("$ZodNullable", (inst, def) =>
   defineLazyInternal(inst, "optin", (zod) => zod.def.innerType._zod.optin);
   defineLazyInternal(inst, "optout", (zod) => zod.def.innerType._zod.optout);
   defineLazyInternal(inst, "pattern", (zod) => {
-    const pattern2 = zod.def.innerType._zod.pattern;
-    return pattern2 ? new RegExp(`^(${cleanRegex2(pattern2.source)}|null)$`) : void 0;
+    const pattern6 = zod.def.innerType._zod.pattern;
+    return pattern6 ? new RegExp(`^(${cleanRegex2(pattern6.source)}|null)$`) : void 0;
   });
   defineLazyInternal(inst, "values", (zod) => {
     return zod.def.innerType._zod.values ? /* @__PURE__ */ new Set([...zod.def.innerType._zod.values, null]) : void 0;
@@ -40722,14 +44744,14 @@ function handleReadonlyResult2(payload) {
 }
 function leafPattern(schema) {
   const def = schema._zod.def;
-  let pattern2 = def.pattern;
+  let pattern6 = def.pattern;
   let isInt = !!def.format?.includes("int");
   let minimum;
   let maximum;
   for (const ch of def.checks ?? []) {
     const d = ch._zod.def;
     if (d.pattern)
-      pattern2 = d.pattern;
+      pattern6 = d.pattern;
     isInt || (isInt = !!d.format?.includes("int"));
     const lo = d.minimum ?? d.length;
     const hi = d.maximum ?? d.length;
@@ -40738,8 +44760,8 @@ function leafPattern(schema) {
     if (hi !== void 0 && (maximum === void 0 || hi < maximum))
       maximum = hi;
   }
-  if (pattern2)
-    return pattern2.source;
+  if (pattern6)
+    return pattern6.source;
   if (minimum !== void 0 && maximum !== void 0 && minimum > maximum)
     return "(?!)";
   if (minimum !== void 0 || maximum !== void 0)
@@ -40960,7 +44982,7 @@ var recursive = /* @__PURE__ */ new WeakMap();
 var NONE = 0;
 var ASSUMED = 1;
 var PROVEN = 2;
-function isRecursive(inst, stack, resolve9) {
+function isRecursive(inst, stack, resolve14) {
   const cached5 = recursive.get(inst);
   if (cached5 !== void 0)
     return cached5 ? PROVEN : NONE;
@@ -40970,7 +44992,7 @@ function isRecursive(inst, stack, resolve9) {
   let result = NONE;
   const check3 = (child) => {
     if (result !== PROVEN && child?._zod) {
-      const answer = isRecursive(child, stack, resolve9);
+      const answer = isRecursive(child, stack, resolve14);
       if (answer > result)
         result = answer;
     }
@@ -40981,13 +45003,13 @@ function isRecursive(inst, stack, resolve9) {
       const desc = Object.getOwnPropertyDescriptor(sh, key);
       if (spread && !desc.enumerable)
         continue;
-      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve9) : NONE;
+      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve14) : NONE;
       if (child > answer)
         answer = child;
     }
     return answer;
   };
-  const merge4 = (answer) => {
+  const merge8 = (answer) => {
     if (answer > result)
       result = answer;
   };
@@ -40996,7 +45018,7 @@ function isRecursive(inst, stack, resolve9) {
   switch (kind) {
     case "object": {
       const raw = rawShape(def);
-      merge4(raw ? shape(raw, true) : ASSUMED);
+      merge8(raw ? shape(raw, true) : ASSUMED);
       check3(def.catchall);
       break;
     }
@@ -41045,8 +45067,8 @@ function isRecursive(inst, stack, resolve9) {
       break;
     // `$ZodLazy` caches its inner on the def, so a resolved edge is followed exactly
     case "lazy": {
-      const inner = def._cachedInner ?? (resolve9 ? inst._zod.innerType : void 0);
-      merge4(inner ? isRecursive(inner, stack, false) : ASSUMED);
+      const inner = def._cachedInner ?? (resolve14 ? inst._zod.innerType : void 0);
+      merge8(inner ? isRecursive(inner, stack, false) : ASSUMED);
       break;
     }
     // a leaf by choice: `parts` are regex fragments, not data positions
@@ -48861,9 +52883,9 @@ function compileValidator(schema, parser) {
 function compile(schema, options) {
   try {
     const parser = compileFn(schema);
-    const clone4 = withParser(schema, parser);
-    clone4._zod.bag.validator = compileValidator(schema, parser);
-    return clone4;
+    const clone8 = withParser(schema, parser);
+    clone8._zod.bag.validator = compileValidator(schema, parser);
+    return clone8;
   } catch (err) {
     if (options?.strict)
       throw err;
@@ -48874,7 +52896,7 @@ function withParser(schema, parser) {
   if (isRecursiveSchema(schema)) {
     throw new ZodCompileUnsupportedError("a schema whose subtree contains a reference cycle");
   }
-  const clone4 = clone3(schema);
+  const clone8 = clone7(schema);
   const liveRun = schema._zod.run;
   const originalRun = liveRun.__originalRun ?? liveRun;
   const wrapped = (payload, ctx) => {
@@ -48894,12 +52916,12 @@ function withParser(schema, parser) {
     return originalRun(payload, ctx);
   };
   wrapped.__originalRun = originalRun;
-  clone4._zod.bag.fallbackRun = originalRun;
-  clone4._zod.bag.validator = parser;
-  clone4._zod.run = wrapped;
+  clone8._zod.bag.fallbackRun = originalRun;
+  clone8._zod.bag.validator = parser;
+  clone8._zod.run = wrapped;
   if (!liveRun.__originalRun)
-    installCompiledUserMethods(clone4, schema, parser);
-  return clone4;
+    installCompiledUserMethods(clone8, schema, parser);
+  return clone8;
 }
 function installCompiledUserMethods(target, source, parser) {
   const targetAny = target;
@@ -50178,7 +54200,7 @@ function generateIntersectionCheck(doc, ctx, schema, accessor) {
 }
 function generateRecordCheck(doc, ctx, schema, accessor) {
   const def = schema._zod.def;
-  const isPlainObjectConst = addConstant(ctx, isPlainObject3);
+  const isPlainObjectConst = addConstant(ctx, isPlainObject7);
   doc.write(`if (!${isPlainObjectConst}(${accessor})) return INVALID;`);
   const outputVar = newVar(ctx);
   const kVar = newVar(ctx);
@@ -50318,9 +54340,9 @@ function generateFileCheck(doc, accessor) {
 }
 function generateTemplateLiteralCheck(doc, ctx, schema, accessor) {
   doc.write(`if (typeof ${accessor} !== "string") return INVALID;`);
-  const pattern2 = schema._zod.pattern;
-  if (pattern2) {
-    const patternConst = addConstant(ctx, pattern2);
+  const pattern6 = schema._zod.pattern;
+  if (pattern6) {
+    const patternConst = addConstant(ctx, pattern6);
     doc.write(`${patternConst}.lastIndex = 0;`);
     doc.write(`if (!${patternConst}.test(${accessor})) return INVALID;`);
   }
@@ -51046,12 +55068,12 @@ function _length2(length, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _regex2(pattern2, params) {
+function _regex2(pattern6, params) {
   return new $ZodCheckRegex2({
     check: "string_format",
     format: "regex",
     ...normalizeParams2(params),
-    pattern: pattern2
+    pattern: pattern6
   });
 }
 // @__NO_SIDE_EFFECTS__
@@ -51098,10 +55120,10 @@ function _endsWith2(suffix, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _property2(property2, schema, params) {
+function _property2(property6, schema, params) {
   return new $ZodCheckProperty2({
     check: "property",
-    property: property2,
+    property: property6,
     schema,
     ...normalizeParams2(params)
   });
@@ -51727,10 +55749,10 @@ function compactTypeUnion(schema) {
 var FOLDABLE_KEYS = /* @__PURE__ */ new Set(["type", "properties", "required", "additionalProperties"]);
 var UNION_KEYS = ["oneOf", "anyOf"];
 function undeclaredConstraint(member) {
-  const extra2 = member.additionalProperties;
-  if (extra2 === void 0 || extra2 === false || typeof extra2 !== "object" || extra2 === null)
+  const extra6 = member.additionalProperties;
+  if (extra6 === void 0 || extra6 === false || typeof extra6 !== "object" || extra6 === null)
     return null;
-  return Object.keys(extra2).length ? extra2 : null;
+  return Object.keys(extra6).length ? extra6 : null;
 }
 function foldObjects(members2) {
   const objects = [];
@@ -52052,9 +56074,9 @@ var addDivisor = (agg, value) => {
   if (!agg.multipleOf.includes(value))
     agg.multipleOf.push(value);
 };
-var addPattern = (agg, pattern2) => {
+var addPattern = (agg, pattern6) => {
   agg.patterns ?? (agg.patterns = /* @__PURE__ */ new Set());
-  agg.patterns.add(pattern2);
+  agg.patterns.add(pattern6);
 };
 var intersectMime = (agg, mime) => {
   agg.mime = agg.mime ? agg.mime.filter((m) => mime.includes(m)) : [...mime];
@@ -52119,8 +56141,8 @@ function aggregateChecks(schema) {
   }
   if (bag.mime)
     intersectMime(agg, bag.mime);
-  for (const pattern2 of bag.patterns ?? [])
-    addPattern(agg, pattern2);
+  for (const pattern6 of bag.patterns ?? [])
+    addPattern(agg, pattern6);
   return agg;
 }
 var formatMap2 = {
@@ -52302,11 +56324,11 @@ var nanProcessor2 = (schema, ctx, json3, params) => {
 };
 var templateLiteralProcessor2 = (schema, _ctx, json3, _params) => {
   const _json = json3;
-  const pattern2 = schema._zod.pattern;
-  if (!pattern2)
+  const pattern6 = schema._zod.pattern;
+  if (!pattern6)
     throw new Error("Pattern not found in template literal");
   _json.type = "string";
-  _json.pattern = pattern2.source;
+  _json.pattern = pattern6.source;
 };
 var fileProcessor2 = (schema, _ctx, json3, _params) => {
   const _json = json3;
@@ -52577,8 +56599,8 @@ var recordProcessor2 = (schema, ctx, _json, params) => {
       path: [...params.path, "patternProperties", "*"]
     });
     json3.patternProperties = {};
-    for (const pattern2 of patterns) {
-      assignProp2(json3.patternProperties, exactPattern(pattern2).source, valueSchema);
+    for (const pattern6 of patterns) {
+      assignProp2(json3.patternProperties, exactPattern(pattern6).source, valueSchema);
     }
   } else {
     if (ctx.target === "draft-07" || ctx.target === "draft-2020-12") {
@@ -52961,7 +56983,7 @@ __export(schemas_exports4, {
   cuid2: () => cuid24,
   currencyCode: () => currencyCode2,
   custom: () => custom2,
-  date: () => date7,
+  date: () => date11,
   describe: () => describe4,
   discriminatedUnion: () => discriminatedUnion2,
   e164: () => e1644,
@@ -52991,7 +57013,7 @@ __export(schemas_exports4, {
   jwt: () => jwt2,
   keyof: () => keyof2,
   ksuid: () => ksuid4,
-  lazy: () => lazy3,
+  lazy: () => lazy7,
   literal: () => literal2,
   looseObject: () => looseObject2,
   looseRecord: () => looseRecord2,
@@ -53017,7 +57039,7 @@ __export(schemas_exports4, {
   readonly: () => readonly2,
   record: () => record2,
   refine: () => refine2,
-  set: () => set3,
+  set: () => set7,
   strictObject: () => strictObject2,
   string: () => string5,
   stringFormat: () => stringFormat2,
@@ -53168,7 +57190,7 @@ var ZodType2 = /* @__PURE__ */ $constructor2("ZodType", (inst, def) => {
     return this.check(...chks);
   },
   clone(def, params) {
-    return clone3(this, def, params);
+    return clone7(this, def, params);
   },
   brand() {
     return this;
@@ -53918,7 +57940,7 @@ var ZodDate2 = /* @__PURE__ */ $constructor2(
     }
   }, {})
 );
-function date7(params) {
+function date11(params) {
   return _date2(ZodDate2, params);
 }
 var ZodArray2 = /* @__PURE__ */ $constructor2("ZodArray", (inst, def) => {
@@ -54181,7 +58203,7 @@ var ZodSet2 = /* @__PURE__ */ $constructor2("ZodSet", (inst, def) => {
   inst.max = (...args) => inst.check(_maxSize2(...args));
   inst.size = (...args) => inst.check(_size2(...args));
 });
-function set3(valueType, params) {
+function set7(valueType, params) {
   return new ZodSet2({
     type: "set",
     valueType,
@@ -54502,7 +58524,7 @@ var ZodLazy2 = /* @__PURE__ */ $constructor2("ZodLazy", (inst, def) => {
   inst._zod.processJSONSchema = (ctx, json3, params) => lazyProcessor2(inst, ctx, json3, params);
   inst.unwrap = () => inst._zod.def.getter();
 });
-function lazy3(getter) {
+function lazy7(getter) {
   return new ZodLazy2({
     type: "lazy",
     getter
@@ -54591,7 +58613,7 @@ var stringbool2 = (...args) => _stringbool2({
   String: ZodString2
 }, ...args);
 function json2(params) {
-  const jsonSchema = lazy3(() => {
+  const jsonSchema = lazy7(() => {
     return union2([string5(params), number5(), boolean5(), _null6(), array2(jsonSchema), record2(string5(), jsonSchema)]);
   });
   return jsonSchema;
@@ -54637,7 +58659,7 @@ __export(iso_exports2, {
   ZodISODateTime: () => ZodISODateTime2,
   ZodISODuration: () => ZodISODuration2,
   ZodISOTime: () => ZodISOTime2,
-  date: () => date8,
+  date: () => date12,
   datetime: () => datetime4,
   duration: () => duration4,
   time: () => time4
@@ -54645,7 +58667,7 @@ __export(iso_exports2, {
 function datetime4(params) {
   return _isoDateTime2(ZodISODateTime2, params);
 }
-function date8(params) {
+function date12(params) {
   return _isoDate2(ZodISODate2, params);
 }
 function time4(params) {
@@ -55158,9 +59180,9 @@ function convertBaseSchema2(schema, ctx) {
         const patternProps = schema.patternProperties;
         const patternKeys = Object.keys(patternProps);
         const looseRecords = [];
-        for (const pattern2 of patternKeys) {
-          const patternValue = convertSchema2(patternProps[pattern2], ctx);
-          const keySchema = z2.string().regex(new RegExp(pattern2));
+        for (const pattern6 of patternKeys) {
+          const patternValue = convertSchema2(patternProps[pattern6], ctx);
+          const keySchema = z2.string().regex(new RegExp(pattern6));
           looseRecords.push(z2.looseRecord(keySchema, patternValue));
         }
         const schemasToIntersect = [];
@@ -55184,7 +59206,7 @@ function convertBaseSchema2(schema, ctx) {
           const patterns = patternKeys.map((p) => new RegExp(p));
           const basePatternSchema = zodSchema;
           zodSchema = zodSchema.check((payload) => {
-            if (!isPlainObject3(payload.value))
+            if (!isPlainObject7(payload.value))
               return;
             const unrecognized = [];
             for (const key of Object.keys(payload.value)) {
@@ -55433,11 +59455,11 @@ function visit(schema, fnOrHandlers) {
           if (newCatchall !== def.catchall)
             changed = true;
         }
-        return changed ? clone3(s, { ...def, shape: newShape, catchall: newCatchall }) : s;
+        return changed ? clone7(s, { ...def, shape: newShape, catchall: newCatchall }) : s;
       }
       case "array": {
         const mapped = run(def.element);
-        return mapped === def.element ? s : clone3(s, { ...def, element: mapped });
+        return mapped === def.element ? s : clone7(s, { ...def, element: mapped });
       }
       case "tuple": {
         const oldItems = def.items;
@@ -55455,17 +59477,17 @@ function visit(schema, fnOrHandlers) {
           if (newRest !== def.rest)
             changed = true;
         }
-        return changed ? clone3(s, { ...def, items: newItems, rest: newRest }) : s;
+        return changed ? clone7(s, { ...def, items: newItems, rest: newRest }) : s;
       }
       case "record":
       case "map": {
         const newKey = run(def.keyType);
         const newVal = run(def.valueType);
-        return newKey === def.keyType && newVal === def.valueType ? s : clone3(s, { ...def, keyType: newKey, valueType: newVal });
+        return newKey === def.keyType && newVal === def.valueType ? s : clone7(s, { ...def, keyType: newKey, valueType: newVal });
       }
       case "set": {
         const newVal = run(def.valueType);
-        return newVal === def.valueType ? s : clone3(s, { ...def, valueType: newVal });
+        return newVal === def.valueType ? s : clone7(s, { ...def, valueType: newVal });
       }
       case "union": {
         const oldOptions = def.options;
@@ -55477,12 +59499,12 @@ function visit(schema, fnOrHandlers) {
             changed = true;
           newOptions.push(mapped);
         }
-        return changed ? clone3(s, { ...def, options: newOptions }) : s;
+        return changed ? clone7(s, { ...def, options: newOptions }) : s;
       }
       case "intersection": {
         const newLeft = run(def.left);
         const newRight = run(def.right);
-        return newLeft === def.left && newRight === def.right ? s : clone3(s, { ...def, left: newLeft, right: newRight });
+        return newLeft === def.left && newRight === def.right ? s : clone7(s, { ...def, left: newLeft, right: newRight });
       }
       case "optional":
       case "nullable":
@@ -55494,22 +59516,22 @@ function visit(schema, fnOrHandlers) {
       case "promise":
       case "success": {
         const newInner = run(def.innerType);
-        return newInner === def.innerType ? s : clone3(s, { ...def, innerType: newInner });
+        return newInner === def.innerType ? s : clone7(s, { ...def, innerType: newInner });
       }
       case "pipe": {
         const newIn = run(def.in);
         const newOut = run(def.out);
-        return newIn === def.in && newOut === def.out ? s : clone3(s, { ...def, in: newIn, out: newOut });
+        return newIn === def.in && newOut === def.out ? s : clone7(s, { ...def, in: newIn, out: newOut });
       }
       case "function": {
         const newInput = run(def.input);
         const newOutput = run(def.output);
-        return newInput === def.input && newOutput === def.output ? s : clone3(s, { ...def, input: newInput, output: newOutput });
+        return newInput === def.input && newOutput === def.output ? s : clone7(s, { ...def, input: newInput, output: newOutput });
       }
       case "lazy": {
         const original = def.getter;
         const { _cachedInner, ...rest } = def;
-        return clone3(s, { ...rest, getter: () => run(original()) });
+        return clone7(s, { ...rest, getter: () => run(original()) });
       }
       // A leaf by choice: `parts` are regex fragments, not data positions.
       case "template_literal":
@@ -55560,7 +59582,7 @@ function withChecks(side, checks) {
   if (!checks?.length)
     return side;
   const def = side._zod.def;
-  return clone3(side, mergeDefs2(def, { checks: [...def.checks ?? [], ...checks] }), { parent: true });
+  return clone7(side, mergeDefs2(def, { checks: [...def.checks ?? [], ...checks] }), { parent: true });
 }
 function outSide(def) {
   return withChecks(def.out, def.checks);
@@ -55590,7 +59612,7 @@ var coerce_exports2 = {};
 __export(coerce_exports2, {
   bigint: () => bigint6,
   boolean: () => boolean6,
-  date: () => date9,
+  date: () => date13,
   number: () => number6,
   string: () => string6
 });
@@ -55606,7 +59628,7 @@ function boolean6(params) {
 function bigint6(params) {
   return _coercedBigint2(ZodBigInt2, params);
 }
-function date9(params) {
+function date13(params) {
   return _coercedDate2(ZodDate2, params);
 }
 
@@ -55724,16 +59746,16 @@ var RpcPeer = class extends EventEmitter2 {
     header.writeUInt32BE(body.length);
     const bytes = Buffer.concat([header, body]);
     this.queuedBytes += bytes.length;
-    const write2 = this.writeTail.then(async () => {
+    const write6 = this.writeTail.then(async () => {
       if (this.failure !== void 0) throw this.failure;
-      if (!this.output.write(bytes)) await new Promise((resolve9, reject) => {
+      if (!this.output.write(bytes)) await new Promise((resolve14, reject) => {
         const cleanup = () => {
           this.output.off("drain", drained);
           this.off("closed", closed);
         };
         const drained = () => {
           cleanup();
-          resolve9();
+          resolve14();
         };
         const closed = (error112) => {
           cleanup();
@@ -55744,10 +59766,10 @@ var RpcPeer = class extends EventEmitter2 {
         if (this.failure !== void 0) closed(this.failure);
       });
     });
-    this.writeTail = write2.catch((error112) => {
+    this.writeTail = write6.catch((error112) => {
       this.close(operationError(error112));
     });
-    return write2.finally(() => {
+    return write6.finally(() => {
       this.queuedBytes -= bytes.length;
     });
   }
@@ -55869,16 +59891,16 @@ var ReplayBuffer = class {
   /** The newest retained slice from `offset` (clamped upward when truncated). */
   sync(offset) {
     const requested = Number.isFinite(offset) ? Math.max(Math.floor(offset), 0) : 0;
-    const from2 = Math.max(requested, this.truncatedFrom);
-    if (from2 >= this.total) return { chunk: Buffer.alloc(0), from: this.total };
+    const from6 = Math.max(requested, this.truncatedFrom);
+    if (from6 >= this.total) return { chunk: Buffer.alloc(0), from: this.total };
     const pieces = [];
     for (let index = 0; index < this.chunks.length; index++) {
       const start = this.starts[index];
       const chunk = this.chunks[index];
-      if (start + chunk.length <= from2) continue;
-      pieces.push(chunk.subarray(Math.max(from2 - start, 0)));
+      if (start + chunk.length <= from6) continue;
+      pieces.push(chunk.subarray(Math.max(from6 - start, 0)));
     }
-    return { chunk: Buffer.concat(pieces), from: from2 };
+    return { chunk: Buffer.concat(pieces), from: from6 };
   }
 };
 async function createEndpoint(root, id, options = {}) {
@@ -55948,9 +59970,9 @@ async function createEndpoint(root, id, options = {}) {
     if (!attached) connected.reject(new Error("workspace daemon stream reservation closed"));
   });
   try {
-    await new Promise((resolve9, reject) => {
+    await new Promise((resolve14, reject) => {
       server.once("error", reject);
-      server.listen(path, resolve9);
+      server.listen(path, resolve14);
     });
   } catch (error112) {
     server.close();
@@ -55968,8 +59990,8 @@ async function createEndpoint(root, id, options = {}) {
     attached() {
       const live = socket;
       if (attached && live !== void 0 && !live.destroyed) return Promise.resolve(live);
-      return new Promise((resolve9) => {
-        attachHandlers.push(resolve9);
+      return new Promise((resolve14) => {
+        attachHandlers.push(resolve14);
       });
     },
     feed(chunk) {
@@ -56000,7 +60022,7 @@ async function createEndpoint(root, id, options = {}) {
 async function readSync2(socket) {
   const chunks = [];
   let received = 0;
-  return await new Promise((resolve9, reject) => {
+  return await new Promise((resolve14, reject) => {
     const timer = setTimeout(() => {
       failure2(new Error("workspace daemon replay preamble timed out"));
     }, 3e4);
@@ -56048,7 +60070,7 @@ async function readSync2(socket) {
       clearTimeout(timer);
       const offset = raw.sync;
       if (typeof offset === "number" && Number.isFinite(offset)) {
-        resolve9(offset);
+        resolve14(offset);
         return;
       }
       reject(new Error("workspace daemon replay preamble invalid"));
@@ -56076,6 +60098,19 @@ var policySchema = external_exports2.object({ mode: external_exports2.enum(["rea
 var entriesSchema = external_exports2.array(external_exports2.object({ name: external_exports2.string(), type: external_exports2.enum(["file", "directory", "other"]), target: targetSchema, version: external_exports2.string().optional(), size: external_exports2.number().nonnegative().optional() }).strict());
 var intentSchema = external_exports2.discriminatedUnion("kind", [external_exports2.object({ kind: external_exports2.literal("createIfAbsent") }).strict(), external_exports2.object({ kind: external_exports2.literal("replaceIfVersion"), version: external_exports2.string() }).strict()]);
 var editSchema = external_exports2.object({ oldString: external_exports2.string(), newString: external_exports2.string(), replaceAll: external_exports2.boolean() }).strict();
+var hunkSchema = external_exports2.object({
+  lineNumber: external_exports2.number(),
+  context: external_exports2.string().optional(),
+  oldLines: external_exports2.array(external_exports2.string()),
+  newLines: external_exports2.array(external_exports2.string()),
+  isEndOfFile: external_exports2.boolean()
+}).strict();
+var versionGuardSchema = external_exports2.object({ version: external_exports2.string() }).strict();
+var moveOptionsSchema = external_exports2.object({
+  hunks: external_exports2.array(hunkSchema).optional(),
+  expectedSource: versionGuardSchema.optional(),
+  expectedDestination: intentSchema.optional()
+}).strict();
 var writeResultSchema = external_exports2.object({ operation: external_exports2.enum(["create", "update"]), version: external_exports2.string(), before: external_exports2.string().nullable(), after: external_exports2.string() }).strict();
 var editResultSchema = external_exports2.object({ version: external_exports2.string(), before: external_exports2.string(), after: external_exports2.string() }).strict();
 var environmentSchema = external_exports2.record(external_exports2.string(), external_exports2.string().nullable());
@@ -56170,8 +60205,8 @@ var SnapshotForwarder = class {
     try {
       while (this.dirty && !this.stopped && this.peer !== void 0) {
         this.dirty = false;
-        const snapshot2 = this.collector.snapshot();
-        await this.peer.request("snapshot", { tail: snapshot2.bytes.toString("base64"), totalBytes: snapshot2.totalBytes }, external_exports2.null());
+        const snapshot6 = this.collector.snapshot();
+        await this.peer.request("snapshot", { tail: snapshot6.bytes.toString("base64"), totalBytes: snapshot6.totalBytes }, external_exports2.null());
       }
     } catch {
       this.stopped = true;
@@ -56456,8 +60491,8 @@ var RemoteProcessOwner = class {
       for (const name of ["stdout", "stderr"]) {
         const collector = collectors[name];
         if (collector === void 0) continue;
-        const snapshot2 = collector.snapshot();
-        collected[name] = { tail: snapshot2.bytes.toString("base64"), totalBytes: snapshot2.totalBytes };
+        const snapshot6 = collector.snapshot();
+        collected[name] = { tail: snapshot6.bytes.toString("base64"), totalBytes: snapshot6.totalBytes };
         const path = collector.readFrom(0).spillPath;
         if (path !== void 0) spills[name] = path;
       }
@@ -56885,6 +60920,82 @@ async function dispatch(method, raw, signal, session, registry4) {
       }
       return outcome;
     }
+    case "fs.patch": {
+      const input2 = external_exports2.object({
+        target: targetSchema,
+        hunks: external_exports2.array(hunkSchema).min(1),
+        expected: versionGuardSchema.optional(),
+        policy: policySchema,
+        opId: external_exports2.string().optional()
+      }).strict().parse(raw);
+      if (input2.opId !== void 0) {
+        const memo2 = writeMemo.get(`${method}:${input2.opId}`);
+        if (memo2 !== void 0) return memo2;
+      }
+      const resolved = await canonicalPolicy(input2.policy, ctx, signal);
+      const outcome = await ctx.fs.patchText(
+        asTarget(input2.target),
+        input2.hunks,
+        input2.expected,
+        signal,
+        resolved
+      );
+      if (input2.opId !== void 0) {
+        writeMemo.set(`${method}:${input2.opId}`, JSON.parse(JSON.stringify(outcome)));
+        session.pruneMemo();
+      }
+      return outcome;
+    }
+    case "fs.delete": {
+      const input2 = external_exports2.object({
+        target: targetSchema,
+        expected: versionGuardSchema.optional(),
+        policy: policySchema,
+        opId: external_exports2.string().optional()
+      }).strict().parse(raw);
+      if (input2.opId !== void 0) {
+        const memo2 = writeMemo.get(`${method}:${input2.opId}`);
+        if (memo2 !== void 0) return memo2;
+      }
+      const resolved = await canonicalPolicy(input2.policy, ctx, signal);
+      const outcome = await ctx.fs.deleteFile(
+        asTarget(input2.target),
+        input2.expected,
+        signal,
+        resolved
+      );
+      if (input2.opId !== void 0) {
+        writeMemo.set(`${method}:${input2.opId}`, JSON.parse(JSON.stringify(outcome)));
+        session.pruneMemo();
+      }
+      return outcome;
+    }
+    case "fs.move": {
+      const input2 = external_exports2.object({
+        source: targetSchema,
+        destination: targetSchema,
+        options: moveOptionsSchema,
+        policy: policySchema,
+        opId: external_exports2.string().optional()
+      }).strict().parse(raw);
+      if (input2.opId !== void 0) {
+        const memo2 = writeMemo.get(`${method}:${input2.opId}`);
+        if (memo2 !== void 0) return memo2;
+      }
+      const resolved = await canonicalPolicy(input2.policy, ctx, signal);
+      const outcome = await ctx.fs.moveFile(
+        asTarget(input2.source),
+        asTarget(input2.destination),
+        input2.options,
+        signal,
+        resolved
+      );
+      if (input2.opId !== void 0) {
+        writeMemo.set(`${method}:${input2.opId}`, JSON.parse(JSON.stringify(outcome)));
+        session.pruneMemo();
+      }
+      return outcome;
+    }
     default:
       throw new Error(`Unknown workspace daemon operation: ${method}`);
   }
@@ -56981,7 +61092,7 @@ var ClientRegistry = class {
    * @returns the whitelist after the update.
    */
   async allow(path) {
-    const canonical = await realpath3(path).catch(() => resolve7(path));
+    const canonical = await realpath3(path).catch(() => resolve12(path));
     if (!this.underRoot(canonical)) {
       this.roots.push(canonical);
       while (this.roots.length > MAX_ALLOWED_ROOTS) this.roots.shift();
@@ -57034,8 +61145,8 @@ var ClientRegistry = class {
       await Promise.race([
         session.dispose().catch(() => {
         }),
-        new Promise((resolve9) => {
-          setTimeout(resolve9, budgetMs).unref();
+        new Promise((resolve14) => {
+          setTimeout(resolve14, budgetMs).unref();
         })
       ]);
     }
@@ -57061,7 +61172,7 @@ async function loadConfig(dir) {
   }
 }
 async function boot(dirArg) {
-  const dir = resolve8(dirArg ?? join13(homedir(), ".dsh-workspace"));
+  const dir = resolve13(dirArg ?? join13(homedir2(), ".dsh-workspace"));
   await mkdir3(dir, { recursive: true });
   const socketPath = join13(dir, "sock");
   const pidPath = join13(dir, "pid");
@@ -57080,7 +61191,7 @@ async function boot(dirArg) {
   const spillReporter = logSpillFailure(console, "workspace daemon");
   const options = {
     dir,
-    roots: config3.roots ?? [homedir()],
+    roots: config3.roots ?? [homedir2()],
     defaultMode: config3.defaultMode ?? "read-only",
     maxProcessHandles: config3.maxProcessHandles ?? 128,
     instanceId,

@@ -145,7 +145,34 @@ async function main() {
   }, z.array(z.object({ name: z.string() }).loose()))
   check('fs.list sees the new file', listed.some(entry => entry.name === 'note.txt'))
 
-  // 5. Deadline retries: replayable calls reuse the opId, caller aborts and
+  // 5. fs.patch → fs.move → fs.delete through the daemon.
+  const policy = { mode: 'workspace-write', workspaceRoot: WORKSPACE }
+  const targetShape = z.object({ targetKey: z.string(), displayPath: z.string() }).loose()
+  const patched = await transport.request('fs.patch', {
+    target, hunks: [{ lineNumber: 1, oldLines: ['hello-transport'], newLines: ['patched-transport'], isEndOfFile: false }], policy,
+  }, z.object({ version: z.string(), before: z.string(), after: z.string() }).loose())
+  check('fs.patch applies parsed hunks', patched.after === 'patched-transport\n', patched.version.slice(0, 7))
+  const movedTarget = await transport.request('fs.resolve', { path: join(WORKSPACE, 'moved.txt') }, targetShape)
+  const moved = await transport.request('fs.move', {
+    source: target, destination: movedTarget, options: {}, policy,
+  }, z.object({
+    sourceBefore: z.string().nullable(),
+    destination: z.object({ operation: z.string(), version: z.string() }).loose(),
+    sourceDeleted: z.literal(true),
+  }).loose())
+  check(
+    'fs.move publishes the destination and removes the source',
+    moved.sourceDeleted === true && (await transport.request('fs.readText', { target: movedTarget }, z.string())) === 'patched-transport\n',
+    moved.destination.operation,
+  )
+  const deleted = await transport.request('fs.delete', { target: movedTarget, policy }, z.object({ before: z.string().nullable() }).loose())
+  check(
+    'fs.delete returns the bounded basis',
+    deleted.before === 'patched-transport\n' && (await transport.request('fs.stat', { target: movedTarget }, z.unknown())) === null,
+    JSON.stringify(deleted.before),
+  )
+
+  // 6. Deadline retries: replayable calls reuse the opId, caller aborts and
   //    unclassified calls are never replayed.
   {
     const fake = new RemoteWorkspaceTransport({
@@ -174,6 +201,14 @@ async function main() {
     check('deadline replay keeps one opId across attempts',
       seen.length === 2 && seen[0].params.opId !== undefined && seen[0].params.opId === seen[1].params.opId,
       `opId=${seen[0]?.params?.opId}`)
+
+    for (const method of ['fs.patch', 'fs.delete', 'fs.move']) {
+      seen.length = 0
+      await fake.request(method, {}, z.string())
+      check(`${method} replay keeps one opId across attempts`,
+        seen.length === 2 && seen[0].params.opId !== undefined && seen[0].params.opId === seen[1].params.opId,
+        `opId=${seen[0]?.params?.opId}`)
+    }
 
     seen.length = 0
     let unclassified
