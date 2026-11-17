@@ -38,7 +38,7 @@ preset 没有启用 `remote_*`，对话会被禁止并提示切换 preset 或新
 | `packages/providers` | `DaemonSshConnection` = daemon 版 `ctx.ssh`，官方 `dsh-fs-ssh`/`dsh-subprocess-ssh`/`dsh-sandbox-ssh`/`dsh-bash-sandbox` 原样复用 |
 | `packages/mount` | 0.2.1 根平面路由（Option B，不覆写 `execution-worlds`）：patch `ctx.fs` 按路径、`ctx.subprocess` 按 cwd、`ctx.sandbox` 按 `workspaceRoot`、`terminalController.execution(agent)` 按会话 cwd、`sessionController.agents.createAgent` 按 cwd（跳过本地 `mkdir`）、`WorkspaceRegistry/Entity`（adopt/indexHeader/resolveByPath/attachSession/delete）；daemon 按 (host, dir, 摘要) 幂等投递；侧映射 `${DSH_HOME}/storages/ssh-workspaces.json`；`remote_*` 别名按 agent preset 启用（`both`/`auto`）并按 workspace 路径门控；`tools/execute` 的 AsyncLocalStorage 作用域让普通工具绕过远端路由 |
 | `packages/api` | 宿主侧 `SshHostsService`：`~/.ssh/config` 枚举（Include 递归/通配隐藏）、`precheck`、远端 `browse`（走 mount 服务）、`POST /adopt` 收养远端工作区；以 HTTP 路由暴露给浏览器 |
-| `packages/ui` | 浏览器半：以 `priority:-1` 占据目录流槽位，复刻「选择工作区目录」弹窗，顶部主机选择条；远端「打开」= `POST /ssh-workspace/adopt` 后按需重命名 `<目录>@<主机名>` |
+| `packages/ui` | 浏览器半：以 `priority:-1` 占据三个目录流槽位（`conversation.hero` / `sidebar` / `workspace.picker`），复刻「选择工作区目录」弹窗，顶部主机选择条；远端「打开」= `POST /ssh-workspace/adopt` 后按需重命名 `<目录>@<主机名>` |
 | `packages/install` | 打包/投递远端归档（bundle + 裁剪 node-pty + linux x64/arm64 ripgrep） |
 | `packages/rpc` | 4 字节长度前缀 JSON 帧（64MiB 上限、128 pending）；`RemoteOperationError` / `RpcTransportError` |
 

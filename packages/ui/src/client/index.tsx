@@ -466,9 +466,9 @@ function RemoteToolsGate({ ctx, sessionId, useSessions }: RemoteToolsGateProps):
 export const inject = ['slots', 'workspaces', 'conversation']
 
 /**
- * Register the dialog into both directory-flow holes, shadowing the shipped
+ * Register the dialog into every directory-flow hole, shadowing the shipped
  * browse occupant: this plugin registers at priority -1 (ascending order, so
- * it renders first). The callback form keeps the two registrations alive with
+ * it renders first). The callback form keeps the registrations alive with
  * the owner declarations, exactly like the shipped browse package.
  * @param ctx - client root context.
  */
@@ -483,10 +483,12 @@ export function apply(ctx: Context): void {
   const bound = (owner: DirectoryFlowOwnerProps): ReactElement =>
     <RemoteDirectoryBrowser {...owner} ctx={ctx} />
   ctx.slots.inject('conversation.hero.workspace.directoryFlow', () =>
-    ctx.slots.inject('sidebar.workspaces.directoryFlow', function* () {
-      yield ctx.slots.register({ name: 'conversation.hero.workspace.directoryFlow', priority: -1 }, bound as never)
-      yield ctx.slots.register({ name: 'sidebar.workspaces.directoryFlow', priority: -1 }, bound as never)
-    }))
+    ctx.slots.inject('sidebar.workspaces.directoryFlow', () =>
+      ctx.slots.inject('workspace.picker.directoryFlow', function* () {
+        yield ctx.slots.register({ name: 'conversation.hero.workspace.directoryFlow', priority: -1 }, bound as never)
+        yield ctx.slots.register({ name: 'sidebar.workspaces.directoryFlow', priority: -1 }, bound as never)
+        yield ctx.slots.register({ name: 'workspace.picker.directoryFlow', priority: -1 }, bound as never)
+      })))
   const gate = (owner: Omit<RemoteToolsGateProps, 'ctx'>): ReactElement =>
     <RemoteToolsGate {...owner} ctx={ctx} />
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
