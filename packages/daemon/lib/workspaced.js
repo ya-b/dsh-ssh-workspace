@@ -7968,9 +7968,24 @@ import { userInfo as userInfo2 } from "node:os";
 import { join as join12, resolve as resolve7 } from "node:path";
 import { randomUUID as randomUUID5 } from "node:crypto";
 
-// ../../node_modules/@deepseek-ai/cordis/node_modules/@deepseek-ai/cosmokit/lib/index.js
+// ../../node_modules/@deepseek-ai/cosmokit/lib/index.js
 function isNullable(value) {
   return value === null || value === void 0;
+}
+function isPlainObject(data) {
+  return data && typeof data === "object" && !Array.isArray(data);
+}
+function filterKeys(object4, filter) {
+  return Object.fromEntries(Object.entries(object4).filter(([key, value]) => filter(key, value)));
+}
+function mapValues(object4, transform3) {
+  return Object.fromEntries(Object.entries(object4).map(([key, value]) => [key, transform3(value, key)]));
+}
+function pick(source, keys, forced) {
+  if (!keys) return { ...source };
+  const result = {};
+  for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
+  return result;
 }
 function defineProperty(object4, key, value) {
   return Object.defineProperty(object4, key, {
@@ -7978,6 +7993,32 @@ function defineProperty(object4, key, value) {
     value,
     enumerable: false
   });
+}
+var write = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
+function snapshot(value, ancestors = /* @__PURE__ */ new Set()) {
+  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
+  if (value === null || typeof value !== "object") return value;
+  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot(item, ancestors)));
+    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new TypeError("volatile config objects must be plain objects or arrays");
+    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot(item, ancestors)])));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+function createVolatile(value) {
+  let current = snapshot(value);
+  return Object.freeze({
+    get: () => current,
+    [write]: (value2) => {
+      current = value2;
+    }
+  });
+}
+function isVolatile(value) {
+  return typeof value === "object" && value !== null && write in value;
 }
 function is(type, value) {
   if (arguments.length === 1) return (value2) => is(type, value2);
@@ -7990,14 +8031,14 @@ function isArrayBufferSource(value) {
   return isArrayBufferLike(value) || ArrayBuffer.isView(value);
 }
 var Binary;
-(function(Binary3) {
-  Binary3.is = isArrayBufferLike;
-  Binary3.isSource = isArrayBufferSource;
+(function(Binary2) {
+  Binary2.is = isArrayBufferLike;
+  Binary2.isSource = isArrayBufferSource;
   function fromSource(source) {
     if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
     else return source;
   }
-  Binary3.fromSource = fromSource;
+  Binary2.fromSource = fromSource;
   function toBase64(source) {
     source = fromSource(source);
     if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
@@ -8006,18 +8047,18 @@ var Binary;
     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
     return btoa(binary);
   }
-  Binary3.toBase64 = toBase64;
+  Binary2.toBase64 = toBase64;
   function fromBase64(source) {
     if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
     return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
   }
-  Binary3.fromBase64 = fromBase64;
+  Binary2.fromBase64 = fromBase64;
   function toHex(source) {
     source = fromSource(source);
     if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
     return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
   }
-  Binary3.toHex = toHex;
+  Binary2.toHex = toHex;
   function fromHex(source) {
     if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
     const hex5 = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
@@ -8025,12 +8066,70 @@ var Binary;
     for (let i = 0; i < hex5.length; i += 2) buffer.push(parseInt(`${hex5[i]}${hex5[i + 1]}`, 16));
     return Uint8Array.from(buffer).buffer;
   }
-  Binary3.fromHex = fromHex;
+  Binary2.fromHex = fromHex;
 })(Binary || (Binary = {}));
 var base64ToArrayBuffer = Binary.fromBase64;
 var arrayBufferToBase64 = Binary.toBase64;
 var hexToArrayBuffer = Binary.fromHex;
 var arrayBufferToHex = Binary.toHex;
+function clone(source, refs = /* @__PURE__ */ new Map()) {
+  if (!source || typeof source !== "object") return source;
+  if (is("Date", source)) return new Date(source.valueOf());
+  if (is("RegExp", source)) return new RegExp(source.source, source.flags);
+  if (isArrayBufferLike(source)) return source.slice(0);
+  if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
+  const cached5 = refs.get(source);
+  if (cached5) return cached5;
+  if (Array.isArray(source)) {
+    const result2 = [];
+    refs.set(source, result2);
+    source.forEach((value, index) => {
+      result2[index] = Reflect.apply(clone, null, [value, refs]);
+    });
+    return result2;
+  }
+  const result = Object.create(Object.getPrototypeOf(source));
+  refs.set(source, result);
+  for (const key of Reflect.ownKeys(source)) {
+    const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
+    if ("value" in descriptor) descriptor.value = Reflect.apply(clone, null, [descriptor.value, refs]);
+    Reflect.defineProperty(result, key, descriptor);
+  }
+  return result;
+}
+function deepEqual(a, b, strict) {
+  const ancestors = /* @__PURE__ */ new Set();
+  function compare(a2, b2) {
+    if (a2 === b2) return true;
+    if (isVolatile(a2) || isVolatile(b2)) return isVolatile(a2) && isVolatile(b2);
+    if (!strict && isNullable(a2) && isNullable(b2)) return true;
+    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
+    if (ancestors.has(a2)) return false;
+    function check3(test, then) {
+      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
+    }
+    ancestors.add(a2);
+    try {
+      return check3(Array.isArray, (a3, b3) => {
+        if (a3.length !== b3.length) return false;
+        for (let index = 0; index < a3.length; index++) if (!compare(a3[index], b3[index])) return false;
+        return true;
+      }) ?? check3(is("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike, (a3, b3) => {
+        if (a3.byteLength !== b3.byteLength) return false;
+        const viewA = new Uint8Array(a3);
+        const viewB = new Uint8Array(b3);
+        for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
+        return true;
+      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({
+        ...a2,
+        ...b2
+      }).every((key) => compare(a2[key], b2[key])));
+    } finally {
+      ancestors.delete(a2);
+    }
+  }
+  return compare(a, b);
+}
 function tokenize(source, delimiters, delimiter2) {
   const output3 = [];
   let state = 0;
@@ -8061,34 +8160,34 @@ function paramCase(source) {
 }
 var hyphenate = paramCase;
 var Time;
-(function(Time3) {
-  Time3.millisecond = 1;
-  Time3.second = 1e3;
-  Time3.minute = Time3.second * 60;
-  Time3.hour = Time3.minute * 60;
-  Time3.day = Time3.hour * 24;
-  Time3.week = Time3.day * 7;
+(function(Time2) {
+  Time2.millisecond = 1;
+  Time2.second = 1e3;
+  Time2.minute = Time2.second * 60;
+  Time2.hour = Time2.minute * 60;
+  Time2.day = Time2.hour * 24;
+  Time2.week = Time2.day * 7;
   let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
   function setTimezoneOffset(offset) {
     timezoneOffset = offset;
   }
-  Time3.setTimezoneOffset = setTimezoneOffset;
+  Time2.setTimezoneOffset = setTimezoneOffset;
   function getTimezoneOffset() {
     return timezoneOffset;
   }
-  Time3.getTimezoneOffset = getTimezoneOffset;
+  Time2.getTimezoneOffset = getTimezoneOffset;
   function getDateNumber(date10 = /* @__PURE__ */ new Date(), offset) {
     if (typeof date10 === "number") date10 = new Date(date10);
     if (offset === void 0) offset = timezoneOffset;
-    return Math.floor((date10.valueOf() / Time3.minute - offset) / 1440);
+    return Math.floor((date10.valueOf() / Time2.minute - offset) / 1440);
   }
-  Time3.getDateNumber = getDateNumber;
+  Time2.getDateNumber = getDateNumber;
   function fromDateNumber(value, offset) {
-    const date10 = new Date(value * Time3.day);
+    const date10 = new Date(value * Time2.day);
     if (offset === void 0) offset = timezoneOffset;
-    return new Date(+date10 + offset * Time3.minute);
+    return new Date(+date10 + offset * Time2.minute);
   }
-  Time3.fromDateNumber = fromDateNumber;
+  Time2.fromDateNumber = fromDateNumber;
   const numeric = /\d+(?:\.\d+)?/.source;
   const timeRegExp = new RegExp(`^${[
     "w(?:eek(?:s)?)?",
@@ -8100,9 +8199,9 @@ var Time;
   function parseTime(source) {
     const capture = timeRegExp.exec(source);
     if (!capture) return 0;
-    return (parseFloat(capture[1]) * Time3.week || 0) + (parseFloat(capture[2]) * Time3.day || 0) + (parseFloat(capture[3]) * Time3.hour || 0) + (parseFloat(capture[4]) * Time3.minute || 0) + (parseFloat(capture[5]) * Time3.second || 0);
+    return (parseFloat(capture[1]) * Time2.week || 0) + (parseFloat(capture[2]) * Time2.day || 0) + (parseFloat(capture[3]) * Time2.hour || 0) + (parseFloat(capture[4]) * Time2.minute || 0) + (parseFloat(capture[5]) * Time2.second || 0);
   }
-  Time3.parseTime = parseTime;
+  Time2.parseTime = parseTime;
   function parseDate(date10) {
     const parsed = parseTime(date10);
     if (parsed) date10 = Date.now() + parsed;
@@ -8110,24 +8209,24 @@ var Time;
     else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date10)) date10 = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date10}`;
     return date10 ? new Date(date10) : /* @__PURE__ */ new Date();
   }
-  Time3.parseDate = parseDate;
+  Time2.parseDate = parseDate;
   function format(ms) {
     const abs = Math.abs(ms);
-    if (abs >= Time3.day - Time3.hour / 2) return Math.round(ms / Time3.day) + "d";
-    else if (abs >= Time3.hour - Time3.minute / 2) return Math.round(ms / Time3.hour) + "h";
-    else if (abs >= Time3.minute - Time3.second / 2) return Math.round(ms / Time3.minute) + "m";
-    else if (abs >= Time3.second) return Math.round(ms / Time3.second) + "s";
+    if (abs >= Time2.day - Time2.hour / 2) return Math.round(ms / Time2.day) + "d";
+    else if (abs >= Time2.hour - Time2.minute / 2) return Math.round(ms / Time2.hour) + "h";
+    else if (abs >= Time2.minute - Time2.second / 2) return Math.round(ms / Time2.minute) + "m";
+    else if (abs >= Time2.second) return Math.round(ms / Time2.second) + "s";
     return ms + "ms";
   }
-  Time3.format = format;
+  Time2.format = format;
   function toDigits(source, length = 2) {
     return source.toString().padStart(length, "0");
   }
-  Time3.toDigits = toDigits;
+  Time2.toDigits = toDigits;
   function template(template2, time5 = /* @__PURE__ */ new Date()) {
     return template2.replace("yyyy", time5.getFullYear().toString()).replace("yy", time5.getFullYear().toString().slice(2)).replace("MM", toDigits(time5.getMonth() + 1)).replace("dd", toDigits(time5.getDate())).replace("hh", toDigits(time5.getHours())).replace("mm", toDigits(time5.getMinutes())).replace("ss", toDigits(time5.getSeconds())).replace("SSS", toDigits(time5.getMilliseconds(), 3));
   }
-  Time3.template = template;
+  Time2.template = template;
 })(Time || (Time = {}));
 
 // ../../node_modules/@deepseek-ai/cordis/lib/index.js
@@ -10034,7 +10133,7 @@ __export(external_exports, {
   check: () => check,
   cidrv4: () => cidrv42,
   cidrv6: () => cidrv62,
-  clone: () => clone,
+  clone: () => clone2,
   codec: () => codec,
   coerce: () => coerce_exports,
   compile: () => compile,
@@ -10447,7 +10546,7 @@ __export(core_exports2, {
   base64Charset: () => base64Charset,
   base64urlCharset: () => base64urlCharset,
   canParseURL: () => canParseURL,
-  clone: () => clone,
+  clone: () => clone2,
   compile: () => compile,
   compileFn: () => compileFn,
   config: () => config,
@@ -10532,7 +10631,7 @@ __export(util_exports, {
   captureStackTrace: () => captureStackTrace,
   cleanEnum: () => cleanEnum,
   cleanRegex: () => cleanRegex,
-  clone: () => clone,
+  clone: () => clone2,
   cloneDef: () => cloneDef,
   codePointLength: () => codePointLength,
   constantCatch: () => constantCatch,
@@ -10555,7 +10654,7 @@ __export(util_exports, {
   hide: () => hide,
   installLazyProp: () => installLazyProp,
   isObject: () => isObject2,
-  isPlainObject: () => isPlainObject,
+  isPlainObject: () => isPlainObject2,
   issue: () => issue,
   joinValues: () => joinValues,
   jsonStringifyReplacer: () => jsonStringifyReplacer,
@@ -10571,7 +10670,7 @@ __export(util_exports, {
   own: () => own,
   parsedType: () => parsedType,
   partial: () => partial,
-  pick: () => pick,
+  pick: () => pick2,
   prefixIssues: () => prefixIssues,
   primitiveTypes: () => primitiveTypes,
   promiseAllObject: () => promiseAllObject,
@@ -10797,7 +10896,7 @@ var allowsEval = /* @__PURE__ */ cached(() => {
     return false;
   }
 });
-function isPlainObject(o) {
+function isPlainObject2(o) {
   if (isObject2(o) === false)
     return false;
   const ctor = o.constructor;
@@ -10814,7 +10913,7 @@ function isPlainObject(o) {
   return true;
 }
 function shallowClone(o) {
-  if (isPlainObject(o))
+  if (isPlainObject2(o))
     return { ...o };
   if (Array.isArray(o))
     return [...o];
@@ -10889,7 +10988,7 @@ var primitiveTypes = /* @__PURE__ */ new Set([
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-function clone(inst, def, params) {
+function clone2(inst, def, params) {
   const cl = new inst._zod.constr(def ?? inst._zod.def);
   if (!def || params?.parent)
     cl._zod.parent = inst;
@@ -10967,7 +11066,7 @@ var BIGINT_FORMAT_RANGES = {
   int64: [/* @__PURE__ */ BigInt("-9223372036854775808"), /* @__PURE__ */ BigInt("9223372036854775807")],
   uint64: [/* @__PURE__ */ BigInt(0), /* @__PURE__ */ BigInt("18446744073709551615")]
 };
-function pick(schema, mask) {
+function pick2(schema, mask) {
   const currDef = schema._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
@@ -10976,7 +11075,7 @@ function pick(schema, mask) {
   }
   const newShape = {};
   mirrorShape(newShape, schema, maskedKeys(schema, mask));
-  return clone(schema, mergeDefs(currDef, { shape: newShape, checks: [] }));
+  return clone2(schema, mergeDefs(currDef, { shape: newShape, checks: [] }));
 }
 function maskedKeys(schema, mask) {
   const raw = sourceShape(schema);
@@ -11000,10 +11099,10 @@ function omit(schema, mask) {
   const omitted = new Set(maskedKeys(schema, mask));
   const newShape = {};
   mirrorShape(newShape, schema, Reflect.ownKeys(sourceShape(schema)).filter((key) => !omitted.has(key)));
-  return clone(schema, mergeDefs(currDef, { shape: newShape, checks: [] }));
+  return clone2(schema, mergeDefs(currDef, { shape: newShape, checks: [] }));
 }
 function extend(schema, shape) {
-  if (!isPlainObject(shape)) {
+  if (!isPlainObject2(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
   const checks = schema._zod.def.checks;
@@ -11016,7 +11115,7 @@ function extend(schema, shape) {
       }
     }
   }
-  return clone(schema, mergeDefs(schema._zod.def, { shape: extended(schema, shape) }));
+  return clone2(schema, mergeDefs(schema._zod.def, { shape: extended(schema, shape) }));
 }
 function extended(schema, shape) {
   const newShape = {};
@@ -11025,10 +11124,10 @@ function extended(schema, shape) {
   return newShape;
 }
 function safeExtend(schema, shape) {
-  if (!isPlainObject(shape)) {
+  if (!isPlainObject2(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
-  return clone(schema, mergeDefs(schema._zod.def, { shape: extended(schema, shape) }));
+  return clone2(schema, mergeDefs(schema._zod.def, { shape: extended(schema, shape) }));
 }
 function merge(a, b) {
   if (!b?._zod?.def) {
@@ -11047,7 +11146,7 @@ function merge(a, b) {
     },
     checks: b._zod.def.checks ?? []
   });
-  return clone(a, def);
+  return clone2(a, def);
 }
 function partial(Class3, schema, mask, name = "partial") {
   const currDef = schema._zod.def;
@@ -11059,7 +11158,7 @@ function partial(Class3, schema, mask, name = "partial") {
   const selected = mask ? new Set(maskedKeys(schema, mask)) : void 0;
   const newShape = {};
   mirrorShape(newShape, schema, Reflect.ownKeys(sourceShape(schema)), Class3 && ((value, key) => selected && !selected.has(key) ? value : new Class3({ type: "optional", innerType: value })));
-  return clone(schema, mergeDefs(schema._zod.def, { shape: newShape, checks: [] }));
+  return clone2(schema, mergeDefs(schema._zod.def, { shape: newShape, checks: [] }));
 }
 function required(Class3, schema, mask) {
   const selected = mask ? new Set(maskedKeys(schema, mask)) : void 0;
@@ -11068,7 +11167,7 @@ function required(Class3, schema, mask) {
     // overwrite with non-optional
     selected && !selected.has(key) ? value : new Class3({ type: "nonoptional", innerType: value })
   ));
-  return clone(schema, mergeDefs(schema._zod.def, { shape: newShape }));
+  return clone2(schema, mergeDefs(schema._zod.def, { shape: newShape }));
 }
 function aborted(x, startIndex = 0) {
   if (x.aborted === true)
@@ -13905,7 +14004,7 @@ function mergeValues(a, b) {
   if (a instanceof Date && b instanceof Date && +a === +b) {
     return { valid: true, data: a };
   }
-  if (isPlainObject(a) && isPlainObject(b)) {
+  if (isPlainObject2(a) && isPlainObject2(b)) {
     const bKeys = Object.keys(b);
     const sharedKeys = Object.keys(a).filter((key) => bKeys.indexOf(key) !== -1);
     const newObj = { ...a, ...b };
@@ -14126,7 +14225,7 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
   memo3?.attach(inst);
   inst._zod.parse = (payload, ctx) => {
     const input3 = payload.value;
-    if (!isPlainObject(input3)) {
+    if (!isPlainObject2(input3)) {
       payload.issues.push({
         expected: "record",
         code: "invalid_type",
@@ -22911,7 +23010,7 @@ function withParser(schema, parser) {
   if (isRecursiveSchema(schema)) {
     throw new ZodCompileUnsupportedError("a schema whose subtree contains a reference cycle");
   }
-  const clone4 = clone(schema);
+  const clone4 = clone2(schema);
   const liveRun = schema._zod.run;
   const originalRun = liveRun.__originalRun ?? liveRun;
   const wrapped = (payload, ctx) => {
@@ -24215,7 +24314,7 @@ function generateIntersectionCheck(doc, ctx, schema, accessor) {
 }
 function generateRecordCheck(doc, ctx, schema, accessor) {
   const def = schema._zod.def;
-  const isPlainObjectConst = addConstant(ctx, isPlainObject);
+  const isPlainObjectConst = addConstant(ctx, isPlainObject2);
   doc.write(`if (!${isPlainObjectConst}(${accessor})) return INVALID;`);
   const outputVar = newVar(ctx);
   const kVar = newVar(ctx);
@@ -27205,7 +27304,7 @@ var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
     return this.check(...chks);
   },
   clone(def, params) {
-    return clone(this, def, params);
+    return clone2(this, def, params);
   },
   brand() {
     return this;
@@ -29221,7 +29320,7 @@ function convertBaseSchema(schema, ctx) {
           const patterns = patternKeys.map((p) => new RegExp(p));
           const basePatternSchema = zodSchema;
           zodSchema = zodSchema.check((payload) => {
-            if (!isPlainObject(payload.value))
+            if (!isPlainObject2(payload.value))
               return;
             const unrecognized = [];
             for (const key of Object.keys(payload.value)) {
@@ -29470,11 +29569,11 @@ function visit(schema, fnOrHandlers) {
           if (newCatchall !== def.catchall)
             changed = true;
         }
-        return changed ? clone(s, { ...def, shape: newShape, catchall: newCatchall }) : s;
+        return changed ? clone2(s, { ...def, shape: newShape, catchall: newCatchall }) : s;
       }
       case "array": {
         const mapped = run(def.element);
-        return mapped === def.element ? s : clone(s, { ...def, element: mapped });
+        return mapped === def.element ? s : clone2(s, { ...def, element: mapped });
       }
       case "tuple": {
         const oldItems = def.items;
@@ -29492,17 +29591,17 @@ function visit(schema, fnOrHandlers) {
           if (newRest !== def.rest)
             changed = true;
         }
-        return changed ? clone(s, { ...def, items: newItems, rest: newRest }) : s;
+        return changed ? clone2(s, { ...def, items: newItems, rest: newRest }) : s;
       }
       case "record":
       case "map": {
         const newKey = run(def.keyType);
         const newVal = run(def.valueType);
-        return newKey === def.keyType && newVal === def.valueType ? s : clone(s, { ...def, keyType: newKey, valueType: newVal });
+        return newKey === def.keyType && newVal === def.valueType ? s : clone2(s, { ...def, keyType: newKey, valueType: newVal });
       }
       case "set": {
         const newVal = run(def.valueType);
-        return newVal === def.valueType ? s : clone(s, { ...def, valueType: newVal });
+        return newVal === def.valueType ? s : clone2(s, { ...def, valueType: newVal });
       }
       case "union": {
         const oldOptions = def.options;
@@ -29514,12 +29613,12 @@ function visit(schema, fnOrHandlers) {
             changed = true;
           newOptions.push(mapped);
         }
-        return changed ? clone(s, { ...def, options: newOptions }) : s;
+        return changed ? clone2(s, { ...def, options: newOptions }) : s;
       }
       case "intersection": {
         const newLeft = run(def.left);
         const newRight = run(def.right);
-        return newLeft === def.left && newRight === def.right ? s : clone(s, { ...def, left: newLeft, right: newRight });
+        return newLeft === def.left && newRight === def.right ? s : clone2(s, { ...def, left: newLeft, right: newRight });
       }
       case "optional":
       case "nullable":
@@ -29531,22 +29630,22 @@ function visit(schema, fnOrHandlers) {
       case "promise":
       case "success": {
         const newInner = run(def.innerType);
-        return newInner === def.innerType ? s : clone(s, { ...def, innerType: newInner });
+        return newInner === def.innerType ? s : clone2(s, { ...def, innerType: newInner });
       }
       case "pipe": {
         const newIn = run(def.in);
         const newOut = run(def.out);
-        return newIn === def.in && newOut === def.out ? s : clone(s, { ...def, in: newIn, out: newOut });
+        return newIn === def.in && newOut === def.out ? s : clone2(s, { ...def, in: newIn, out: newOut });
       }
       case "function": {
         const newInput = run(def.input);
         const newOutput = run(def.output);
-        return newInput === def.input && newOutput === def.output ? s : clone(s, { ...def, input: newInput, output: newOutput });
+        return newInput === def.input && newOutput === def.output ? s : clone2(s, { ...def, input: newInput, output: newOutput });
       }
       case "lazy": {
         const original = def.getter;
         const { _cachedInner, ...rest } = def;
-        return clone(s, { ...rest, getter: () => run(original()) });
+        return clone2(s, { ...rest, getter: () => run(original()) });
       }
       // A leaf by choice: `parts` are regex fragments, not data positions.
       case "template_literal":
@@ -29597,7 +29696,7 @@ function withChecks(side, checks) {
   if (!checks?.length)
     return side;
   const def = side._zod.def;
-  return clone(side, mergeDefs(def, { checks: [...def.checks ?? [], ...checks] }), { parent: true });
+  return clone2(side, mergeDefs(def, { checks: [...def.checks ?? [], ...checks] }), { parent: true });
 }
 function outSide(def) {
   return withChecks(def.out, def.checks);
@@ -29646,231 +29745,6 @@ function bigint3(params) {
 function date4(params) {
   return _coercedDate(ZodDate, params);
 }
-
-// ../../node_modules/@deepseek-ai/schemastery/node_modules/@deepseek-ai/cosmokit/lib/index.js
-function isNullable2(value) {
-  return value === null || value === void 0;
-}
-function isPlainObject2(data) {
-  return data && typeof data === "object" && !Array.isArray(data);
-}
-function filterKeys(object4, filter) {
-  return Object.fromEntries(Object.entries(object4).filter(([key, value]) => filter(key, value)));
-}
-function mapValues(object4, transform3) {
-  return Object.fromEntries(Object.entries(object4).map(([key, value]) => [key, transform3(value, key)]));
-}
-function pick2(source, keys, forced) {
-  if (!keys) return { ...source };
-  const result = {};
-  for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
-  return result;
-}
-var write = /* @__PURE__ */ Symbol.for("cosmokit.volatile.write");
-function snapshot(value, ancestors = /* @__PURE__ */ new Set()) {
-  if (typeof value === "function") throw new TypeError("volatile config cannot contain functions");
-  if (value === null || typeof value !== "object") return value;
-  if (ancestors.has(value)) throw new TypeError("volatile config cannot contain cycles");
-  ancestors.add(value);
-  try {
-    if (Array.isArray(value)) return Object.freeze(value.map((item) => snapshot(item, ancestors)));
-    if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) throw new TypeError("volatile config objects must be plain objects or arrays");
-    return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, item]) => [key, snapshot(item, ancestors)])));
-  } finally {
-    ancestors.delete(value);
-  }
-}
-function createVolatile(value) {
-  let current = snapshot(value);
-  return Object.freeze({
-    get: () => current,
-    [write]: (value2) => {
-      current = value2;
-    }
-  });
-}
-function isVolatile(value) {
-  return typeof value === "object" && value !== null && write in value;
-}
-function is2(type, value) {
-  if (arguments.length === 1) return (value2) => is2(type, value2);
-  return type in globalThis && value instanceof globalThis[type] || Object.prototype.toString.call(value).slice(8, -1) === type;
-}
-function isArrayBufferLike2(value) {
-  return is2("ArrayBuffer", value) || is2("SharedArrayBuffer", value);
-}
-function isArrayBufferSource2(value) {
-  return isArrayBufferLike2(value) || ArrayBuffer.isView(value);
-}
-var Binary2;
-(function(Binary3) {
-  Binary3.is = isArrayBufferLike2;
-  Binary3.isSource = isArrayBufferSource2;
-  function fromSource(source) {
-    if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
-    else return source;
-  }
-  Binary3.fromSource = fromSource;
-  function toBase64(source) {
-    source = fromSource(source);
-    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
-    let binary = "";
-    const bytes = new Uint8Array(source);
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-  }
-  Binary3.toBase64 = toBase64;
-  function fromBase64(source) {
-    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
-    return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
-  }
-  Binary3.fromBase64 = fromBase64;
-  function toHex(source) {
-    source = fromSource(source);
-    if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
-    return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  }
-  Binary3.toHex = toHex;
-  function fromHex(source) {
-    if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
-    const hex5 = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
-    const buffer = [];
-    for (let i = 0; i < hex5.length; i += 2) buffer.push(parseInt(`${hex5[i]}${hex5[i + 1]}`, 16));
-    return Uint8Array.from(buffer).buffer;
-  }
-  Binary3.fromHex = fromHex;
-})(Binary2 || (Binary2 = {}));
-var base64ToArrayBuffer2 = Binary2.fromBase64;
-var arrayBufferToBase642 = Binary2.toBase64;
-var hexToArrayBuffer2 = Binary2.fromHex;
-var arrayBufferToHex2 = Binary2.toHex;
-function clone2(source, refs = /* @__PURE__ */ new Map()) {
-  if (!source || typeof source !== "object") return source;
-  if (is2("Date", source)) return new Date(source.valueOf());
-  if (is2("RegExp", source)) return new RegExp(source.source, source.flags);
-  if (isArrayBufferLike2(source)) return source.slice(0);
-  if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
-  const cached5 = refs.get(source);
-  if (cached5) return cached5;
-  if (Array.isArray(source)) {
-    const result2 = [];
-    refs.set(source, result2);
-    source.forEach((value, index) => {
-      result2[index] = Reflect.apply(clone2, null, [value, refs]);
-    });
-    return result2;
-  }
-  const result = Object.create(Object.getPrototypeOf(source));
-  refs.set(source, result);
-  for (const key of Reflect.ownKeys(source)) {
-    const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
-    if ("value" in descriptor) descriptor.value = Reflect.apply(clone2, null, [descriptor.value, refs]);
-    Reflect.defineProperty(result, key, descriptor);
-  }
-  return result;
-}
-function deepEqual(a, b, strict) {
-  const ancestors = /* @__PURE__ */ new Set();
-  function compare(a2, b2) {
-    if (a2 === b2) return true;
-    if (isVolatile(a2) || isVolatile(b2)) return isVolatile(a2) && isVolatile(b2);
-    if (!strict && isNullable2(a2) && isNullable2(b2)) return true;
-    if (typeof a2 !== typeof b2 || typeof a2 !== "object" || !a2 || !b2) return false;
-    if (ancestors.has(a2)) return false;
-    function check3(test, then) {
-      return test(a2) ? test(b2) ? then(a2, b2) : false : test(b2) ? false : void 0;
-    }
-    ancestors.add(a2);
-    try {
-      return check3(Array.isArray, (a3, b3) => {
-        if (a3.length !== b3.length) return false;
-        for (let index = 0; index < a3.length; index++) if (!compare(a3[index], b3[index])) return false;
-        return true;
-      }) ?? check3(is2("Date"), (a3, b3) => a3.valueOf() === b3.valueOf()) ?? check3(is2("URL"), (a3, b3) => a3.href === b3.href) ?? check3(is2("RegExp"), (a3, b3) => a3.source === b3.source && a3.flags === b3.flags) ?? check3(isArrayBufferLike2, (a3, b3) => {
-        if (a3.byteLength !== b3.byteLength) return false;
-        const viewA = new Uint8Array(a3);
-        const viewB = new Uint8Array(b3);
-        for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
-        return true;
-      }) ?? ((!strict || [a2, b2].every((value) => Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) && Object.keys({
-        ...a2,
-        ...b2
-      }).every((key) => compare(a2[key], b2[key])));
-    } finally {
-      ancestors.delete(a2);
-    }
-  }
-  return compare(a, b);
-}
-var Time2;
-(function(Time3) {
-  Time3.millisecond = 1;
-  Time3.second = 1e3;
-  Time3.minute = Time3.second * 60;
-  Time3.hour = Time3.minute * 60;
-  Time3.day = Time3.hour * 24;
-  Time3.week = Time3.day * 7;
-  let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
-  function setTimezoneOffset(offset) {
-    timezoneOffset = offset;
-  }
-  Time3.setTimezoneOffset = setTimezoneOffset;
-  function getTimezoneOffset() {
-    return timezoneOffset;
-  }
-  Time3.getTimezoneOffset = getTimezoneOffset;
-  function getDateNumber(date10 = /* @__PURE__ */ new Date(), offset) {
-    if (typeof date10 === "number") date10 = new Date(date10);
-    if (offset === void 0) offset = timezoneOffset;
-    return Math.floor((date10.valueOf() / Time3.minute - offset) / 1440);
-  }
-  Time3.getDateNumber = getDateNumber;
-  function fromDateNumber(value, offset) {
-    const date10 = new Date(value * Time3.day);
-    if (offset === void 0) offset = timezoneOffset;
-    return new Date(+date10 + offset * Time3.minute);
-  }
-  Time3.fromDateNumber = fromDateNumber;
-  const numeric = /\d+(?:\.\d+)?/.source;
-  const timeRegExp = new RegExp(`^${[
-    "w(?:eek(?:s)?)?",
-    "d(?:ay(?:s)?)?",
-    "h(?:our(?:s)?)?",
-    "m(?:in(?:ute)?(?:s)?)?",
-    "s(?:ec(?:ond)?(?:s)?)?"
-  ].map((unit) => `(${numeric}${unit})?`).join("")}$`);
-  function parseTime(source) {
-    const capture = timeRegExp.exec(source);
-    if (!capture) return 0;
-    return (parseFloat(capture[1]) * Time3.week || 0) + (parseFloat(capture[2]) * Time3.day || 0) + (parseFloat(capture[3]) * Time3.hour || 0) + (parseFloat(capture[4]) * Time3.minute || 0) + (parseFloat(capture[5]) * Time3.second || 0);
-  }
-  Time3.parseTime = parseTime;
-  function parseDate(date10) {
-    const parsed = parseTime(date10);
-    if (parsed) date10 = Date.now() + parsed;
-    else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date10)) date10 = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date10}`;
-    else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date10)) date10 = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date10}`;
-    return date10 ? new Date(date10) : /* @__PURE__ */ new Date();
-  }
-  Time3.parseDate = parseDate;
-  function format(ms) {
-    const abs = Math.abs(ms);
-    if (abs >= Time3.day - Time3.hour / 2) return Math.round(ms / Time3.day) + "d";
-    else if (abs >= Time3.hour - Time3.minute / 2) return Math.round(ms / Time3.hour) + "h";
-    else if (abs >= Time3.minute - Time3.second / 2) return Math.round(ms / Time3.minute) + "m";
-    else if (abs >= Time3.second) return Math.round(ms / Time3.second) + "s";
-    return ms + "ms";
-  }
-  Time3.format = format;
-  function toDigits(source, length = 2) {
-    return source.toString().padStart(length, "0");
-  }
-  Time3.toDigits = toDigits;
-  function template(template2, time5 = /* @__PURE__ */ new Date()) {
-    return template2.replace("yyyy", time5.getFullYear().toString()).replace("yy", time5.getFullYear().toString().slice(2)).replace("MM", toDigits(time5.getMonth() + 1)).replace("dd", toDigits(time5.getDate())).replace("hh", toDigits(time5.getHours())).replace("mm", toDigits(time5.getMinutes())).replace("ss", toDigits(time5.getSeconds())).replace("SSS", toDigits(time5.getMilliseconds(), 3));
-  }
-  Time3.template = template;
-})(Time2 || (Time2 = {}));
 
 // ../../node_modules/@deepseek-ai/schemastery/lib/index.mjs
 var kSchema = /* @__PURE__ */ Symbol.for("schemastery");
@@ -30041,7 +29915,7 @@ Schema.prototype.experimental = function experimental() {
 };
 Schema.prototype.pattern = function pattern(regexp) {
   const schema = Schema(this);
-  const pattern2 = pick2(regexp, ["source", "flags"]);
+  const pattern2 = pick(regexp, ["source", "flags"]);
   schema.meta = {
     ...schema.meta,
     pattern: pattern2
@@ -30051,12 +29925,12 @@ Schema.prototype.pattern = function pattern(regexp) {
 Schema.prototype.simplify = function simplify(value) {
   if (isVolatile(value)) value = value.get();
   if (deepEqual(value, this.meta.default, this.type === "dict")) return null;
-  if (isNullable2(value)) return value;
+  if (isNullable(value)) return value;
   if (this.type === "object" || this.type === "dict") {
     const result = {};
     for (const key in value) {
       const item = (this.type === "object" ? this.dict[key] : this.inner)?.simplify(value[key]);
-      if (this.type === "dict" || !isNullable2(item)) result[key] = item;
+      if (this.type === "dict" || !isNullable(item)) result[key] = item;
     }
     if (deepEqual(result, this.meta.default, this.type === "dict")) return null;
     return result;
@@ -30151,16 +30025,16 @@ Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
     }
   }
   if (options.ignore?.(data, schema)) return [data];
-  if (isNullable2(data) && schema.type !== "lazy") {
+  if (isNullable(data) && schema.type !== "lazy") {
     if (schema.meta.required) throw new ValidationError2(`missing required value`, options);
     let current = schema;
     let fallback = schema.meta.default;
-    while (current?.type === "intersect" && isNullable2(fallback)) {
+    while (current?.type === "intersect" && isNullable(fallback)) {
       current = current.list[0];
       fallback = current?.meta.default;
     }
-    if (isNullable2(fallback)) return [data];
-    data = clone2(fallback);
+    if (isNullable(fallback)) return [data];
+    data = clone(fallback);
   }
   const callback = resolvers[schema.type];
   if (!callback) throw new ValidationError2(`unsupported type "${schema.type}"`, options);
@@ -30172,7 +30046,7 @@ Schema.resolve = function resolve(data, schema, options = {}, strict = false) {
   }
 };
 Schema.from = function from(source) {
-  if (isNullable2(source)) return Schema.any();
+  if (isNullable(source)) return Schema.any();
   else if ([
     "string",
     "number",
@@ -30238,12 +30112,12 @@ Schema.arrayBuffer = function arrayBuffer(encoding) {
     Schema.is(ArrayBuffer),
     Schema.is(SharedArrayBuffer),
     Schema.transform(Schema.any(), (value, options) => {
-      if (Binary2.isSource(value)) return Binary2.fromSource(value);
+      if (Binary.isSource(value)) return Binary.fromSource(value);
       throw new ValidationError2(`expected ArrayBufferSource but got ${value}`, options);
     }, true),
     ...encoding ? [Schema.transform(Schema.string(), (value, options) => {
       try {
-        return encoding === "base64" ? Binary2.fromBase64(value) : Binary2.fromHex(value);
+        return encoding === "base64" ? Binary.fromBase64(value) : Binary.fromHex(value);
       } catch (e) {
         throw new ValidationError2(e.message, options);
       }
@@ -30337,7 +30211,7 @@ Schema.extend("is", (data, { constructor }, options) => {
     if (data instanceof constructor) return [data];
     throw new ValidationError2(`expected ${constructor.name} but got ${data}`, options);
   } else {
-    if (isNullable2(data)) throw new ValidationError2(`expected ${constructor} but got ${data}`, options);
+    if (isNullable(data)) throw new ValidationError2(`expected ${constructor} but got ${data}`, options);
     let prototype = Object.getPrototypeOf(data);
     while (prototype) {
       if (prototype.constructor?.name === constructor) return [data];
@@ -30362,11 +30236,11 @@ function property(data, key, schema, options) {
 }
 Schema.extend("array", (data, { inner, meta: meta5 }, options) => {
   if (!Array.isArray(data)) throw new ValidationError2(`expected array but got ${data}`, options);
-  checkWithinRange(data.length, meta5, "array length", options, !isNullable2(inner.meta.default));
+  checkWithinRange(data.length, meta5, "array length", options, !isNullable(inner.meta.default));
   return [data.map((_, index) => property(data, index, inner, options))];
 });
 Schema.extend("dict", (data, { inner, sKey }, options, strict) => {
-  if (!isPlainObject2(data)) throw new ValidationError2(`expected object but got ${data}`, options);
+  if (!isPlainObject(data)) throw new ValidationError2(`expected object but got ${data}`, options);
   const result = {};
   for (const key in data) {
     let rKey;
@@ -30396,11 +30270,11 @@ function merge2(result, data) {
   }
 }
 Schema.extend("object", (data, { dict }, options, strict) => {
-  if (!isPlainObject2(data)) throw new ValidationError2(`expected object but got ${data}`, options);
+  if (!isPlainObject(data)) throw new ValidationError2(`expected object but got ${data}`, options);
   const result = {};
   for (const key in dict) {
     const value = property(data, key, dict[key], options);
-    if (!isNullable2(value) || key in data) result[key] = value;
+    if (!isNullable(value) || key in data) result[key] = value;
   }
   if (!strict) merge2(result, data);
   return [result];
@@ -30419,13 +30293,13 @@ Schema.extend("intersect", (data, { list, toString: toString2 }, options, strict
   let result;
   for (const inner of list) {
     const value = Schema.resolve(data, inner, options, true)[0];
-    if (isNullable2(value)) continue;
-    if (isNullable2(result)) result = value;
+    if (isNullable(value)) continue;
+    if (isNullable(result)) result = value;
     else if (typeof result !== typeof value) throw new ValidationError2(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
     else if (typeof value === "object") merge2(result ??= {}, value);
     else if (result !== value) throw new ValidationError2(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
   }
-  if (!strict && isPlainObject2(data)) merge2(result, data);
+  if (!strict && isPlainObject(data)) merge2(result, data);
   return [result];
 });
 Schema.extend("transform", (data, { inner, callback, preserve }, options) => {
@@ -31468,6 +31342,7 @@ var LLM_FAILURE_CODES = {
   ACCOUNT_TOKEN_INVALID: {},
   AUTH: {},
   CLIENT_UPGRADE_REQUIRED: {},
+  CONTENT_REFUSED: {},
   CONTEXT_WINDOW_EXCEEDED: {},
   DISCOVERY_FAILED: {},
   DISCOVERY_UNSUPPORTED: {},
